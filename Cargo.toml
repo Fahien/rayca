@@ -1,0 +1,9 @@
+[package]
+name = "rayca"
+version = "0.1.0"
+authors = ["Antonio Caggiano <info@antoniocaggiano.eu>"]
+edition = "2018"
+license = "MIT"
+
+[dependencies]
+png = "0.17.5"
