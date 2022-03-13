@@ -5,13 +5,14 @@
 use super::*;
 
 pub struct Scene {
-    objects: Vec<Sphere>,
+    pub objects: Vec<Box<dyn Intersect>>,
 }
 
 impl Scene {
     pub fn new() -> Self {
-        let objects = vec![Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.1, 0xFF0000FFu32)];
-        Self { objects }
+        Self {
+            objects: Default::default(),
+        }
     }
 }
 
@@ -44,7 +45,7 @@ impl Draw for Scene {
 
                 for obj in &self.objects {
                     if obj.intersects(&ray) {
-                        image.set(x, y, obj.color);
+                        image.set(x, y, 0xFF0000FFu32);
                     }
                 }
             }
