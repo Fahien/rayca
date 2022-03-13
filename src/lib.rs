@@ -8,9 +8,11 @@ pub mod model;
 pub mod png;
 pub mod scene;
 pub mod sphere;
+pub mod triangle;
 
 pub use draw::*;
 pub use math::*;
 pub use model::*;
 pub use scene::*;
 pub use sphere::*;
+pub use triangle::*;

@@ -41,12 +41,12 @@ impl Intersect for Sphere {
     fn intersects(&self, ray: &Ray) -> bool {
         let l = self.center - ray.origin;
         // angle between sphere-center-to-ray-origin and ray-direction
-        let tca = l.dot(&ray.dir);
+        let tca = l.dot(ray.dir);
         if tca < 0.0 {
             return false;
         }
 
-        let d2 = l.dot(&l) - tca * tca;
+        let d2 = l.dot(l) - tca * tca;
         if d2 > self.radius2 {
             return false;
         }
