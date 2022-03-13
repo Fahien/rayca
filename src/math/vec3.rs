@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::Sub;
+use std::ops::{Add, Mul, Sub};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -21,11 +21,34 @@ impl Vec3 {
         self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
     }
 
+    pub fn cross(&self, rhs: &Self) -> Self {
+        Self::new(
+            self.y * rhs.z - rhs.y * self.z,
+            self.z * rhs.x - rhs.z * self.x,
+            self.x * rhs.y - rhs.x * self.y,
+        )
+    }
+
+    pub fn len(&self) -> f32 {
+        self.dot(self).sqrt()
+    }
+
     pub fn normalize(&mut self) {
-        let len = self.dot(self).sqrt();
+        let len = self.len();
         self.x /= len;
         self.y /= len;
         self.z /= len;
+    }
+}
+
+impl Add for Vec3 {
+    type Output = Vec3;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+        self
     }
 }
 
@@ -37,6 +60,14 @@ impl Sub for Vec3 {
         self.y -= rhs.y;
         self.z -= rhs.z;
         self
+    }
+}
+
+impl Mul<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::new(self.x * rhs, self.y * rhs, self.z * rhs)
     }
 }
 
