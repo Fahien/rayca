@@ -6,4 +6,4 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
-png = "0.17.5"
+png = "0.17.7"

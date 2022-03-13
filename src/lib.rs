@@ -4,9 +4,13 @@
 
 pub mod draw;
 pub mod image;
+pub mod math;
 pub mod png;
 pub mod scene;
+pub mod sphere;
 
 pub use draw::*;
 pub use image::*;
+pub use math::*;
 pub use scene::*;
+pub use sphere::*;
