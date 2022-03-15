@@ -2,9 +2,11 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use super::RGBA8;
+
 pub struct Image {
     /// Row major, top-left origin
-    buffer: Vec<u32>,
+    buffer: Vec<RGBA8>,
 
     width: u32,
     height: u32,
@@ -14,7 +16,7 @@ impl Image {
     pub fn new(width: u32, height: u32) -> Self {
         let mut buffer = Vec::new();
 
-        buffer.resize(width as usize * height as usize, 0);
+        buffer.resize(width as usize * height as usize, RGBA8::default());
 
         Self {
             buffer,
@@ -40,11 +42,11 @@ impl Image {
         }
     }
 
-    pub fn data(&self) -> &[u32] {
+    pub fn data(&self) -> &[RGBA8] {
         &self.buffer
     }
 
-    pub fn data_mut(&mut self) -> &mut [u32] {
+    pub fn data_mut(&mut self) -> &mut [RGBA8] {
         &mut self.buffer
     }
 
@@ -54,16 +56,16 @@ impl Image {
         y as usize * self.width as usize + x as usize
     }
 
-    pub fn get(&self, x: u32, y: u32) -> u32 {
+    pub fn get(&self, x: u32, y: u32) -> RGBA8 {
         self.buffer[self.index(x, y)]
     }
 
-    pub fn set(&mut self, x: u32, y: u32, value: u32) {
+    pub fn set(&mut self, x: u32, y: u32, value: RGBA8) {
         let index = self.index(x, y);
         self.buffer[index] = value;
     }
 
-    pub fn clear(&mut self, color: u32) {
+    pub fn clear(&mut self, color: RGBA8) {
         self.buffer.fill(color);
     }
 }
@@ -77,13 +79,13 @@ mod test {
         let (width, height) = (2, 1);
         let image = Image::new(width, height);
         assert!(image.height() == height && image.width() == width);
-        assert!(image.get(1, 0) == 0);
+        assert!(image.get(1, 0) == RGBA8::from(0));
     }
 
     #[test]
     fn clear() {
         let mut image = Image::new(1, 2);
-        let color = 0xFFFFFFFFu32;
+        let color = RGBA8::from(0xFFFFFFFF);
         image.clear(color);
         assert!(image.data().iter().all(|&value| value == color));
     }
