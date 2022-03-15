@@ -39,7 +39,7 @@ impl Draw for Scene {
 
                 for obj in &self.objects {
                     if obj.intersects(&ray) {
-                        image.set(x, y, 0xFF0000FFu32);
+                        image.set(x, y, RGBA8::from(0x00FF00FF));
                     }
                 }
             }
