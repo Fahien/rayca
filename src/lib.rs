@@ -9,6 +9,7 @@ pub mod png;
 pub mod scene;
 pub mod sphere;
 pub mod triangle;
+pub mod vertex;
 
 pub use draw::*;
 pub use image::*;
@@ -16,3 +17,4 @@ pub use math::*;
 pub use scene::*;
 pub use sphere::*;
 pub use triangle::*;
+pub use vertex::*;

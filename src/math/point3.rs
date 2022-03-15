@@ -47,3 +47,11 @@ impl Sub for Point3 {
         Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
     }
 }
+
+impl Sub<&Point3> for &Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Point3) -> Self::Output {
+        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+    }
+}

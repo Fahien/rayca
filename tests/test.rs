@@ -19,9 +19,9 @@ fn triangle() {
     let mut image = Image::new(32, 32);
     let mut scene = Scene::new();
     let triangle = Triangle::new(
-        Point3::new(-0.1, -0.1, -1.0),
-        Point3::new(0.1, -0.1, -1.0),
-        Point3::new(0.0, 0.1, -1.0),
+        Vertex::new(-0.1, -0.1, -1.0),
+        Vertex::new(0.1, -0.1, -1.0),
+        Vertex::new(0.0, 0.1, -1.0),
     );
     scene.objects.push(Box::new(triangle));
     scene.draw(&mut image);
