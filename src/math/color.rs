@@ -2,6 +2,20 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+#[derive(Clone, Copy, Default, Debug, PartialEq)]
+pub struct Color {
+    r: f32,
+    g: f32,
+    b: f32,
+    a: f32,
+}
+
+impl Color {
+    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
+        Self { r, g, b, a }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
 /// This is the layout expected by the PNG class
