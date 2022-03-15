@@ -3,16 +3,14 @@
 // SPDX-License-Identifier: MIT
 
 pub mod draw;
+pub mod geometry;
 pub mod math;
 pub mod model;
 pub mod png;
 pub mod scene;
-pub mod sphere;
-pub mod triangle;
 
 pub use draw::*;
+pub use geometry::*;
 pub use math::*;
 pub use model::*;
 pub use scene::*;
-pub use sphere::*;
-pub use triangle::*;

@@ -2,9 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::ray::Intersect;
-
-use super::*;
+use crate::{ray::Intersect, Point3, Ray};
 
 pub struct Sphere {
     center: Point3,
@@ -41,12 +39,12 @@ impl Intersect for Sphere {
     fn intersects(&self, ray: &Ray) -> bool {
         let l = self.center - ray.origin;
         // angle between sphere-center-to-ray-origin and ray-direction
-        let tca = l.dot(ray.dir);
+        let tca = l.dot(&ray.dir);
         if tca < 0.0 {
             return false;
         }
 
-        let d2 = l.dot(l) - tca * tca;
+        let d2 = l.dot(&l) - tca * tca;
         if d2 > self.radius2 {
             return false;
         }
@@ -57,6 +55,8 @@ impl Intersect for Sphere {
 
 #[cfg(test)]
 mod test {
+    use crate::Vec3;
+
     use super::*;
 
     #[test]
