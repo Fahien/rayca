@@ -4,21 +4,18 @@
 
 use super::*;
 
+#[derive(Default)]
 pub struct Scene {
-    pub objects: Vec<Box<dyn Intersect>>,
+    pub triangles: Vec<Triangle>,
+    pub triangles_ex: Vec<TriangleEx>,
+
+    pub spheres: Vec<Sphere>,
+    pub spheres_ex: Vec<SphereEx>,
 }
 
 impl Scene {
     pub fn new() -> Self {
-        Self {
-            objects: Default::default(),
-        }
-    }
-}
-
-impl Default for Scene {
-    fn default() -> Self {
-        Self::new()
+        Self::default()
     }
 }
 
@@ -43,9 +40,21 @@ impl Draw for Scene {
                 dir.normalize();
                 let ray = Ray::new(Point3::default(), dir);
 
-                for obj in &self.objects {
-                    if obj.intersects(&ray) {
-                        image.set(x, y, RGBA8::from(0x00FF00FF));
+                for i in 0..self.triangles.len() {
+                    let triangle = &self.triangles[i];
+                    if let Some(hit) = triangle.intersects(&ray) {
+                        let triangle_ex = &self.triangles_ex[i];
+                        let color = triangle_ex.get_color(&hit);
+                        image.set(x, y, color.into());
+                    }
+                }
+
+                for i in 0..self.spheres.len() {
+                    let sphere = &self.spheres[i];
+                    if let Some(hit) = sphere.intersects(&ray) {
+                        let sphere_ex = &self.spheres_ex[i];
+                        let color = sphere_ex.get_color(sphere, &hit);
+                        image.set(x, y, color.into());
                     }
                 }
             }

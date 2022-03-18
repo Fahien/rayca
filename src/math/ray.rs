@@ -16,6 +16,22 @@ impl Ray {
     }
 }
 
-pub trait Intersect {
-    fn intersects(&self, ray: &Ray) -> bool;
+pub struct Hit {
+    pub point: Vec3,
+
+    /// Barycentric coordinates expressing the hit point in terms of the primitive.
+    /// Useful to interpolate vertex data of such a primitive
+    pub uv: Vec2,
 }
+
+impl Hit {
+    pub fn new(point: Vec3, uv: Vec2) -> Self {
+        Self { point, uv }
+    }
+}
+
+pub trait Intersect {
+    fn intersects(&self, ray: &Ray) -> Option<Hit>;
+}
+
+pub trait IntersectEx {}
