@@ -16,6 +16,19 @@ impl Ray {
     }
 }
 
+pub struct Hit {
+    pub point: Vec3,
+    pub uv: Vec2,
+}
+
+impl Hit {
+    pub fn new(point: Vec3, uv: Vec2) -> Self {
+        Self { point, uv }
+    }
+}
+
 pub trait Intersect {
-    fn intersects(&self, ray: &Ray) -> bool;
+    fn intersects(&self, ray: &Ray) -> Option<Hit>;
+    fn get_color(&self, hit: &Hit) -> Color;
+    fn get_normal(&self, hit: &Hit) -> Vec3;
 }
