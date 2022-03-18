@@ -8,7 +8,7 @@ use rayca::{png::*, *};
 fn circle() {
     let mut image = Image::new(1024, 1024);
     let mut scene = Scene::new();
-    let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.1, 0xFF0000FFu32);
+    let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.1, RGBA8::from(0xFF0000FFu32));
     scene.objects.push(Box::new(sphere));
     scene.draw(&mut image);
     dump(&image, "target/sphere.png");
@@ -18,11 +18,14 @@ fn circle() {
 fn triangle() {
     let mut image = Image::new(1024, 1024);
     let mut scene = Scene::new();
-    let triangle = Triangle::new(
+    let mut triangle = Triangle::new(
         Vertex::new(-0.1, -0.1, -1.0),
         Vertex::new(0.1, -0.1, -1.0),
         Vertex::new(0.0, 0.1, -1.0),
     );
+    triangle.vertices[0].color = RGBA8::from(0xFF0000FF);
+    triangle.vertices[1].color = RGBA8::from(0x00FF00FF);
+    triangle.vertices[2].color = RGBA8::from(0x0000FFFF);
     scene.objects.push(Box::new(triangle));
     scene.draw(&mut image);
     dump(&image, "target/triangle.png");
