@@ -39,9 +39,7 @@ impl Draw for Scene {
 
                 for obj in &self.objects {
                     if let Some(hit) = obj.intersects(&ray) {
-                        let normal = obj.get_normal(&hit);
-                        let color = (normal.dot(&-ray.dir) * 255.0) as u8;
-                        let color = RGBA8::new(color, color, color, 255);
+                        let color = obj.get_color(&hit);
                         image.set(x, y, color);
                     }
                 }
