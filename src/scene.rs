@@ -38,8 +38,11 @@ impl Draw for Scene {
                 let ray = Ray::new(Vec3::default(), dir);
 
                 for obj in &self.objects {
-                    if obj.intersects(&ray) {
-                        image.set(x, y, RGBA8::from(0x00FF00FF));
+                    if let Some(hit) = obj.intersects(&ray) {
+                        let normal = obj.get_normal(&hit);
+                        let color = (normal.dot(&-ray.dir) * 255.0) as u8;
+                        let color = RGBA8::new(color, color, color, 255);
+                        image.set(x, y, color);
                     }
                 }
             }

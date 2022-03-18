@@ -38,20 +38,44 @@ impl Default for Sphere {
 
 impl Intersect for Sphere {
     /// [Ray-sphere intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection)
-    fn intersects(&self, ray: &Ray) -> bool {
+    fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let l = self.center - ray.origin;
         // angle between sphere-center-to-ray-origin and ray-direction
         let tca = l.dot(&ray.dir);
         if tca < 0.0 {
-            return false;
+            return None;
         }
 
         let d2 = l.dot(&l) - tca * tca;
         if d2 > self.radius2 {
-            return false;
+            return None;
         }
 
-        true
+        let thc = (self.radius2 - d2).sqrt();
+        let mut t0 = tca - thc;
+        let mut t1 = tca + thc;
+
+        if t0 > t1 {
+            std::mem::swap(&mut t0, &mut t1);
+        }
+
+        if t0 < 0.0 {
+            t0 = t1;
+            if t0 < 0.0 {
+                return None;
+            }
+        }
+
+        let point = ray.origin + ray.dir * t0;
+        let hit = Hit::new(point);
+
+        Some(hit)
+    }
+
+    fn get_normal(&self, hit: &Hit) -> Vec3 {
+        let mut normal = hit.point - self.center;
+        normal.normalize();
+        normal
     }
 }
 
@@ -66,14 +90,14 @@ mod test {
 
         let right = Vec3::new(1.0, 0.0, 0.0);
         let ray = Ray::new(orig, right);
-        assert!(sphere.intersects(&ray));
+        assert!(sphere.intersects(&ray).is_some());
 
         let ray = Ray::new(Vec3::new(2.0, 0.0, 0.0), right);
-        assert!(!sphere.intersects(&ray));
+        assert!(sphere.intersects(&ray).is_none());
 
         let sphere = Sphere::new(Vec3::new(4.0, 0.0, 0.0), 1.0, 0xFFFFFFFFu32);
         let forward = Vec3::new(0.0, 0.0, -1.0);
         let ray = Ray::new(orig, forward);
-        assert!(!sphere.intersects(&ray));
+        assert!(sphere.intersects(&ray).is_none());
     }
 }
