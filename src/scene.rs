@@ -44,8 +44,9 @@ impl Draw for Scene {
                 let ray = Ray::new(Point3::default(), dir);
 
                 for obj in &self.objects {
-                    if obj.intersects(&ray) {
-                        image.set(x, y, RGBA8::from(0x00FF00FF));
+                    if let Some(hit) = obj.intersects(&ray) {
+                        let color = obj.get_color(&hit);
+                        image.set(x, y, color.into());
                     }
                 }
             }

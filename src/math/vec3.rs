@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Mul, Neg, Sub};
 
 use crate::{Dot, Point3};
 
@@ -164,6 +164,25 @@ impl Mul<f32> for &Vec3 {
 impl From<Point3> for Vec3 {
     fn from(p: Point3) -> Self {
         Self::new(p.x, p.y, p.z)
+    }
+}
+
+impl Neg for Vec3 {
+    type Output = Vec3;
+
+    fn neg(mut self) -> Self::Output {
+        self.x = -self.x;
+        self.y = -self.y;
+        self.z = -self.z;
+        self
+    }
+}
+
+impl Neg for &Vec3 {
+    type Output = Vec3;
+
+    fn neg(self) -> Self::Output {
+        Self::Output::new(-self.x, -self.y, -self.z)
     }
 }
 
