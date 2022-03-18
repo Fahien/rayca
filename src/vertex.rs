@@ -8,7 +8,7 @@ use super::*;
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct Vertex {
     pub point: Vec3,
-    pub color: ABGR8,
+    pub color: RGBA8,
 }
 
 impl Vertex {
