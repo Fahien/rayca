@@ -2,21 +2,33 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::borrow::Cow;
+
 use super::*;
 
-pub struct Triangle {
-    pub vertices: [Vertex; 3],
+pub struct Triangle<'m> {
+    pub vertices: [Cow<'m, Vertex>; 3],
 }
 
-impl Triangle {
+impl<'m> Triangle<'m> {
     pub fn new(a: Vertex, b: Vertex, c: Vertex) -> Self {
         Self {
-            vertices: [a, b, c],
+            vertices: [Cow::Owned(a), Cow::Owned(b), Cow::Owned(c)],
         }
+    }
+
+    pub fn borrow(a: &'m Vertex, b: &'m Vertex, c: &'m Vertex) -> Self {
+        Self {
+            vertices: [Cow::Borrowed(a), Cow::Borrowed(b), Cow::Borrowed(c)],
+        }
+    }
+
+    pub fn get_vertex_mut(&mut self, index: usize) -> &mut Vertex {
+        self.vertices[index].to_mut()
     }
 }
 
-impl Default for Triangle {
+impl<'m> Default for Triangle<'m> {
     fn default() -> Self {
         Self::new(
             Vertex::new(-1.0, 0.0, 0.0),
@@ -26,12 +38,12 @@ impl Default for Triangle {
     }
 }
 
-impl Intersect for Triangle {
+impl<'m> Intersect for Triangle<'m> {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
     fn intersects(&self, ray: &Ray) -> Option<Hit> {
-        let v0 = Vec3::from(self.vertices[0].point);
-        let v1 = Vec3::from(self.vertices[1].point);
-        let v2 = Vec3::from(self.vertices[2].point);
+        let v0 = Vec3::from(self.vertices[0].pos);
+        let v1 = Vec3::from(self.vertices[1].pos);
+        let v2 = Vec3::from(self.vertices[2].pos);
 
         // Plane's normal
         let v0v1 = v1 - v0;

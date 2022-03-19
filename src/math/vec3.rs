@@ -19,10 +19,6 @@ impl Vec3 {
         Self { x, y, z }
     }
 
-    pub fn dot(&self, rhs: &Self) -> f32 {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
-    }
-
     pub fn cross(&self, rhs: &Self) -> Self {
         Self::new(
             self.y * rhs.z - rhs.y * self.z,

@@ -23,10 +23,24 @@ fn triangle() {
         Vertex::new(0.1, -0.1, -1.0),
         Vertex::new(0.0, 0.1, -1.0),
     );
-    triangle.vertices[0].color = Color::from(0xFF0000FF);
-    triangle.vertices[1].color = Color::from(0x00FF00FF);
-    triangle.vertices[2].color = Color::from(0x0000FFFF);
+    triangle.get_vertex_mut(0).color = Color::from(0xFF0000FF);
+    triangle.get_vertex_mut(1).color = Color::from(0x00FF00FF);
+    triangle.get_vertex_mut(2).color = Color::from(0x0000FFFF);
     scene.objects.push(Box::new(triangle));
     scene.draw(&mut image);
     dump(&image, "target/triangle.png");
+}
+
+mod gltf {
+    use super::*;
+
+    #[test]
+    fn cube() {
+        let mut image = Image::new(256, 256);
+        let mut scene = Scene::new();
+        scene.load("tests/model/box/box.gltf").unwrap();
+
+        scene.draw(&mut image);
+        dump(&image, "target/gltf-cube.png");
+    }
 }

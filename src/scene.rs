@@ -2,17 +2,29 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::{error::Error, path::Path};
+
 use super::*;
 
 pub struct Scene {
     pub objects: Vec<Box<dyn Intersect>>,
+    // Single model collecting elements from all loaded models
+    pub model: Model,
 }
 
 impl Scene {
     pub fn new() -> Self {
         Self {
             objects: Default::default(),
+            model: Default::default(),
         }
+    }
+
+    pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Box<dyn Error>> {
+        // Open glTF model
+        let model = Model::builder(path)?.build()?;
+        self.model.append(model);
+        Ok(())
     }
 }
 
@@ -41,7 +53,8 @@ impl Draw for Scene {
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
-                let ray = Ray::new(Point3::default(), dir);
+                let origin = Point3::new(0.0, 0.0, 0.0);
+                let ray = Ray::new(origin, dir);
 
                 for obj in &self.objects {
                     if let Some(hit) = obj.intersects(&ray) {
@@ -49,7 +62,45 @@ impl Draw for Scene {
                         image.set(x, y, color.into());
                     }
                 }
+
+                for mesh in self.model.meshes.iter() {
+                    for prim_handle in mesh.primitives.iter() {
+                        let prim = self.model.primitives.get(*prim_handle).unwrap();
+                        for triangle in prim.triangles() {
+                            if let Some(hit) = triangle.intersects(&ray) {
+                                let color = triangle.get_color(&hit);
+                                image.set(x, y, color.into());
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use owo_colors::{OwoColorize, Stream::Stdout};
+
+    use super::*;
+
+    #[test]
+    fn load() {
+        let mut scene = Scene::new();
+        assert!(scene.load("test").is_err());
+
+        let path = "tests/model/box/box.gltf";
+        match scene.load(path) {
+            Ok(_) => (),
+            Err(err) => {
+                panic!(
+                    "{}: Failed to load \"{}\": {}",
+                    "ERROR".if_supports_color(Stdout, |text| text.red()),
+                    path,
+                    err
+                );
+            }
+        };
     }
 }
