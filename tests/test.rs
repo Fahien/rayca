@@ -30,3 +30,13 @@ fn triangle() {
     scene.draw(&mut image);
     dump(&image, "target/triangle.png");
 }
+
+#[test]
+fn cube() {
+    let mut image = Image::new(1024, 1024);
+    let mut scene = Scene::new();
+    scene.load("tests/box.gltf").unwrap();
+
+    scene.draw(&mut image);
+    dump(&image, "target/cube.png");
+}
