@@ -1,3 +1,6 @@
+.DS_store
+.rayca
 .vscode
-target
+code
 node_modules
+target
