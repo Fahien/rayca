@@ -2,9 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Color, Hit, Intersect, Point3, Ray, Vec2, Vec3};
-
-use super::*;
+use crate::{Color, Dot, Hit, Intersect, Point3, Ray, Vec2, Vec3, Vertex};
 
 pub struct Triangle {
     vertices: [Point3; 3],
@@ -15,6 +13,10 @@ impl Triangle {
         Self {
             vertices: [a, b, c],
         }
+    }
+
+    pub fn get_vertex_mut(&mut self, index: usize) -> &mut Point3 {
+        &mut self.vertices[index]
     }
 }
 

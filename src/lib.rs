@@ -8,9 +8,11 @@ pub mod math;
 pub mod model;
 pub mod png;
 pub mod scene;
+pub mod util;
 
 pub use draw::*;
 pub use geometry::*;
 pub use math::*;
 pub use model::*;
 pub use scene::*;
+pub use util::*;

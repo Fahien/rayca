@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{ray::Intersect, Color, Hit, Point3, Ray, Vec2, Vec3, RGBA8};
+use crate::{ray::Intersect, Color, Dot, Hit, Point3, Ray, Vec2, Vec3, RGBA8};
 
 pub struct Sphere {
     center: Point3,

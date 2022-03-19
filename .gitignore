@@ -1,6 +1,6 @@
 .DS_Store
+.rayca
 .vscode
 dist
 node_modules
 target
-node_modules

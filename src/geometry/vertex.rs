@@ -5,7 +5,19 @@
 use crate::Color;
 
 #[repr(C)]
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Vertex {
     pub color: Color,
+}
+
+impl Vertex {
+    pub fn new(color: Color) -> Self {
+        Self { color }
+    }
+}
+
+impl Default for Vertex {
+    fn default() -> Self {
+        Self::new(Color::WHITE)
+    }
 }

@@ -34,3 +34,13 @@ fn triangle() {
     scene.draw(&mut image);
     dump(&image, "target/triangle.png");
 }
+
+#[test]
+fn gltf_box() {
+    let mut image = Image::new(256, 256);
+    let mut scene = Scene::new();
+    scene.gltf_model = GltfModel::load("tests/model/box/box.gltf").unwrap();
+
+    scene.draw(&mut image);
+    dump(&image, "target/gltf-box.png");
+}
