@@ -1,0 +1,3 @@
+[submodule "tests/model"]
+	path = tests/model
+	url = https://github.com/Fahien/rayca-models.git

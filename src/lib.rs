@@ -5,16 +5,22 @@
 pub mod draw;
 pub mod image;
 pub mod math;
+pub mod mesh;
+pub mod model;
 pub mod png;
 pub mod scene;
 pub mod sphere;
-pub mod vertex;
 pub mod triangle;
+pub mod util;
+pub mod vertex;
 
 pub use draw::*;
 pub use image::*;
 pub use math::*;
+pub use mesh::*;
+pub use model::*;
 pub use scene::*;
 pub use sphere::*;
-pub use vertex::*;
 pub use triangle::*;
+pub use util::*;
+pub use vertex::*;
