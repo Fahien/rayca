@@ -121,6 +121,12 @@ pub struct TriangleEx {
 }
 
 impl TriangleEx {
+    pub fn new(a: Vertex, b: Vertex, c: Vertex) -> Self {
+        Self {
+            vertices: [a, b, c],
+        }
+    }
+
     pub fn get_color(&self, hit: &Hit) -> Color {
         // Interpolate vertex colors
         let c0 = &self.vertices[0].color;

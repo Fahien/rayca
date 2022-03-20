@@ -40,7 +40,7 @@ impl Draw for Scene {
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
-                let origin = Point3::new(0.0, 0.0, 0.0);
+                let origin = Point3::new(0.0, 0.0, 4.0);
                 let ray = Ray::new(origin, dir);
 
                 for i in 0..self.triangles.len() {
@@ -61,16 +61,19 @@ impl Draw for Scene {
                     }
                 }
 
-                for mesh in self.gltf_model.meshes.iter() {
-                    for prim_handle in mesh.primitives.iter() {
-                        let prim = self.gltf_model.primitives.get(*prim_handle).unwrap();
-                        let (triangles, triangles_ex) = prim.triangles();
-                        for i in 0..triangles.len() {
-                            let triangle = &triangles[i];
-                            if let Some(hit) = triangle.intersects(&ray) {
-                                let triangle_ex = &triangles_ex[i];
-                                let color = triangle_ex.get_color(&hit);
-                                image.set(x, y, color.into());
+                for node in self.gltf_model.nodes.iter() {
+                    for mesh in self.gltf_model.meshes.iter() {
+                        for prim_handle in mesh.primitives.iter() {
+                            let prim = self.gltf_model.primitives.get(*prim_handle).unwrap();
+                            let transform = Mat4::from(&node.trs);
+                            let (triangles, triangles_ex) = prim.triangles(transform);
+                            for i in 0..triangles.len() {
+                                let triangle = &triangles[i];
+                                if let Some(hit) = triangle.intersects(&ray) {
+                                    let triangle_ex = &triangles_ex[i];
+                                    let color = triangle_ex.get_color(&hit);
+                                    image.set(x, y, color.into());
+                                }
                             }
                         }
                     }

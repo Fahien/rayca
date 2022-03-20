@@ -142,25 +142,35 @@ impl From<&Trs> for Mat4 {
     }
 }
 
-impl Mul<Vec3> for &Mat4 {
-    type Output = Vec3;
+macro_rules! impl_mul3 {
+    ($T3: ty, $M4: ty) => {
+        impl Mul<$T3> for $M4 {
+            type Output = $T3;
 
-    fn mul(self, rhs: Vec3) -> Self::Output {
-        let mut ret = [0.0, 0.0, 0.0, 0.0];
+            fn mul(self, rhs: $T3) -> Self::Output {
+                let mut ret = [0.0, 0.0, 0.0, 0.0];
 
-        for i in 0..4 {
-            for j in 0..3 {
-                let vv = rhs[j];
-                let mv = self[i][j];
-                ret[i] += mv * vv;
+                for i in 0..4 {
+                    for j in 0..3 {
+                        let vv = rhs[j];
+                        let mv = self[i][j];
+                        ret[i] += mv * vv;
+                    }
+                    let mv = self[i][3];
+                    ret[i] += mv;
+                }
+
+                let den = if ret[3] != 0.0 { ret[3] } else { 1.0 };
+                <$T3>::new(ret[0] / den, ret[1] / den, ret[2] / den)
             }
-            let mv = self[i][3];
-            ret[i] += mv;
         }
-
-        Vec3::new(ret[0] / ret[3], ret[1] / ret[3], ret[2] / ret[3])
-    }
+    };
 }
+
+impl_mul3!(Point3, Mat4);
+impl_mul3!(Vec3, Mat4);
+impl_mul3!(Point3, &Mat4);
+impl_mul3!(Vec3, &Mat4);
 
 #[cfg(test)]
 mod test {

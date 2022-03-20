@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, Sub};
+use std::ops::{Add, Index, Sub};
 
 use crate::{Dot, Vec3};
 
@@ -53,5 +53,18 @@ impl Sub<&Point3> for &Point3 {
 
     fn sub(self, rhs: &Point3) -> Self::Output {
         Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+    }
+}
+
+impl Index<usize> for Point3 {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Index out of bounds"),
+        }
     }
 }

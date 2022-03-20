@@ -51,6 +51,12 @@ pub struct Handle<T> {
     phantom: PhantomData<*const T>,
 }
 
+impl<T> Default for Handle<T> {
+    fn default() -> Self {
+        Self::none()
+    }
+}
+
 impl<T> Handle<T> {
     pub fn new(id: usize) -> Self {
         Self {

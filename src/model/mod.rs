@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 pub mod image;
+pub mod node;
 pub mod tf;
 
 pub use image::*;
+pub use node::*;
 pub use tf::*;

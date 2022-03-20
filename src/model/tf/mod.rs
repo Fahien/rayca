@@ -11,7 +11,7 @@ use std::{error::Error, path::Path};
 
 use gltf::Gltf;
 
-use crate::Pack;
+use crate::{Handle, Node, Pack, Quat, Vec3};
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
     match data_type {
@@ -74,6 +74,26 @@ impl UriBuffers {
         Ok(uri_buffers)
     }
 
+    fn load_indices(&self, gprimitive: &gltf::Primitive) -> (Vec<u8>, usize) {
+        let mut indices = vec![];
+        let mut index_size = 1;
+
+        if let Some(accessor) = gprimitive.indices() {
+            let data_type = accessor.data_type();
+            index_size = data_type_as_size(data_type);
+
+            // Data type can vary
+            let data = self.get_data_start(&accessor);
+            let d = &data[0];
+            let len = accessor.count() * data_type_as_size(data_type);
+            // Use bytes regardless of the index data type
+            let slice: &[u8] = unsafe { std::slice::from_raw_parts(d as *const u8 as _, len) };
+            indices = Vec::from(slice);
+        }
+
+        (indices, index_size)
+    }
+
     fn load_positions(
         &self,
         vertices: &mut Vec<GltfVertex>,
@@ -110,6 +130,41 @@ impl UriBuffers {
         Ok(())
     }
 
+    fn load_normals(
+        &self,
+        vertices: &mut Vec<GltfVertex>,
+        accessor: &gltf::Accessor,
+    ) -> Result<(), Box<dyn Error>> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        assert!(dimensions == gltf::accessor::Dimensions::Vec3);
+
+        let view = accessor.view().unwrap();
+        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
+        assert!(target == gltf::buffer::Target::ArrayBuffer);
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let normal = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 3) };
+
+            if vertices.len() <= i {
+                vertices.push(GltfVertex::default())
+            }
+            vertices[i].normal.x = normal[0];
+            vertices[i].normal.y = normal[1];
+            vertices[i].normal.z = normal[2];
+        }
+
+        Ok(())
+    }
+
     fn get_data_start<'b>(&'b self, accessor: &gltf::Accessor) -> &'b [u8] {
         let view = accessor.view().unwrap();
         let view_len = view.length();
@@ -135,6 +190,8 @@ impl UriBuffers {
 pub struct GltfModel {
     pub primitives: Pack<GltfPrimitive>,
     pub meshes: Pack<GltfMesh>,
+    pub nodes: Pack<Node>,
+    pub root: Node,
 }
 
 impl GltfModel {
@@ -148,6 +205,7 @@ impl GltfModel {
             .ok_or("Failed to get parent directory")?;
         let uri_buffers = UriBuffers::new(&gltf, parent_dir)?;
         ret.load_meshes(&gltf, &uri_buffers)?;
+        ret.load_nodes(&gltf);
 
         Ok(ret)
     }
@@ -162,6 +220,13 @@ impl GltfModel {
                 let mode = gprimitive.mode();
                 assert!(mode == gltf::mesh::Mode::Triangles);
 
+                // Load normals first, so we can process tangents later
+                for (semantic, accessor) in gprimitive.attributes() {
+                    if semantic == gltf::mesh::Semantic::Normals {
+                        uri_buffers.load_normals(&mut vertices, &accessor)?;
+                    }
+                }
+
                 for (semantic, accessor) in gprimitive.attributes() {
                     match semantic {
                         gltf::mesh::Semantic::Positions => {
@@ -171,23 +236,12 @@ impl GltfModel {
                     }
                 }
 
-                let mut indices = vec![];
-                if let Some(accessor) = gprimitive.indices() {
-                    let data_type = accessor.data_type();
-
-                    // Data type can vary
-                    let data = uri_buffers.get_data_start(&accessor);
-                    let d = &data[0];
-                    let length = accessor.count() * data_type_as_size(data_type);
-                    // Use bytes regardless of the index data type
-                    let slice: &[u8] =
-                        unsafe { std::slice::from_raw_parts(d as *const u8 as _, length) };
-                    indices = Vec::from(slice);
-                }
+                let (indices, index_size) = uri_buffers.load_indices(&gprimitive);
 
                 let primitive = GltfPrimitive::builder()
                     .vertices(vertices)
                     .indices(indices)
+                    .index_size(index_size)
                     .build();
                 let primitive_handle = self.primitives.push(primitive);
                 primitive_handles.push(primitive_handle);
@@ -198,6 +252,55 @@ impl GltfModel {
         }
 
         Ok(())
+    }
+
+    fn load_nodes(&mut self, gltf: &Gltf) {
+        // Load scene
+        let scene = gltf.scenes().next().unwrap();
+        self.root = Node::builder()
+            .name("Root".into())
+            .children(
+                scene
+                    .nodes()
+                    .map(|gchild| Handle::new(gchild.index()))
+                    .collect(),
+            )
+            .build();
+
+        // Load nodes
+        for gnode in gltf.nodes() {
+            let mut node_builder = Node::builder()
+                .id(gnode.index())
+                .name(gnode.name().unwrap_or("Unknown").into())
+                .children(
+                    gnode
+                        .children()
+                        .map(|gchild| Handle::new(gchild.index()))
+                        .collect(),
+                );
+
+            let transform = gnode.transform().decomposed();
+
+            let translation = &transform.0;
+            let translation = Vec3::new(translation[0], translation[1], translation[2]);
+            node_builder = node_builder.translation(translation);
+
+            // xyzw
+            let rotation = &transform.1;
+            let rotation = Quat::new(rotation[0], rotation[1], rotation[2], rotation[3]);
+            node_builder = node_builder.rotation(rotation);
+
+            let scale = &transform.2;
+            let scale = Vec3::new(scale[0], scale[1], scale[2]);
+            node_builder = node_builder.scale(scale);
+
+            if let Some(mesh) = gnode.mesh() {
+                node_builder = node_builder.mesh(Handle::new(mesh.index()));
+            }
+
+            let node = node_builder.build();
+            self.nodes.push(node);
+        }
     }
 }
 

@@ -29,6 +29,9 @@ fn triangle() {
     triangle_ex.vertices[0].color = Color::from(0xFF0000FF);
     triangle_ex.vertices[1].color = Color::from(0x00FF00FF);
     triangle_ex.vertices[2].color = Color::from(0x0000FFFF);
+    triangle_ex.vertices[0].normal = Vec3::new(0.0, 0.0, 1.0);
+    triangle_ex.vertices[1].normal = Vec3::new(1.0, 0.0, 0.0);
+    triangle_ex.vertices[2].normal = Vec3::new(0.0, 1.0, 0.0);
     scene.triangles.push(triangle);
     scene.triangles_ex.push(triangle_ex);
     scene.draw(&mut image);
@@ -37,10 +40,18 @@ fn triangle() {
 
 #[test]
 fn gltf_box() {
-    let mut image = Image::new(256, 256);
+    let mut image = Image::new(128, 128);
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load("tests/model/box/box.gltf").unwrap();
-
     scene.draw(&mut image);
     dump(&image, "target/gltf-box.png");
+}
+
+#[test]
+fn gltf_triangle() {
+    let mut image = Image::new(128, 128);
+    let mut scene = Scene::new();
+    scene.gltf_model = GltfModel::load("tests/model/triangle/triangle.gltf").unwrap();
+    scene.draw(&mut image);
+    dump(&image, "target/gltf-triangle.png");
 }
