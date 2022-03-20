@@ -7,3 +7,12 @@ pub use color::*;
 
 pub mod vec3;
 pub use vec3::*;
+
+pub mod quat;
+pub use quat::*;
+
+pub mod mat4;
+pub use mat4::*;
+
+pub mod trs;
+pub use trs::*;
