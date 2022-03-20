@@ -105,8 +105,13 @@ impl Intersect for Triangle<Vertex> {
         (1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1
     }
 
-    fn get_normal(&self, _hit: &Hit) -> Vec3 {
-        Vec3::new(0.0, 0.0, 1.0)
+    fn get_normal(&self, hit: &Hit) -> Vec3 {
+        // Interpolate normals
+        let n0 = &self.vertices[0].normal;
+        let n1 = &self.vertices[1].normal;
+        let n2 = &self.vertices[2].normal;
+
+        n2 * (1.0 - hit.uv.x - hit.uv.y) + n0 * hit.uv.x + n1 * hit.uv.y
     }
 }
 

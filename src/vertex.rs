@@ -8,6 +8,7 @@ use super::*;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vertex {
     pub pos: Vec3,
+    pub normal: Vec3,
     pub color: RGBA8,
 }
 
@@ -15,6 +16,7 @@ impl Vertex {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self {
             pos: Vec3::new(x, y, z),
+            normal: Vec3::new(0.0, 0.0, 1.0),
             color: RGBA8::from(0xFFFFFFFF),
         }
     }
