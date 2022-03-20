@@ -1,8 +1,8 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::Mat4;
+use crate::*;
 
 /// Quaternion structure
 pub struct Quat {
@@ -33,6 +33,14 @@ impl Quat {
         self.y /= len;
         self.z /= len;
         self.w /= len;
+    }
+
+    pub fn get_xyz(&self) -> Vec3 {
+        Vec3::new(self.x, self.y, self.z)
+    }
+
+    pub fn get_w(&self) -> f32 {
+        self.w
     }
 }
 

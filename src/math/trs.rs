@@ -52,6 +52,17 @@ impl Mul<Mat4> for &Trs {
     }
 }
 
+impl Mul<Point3> for &Trs {
+    type Output = Point3;
+
+    fn mul(self, mut rhs: Point3) -> Self::Output {
+        rhs.scale(&self.scale);
+        rhs.rotate(&self.rotation);
+        rhs.translate(&self.translation);
+        rhs
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -157,6 +157,17 @@ impl Mul<f32> for &Vec3 {
     }
 }
 
+impl Mul<Vec3> for f32 {
+    type Output = Vec3;
+
+    fn mul(self, mut rhs: Vec3) -> Self::Output {
+        rhs.x *= self;
+        rhs.y *= self;
+        rhs.z *= self;
+        rhs
+    }
+}
+
 impl From<Point3> for Vec3 {
     fn from(p: Point3) -> Self {
         Self::new(p.x, p.y, p.z)

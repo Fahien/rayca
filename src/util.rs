@@ -51,7 +51,18 @@ pub struct Handle<T> {
     phantom: PhantomData<*const T>,
 }
 
+impl<T> Default for Handle<T> {
+    fn default() -> Self {
+        Self::none()
+    }
+}
+
 impl<T> Handle<T> {
+    pub const NONE: Self = Self {
+        id: std::usize::MAX,
+        phantom: PhantomData,
+    };
+
     pub fn new(id: usize) -> Self {
         Self {
             id,
@@ -181,6 +192,7 @@ impl<T> Pack<T> {
         self.free.push(handle.id);
     }
 
+    /// Appends `other` to the current one, returning the offset for updating handles to `other`
     pub fn append(&mut self, other: &mut Pack<T>) -> usize {
         let ret = self.indices.len();
 
