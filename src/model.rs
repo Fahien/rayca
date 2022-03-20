@@ -138,8 +138,10 @@ impl ModelBuilder {
                 }
 
                 let mut indices = vec![];
+                let mut index_size = 1;
                 if let Some(accessor) = gprimitive.indices() {
                     let data_type = accessor.data_type();
+                    index_size = data_type_as_size(data_type);
 
                     // Data type can vary
                     let data = self.get_data_start(&accessor);
@@ -154,6 +156,7 @@ impl ModelBuilder {
                 let primitive = Primitive::builder()
                     .vertices(vertices)
                     .indices(indices)
+                    .index_size(index_size)
                     .build();
                 let primitive_handle = model.primitives.push(primitive);
                 primitive_handles.push(primitive_handle);
