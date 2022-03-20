@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use crate::Vec3;
+
 use std::ops::{Add, Mul};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -26,6 +28,12 @@ impl From<u32> for Color {
             (color >> 8) as u8 as f32 / 255.0,
             color as u8 as f32 / 255.0,
         )
+    }
+}
+
+impl From<Vec3> for Color {
+    fn from(v: Vec3) -> Self {
+        Self::new(v.x, v.y, v.z, 1.0)
     }
 }
 
