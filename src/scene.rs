@@ -53,13 +53,18 @@ impl Draw for Scene {
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
-                let origin = Point3::new(0.0, 0.0, 3.0);
+                let origin = Point3::new(0.0, 0.0, 4.0);
                 let ray = Ray::new(origin, dir);
+
+                let mut depth = f32::INFINITY;
 
                 for obj in &self.objects {
                     if let Some(hit) = obj.intersects(&ray) {
-                        let color = obj.get_color(&hit);
-                        image.set(x, y, color.into());
+                        if hit.depth < depth {
+                            depth = hit.depth;
+                            let color = obj.get_color(&hit);
+                            image.set(x, y, color.into());
+                        }
                     }
                 }
 
@@ -69,8 +74,13 @@ impl Draw for Scene {
                             let prim = self.model.primitives.get(*prim_handle).unwrap();
                             for triangle in prim.triangles(&node.trs) {
                                 if let Some(hit) = triangle.intersects(&ray) {
-                                    let color = triangle.get_color(&hit);
-                                    image.set(x, y, color.into());
+                                    if hit.depth < depth {
+                                        depth = hit.depth;
+                                        //let color = triangle.get_color(&hit);
+                                        let n = triangle.get_normal(&hit);
+                                        let color = Color::from(n);
+                                        image.set(x, y, color.into());
+                                    }
                                 }
                             }
                         }

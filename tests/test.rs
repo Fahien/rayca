@@ -41,11 +41,21 @@ mod gltf {
 
     #[test]
     fn cube() {
-        let mut image = Image::new(256, 256);
+        let mut image = Image::new(128, 128);
         let mut scene = Scene::new();
         scene.load("tests/model/box/box.gltf").unwrap();
 
         scene.draw(&mut image);
         dump(&image, "target/gltf-cube.png");
+    }
+
+    #[test]
+    fn triangle() {
+        let mut image = Image::new(256, 256);
+        let mut scene = Scene::new();
+        scene.load("tests/model/triangle/triangle.gltf").unwrap();
+
+        scene.draw(&mut image);
+        dump(&image, "target/gltf-triangle.png");
     }
 }
