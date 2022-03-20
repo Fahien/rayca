@@ -62,7 +62,7 @@ impl Intersect for Sphere {
         }
 
         let point = ray.origin + ray.dir * t0;
-        let hit = Hit::new(point, Vec2::default());
+        let hit = Hit::new(t0, point, Vec2::default());
 
         Some(hit)
     }

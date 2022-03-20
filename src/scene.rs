@@ -43,21 +43,29 @@ impl Draw for Scene {
                 let origin = Point3::new(0.0, 0.0, 4.0);
                 let ray = Ray::new(origin, dir);
 
+                let mut depth = f32::INFINITY;
+
                 for i in 0..self.triangles.len() {
                     let triangle = &self.triangles[i];
                     if let Some(hit) = triangle.intersects(&ray) {
-                        let triangle_ex = &self.triangles_ex[i];
-                        let color = triangle_ex.get_color(&hit);
-                        image.set(x, y, color.into());
+                        if hit.depth < depth {
+                            depth = hit.depth;
+                            let triangle_ex = &self.triangles_ex[i];
+                            let color = triangle_ex.get_color(&hit);
+                            image.set(x, y, color.into());
+                        }
                     }
                 }
 
                 for i in 0..self.spheres.len() {
                     let sphere = &self.spheres[i];
                     if let Some(hit) = sphere.intersects(&ray) {
-                        let sphere_ex = &self.spheres_ex[i];
-                        let color = sphere_ex.get_color(sphere, &hit);
-                        image.set(x, y, color.into());
+                        if hit.depth < depth {
+                            depth = hit.depth;
+                            let sphere_ex = &self.spheres_ex[i];
+                            let color = sphere_ex.get_color(sphere, &hit);
+                            image.set(x, y, color.into());
+                        }
                     }
                 }
 
@@ -70,9 +78,13 @@ impl Draw for Scene {
                             for i in 0..triangles.len() {
                                 let triangle = &triangles[i];
                                 if let Some(hit) = triangle.intersects(&ray) {
-                                    let triangle_ex = &triangles_ex[i];
-                                    let color = triangle_ex.get_color(&hit);
-                                    image.set(x, y, color.into());
+                                    if hit.depth < depth {
+                                        depth = hit.depth;
+                                        let triangle_ex = &triangles_ex[i];
+                                        let n = triangle_ex.get_normal(&hit);
+                                        let color = Color::from(n);
+                                        image.set(x, y, color.into());
+                                    }
                                 }
                             }
                         }

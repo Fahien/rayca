@@ -40,7 +40,7 @@ impl From<u32> for Color {
 
 impl From<Vec3> for Color {
     fn from(v: Vec3) -> Self {
-        Self::new(v.x, v.y, v.z, 1.0)
+        Self::new((v.x + 1.0) / 2.0, (v.y + 1.0) / 2.0, (v.z + 1.0) / 2.0, 1.0)
     }
 }
 
