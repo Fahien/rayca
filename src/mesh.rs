@@ -52,15 +52,20 @@ impl Primitive {
         }
     }
 
-    pub fn triangles(&self) -> Vec<Triangle<&Vertex>> {
+    pub fn triangles(&self, transform: Mat4) -> Vec<Triangle<Vertex>> {
         let mut ret = vec![];
 
         for i in 0..(self.indices.len() / 3) {
-            ret.push(Triangle::new(
-                &self.vertices[self.indices[i * 3] as usize],
-                &self.vertices[self.indices[i * 3 + 1] as usize],
-                &self.vertices[self.indices[i * 3 + 2] as usize],
-            ))
+            let mut a = self.vertices[self.indices[i * 3] as usize];
+            a.pos = &transform * a.pos;
+
+            let mut b = self.vertices[self.indices[i * 3 + 1] as usize];
+            b.pos = &transform * b.pos;
+
+            let mut c = self.vertices[self.indices[i * 3 + 2] as usize];
+            c.pos = &transform * c.pos;
+
+            ret.push(Triangle::new(a, b, c))
         }
         ret
     }

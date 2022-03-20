@@ -26,6 +26,11 @@ fn triangle() {
     triangle.vertices[0].color = Color::from(0xFF0000FF);
     triangle.vertices[1].color = Color::from(0x00FF00FF);
     triangle.vertices[2].color = Color::from(0x0000FFFF);
+
+    triangle.vertices[0].normal = Vec3::new(0.0, 0.0, 1.0);
+    triangle.vertices[1].normal = Vec3::new(1.0, 0.0, 0.0);
+    triangle.vertices[2].normal = Vec3::new(0.0, 1.0, 0.0);
+
     scene.objects.push(Box::new(triangle));
     scene.draw(&mut image);
     dump(&image, "target/triangle.png");
@@ -33,7 +38,7 @@ fn triangle() {
 
 #[test]
 fn cube() {
-    let mut image = Image::new(1024, 1024);
+    let mut image = Image::new(256, 256);
     let mut scene = Scene::new();
     scene.load("tests/model/box/box.gltf").unwrap();
 
