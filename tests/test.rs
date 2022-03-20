@@ -36,12 +36,26 @@ fn triangle() {
     dump(&image, "target/triangle.png");
 }
 
-#[test]
-fn cube() {
-    let mut image = Image::new(256, 256);
-    let mut scene = Scene::new();
-    scene.load("tests/box.gltf").unwrap();
+mod gltf {
+    use super::*;
 
-    scene.draw(&mut image);
-    dump(&image, "target/cube.png");
+    #[test]
+    fn cube() {
+        let mut image = Image::new(1024, 1024);
+        let mut scene = Scene::new();
+        scene.load("tests/box.gltf").unwrap();
+
+        scene.draw(&mut image);
+        dump(&image, "target/cube.png");
+    }
+
+    #[test]
+    fn triangle() {
+        let mut image = Image::new(256, 256);
+        let mut scene = Scene::new();
+        scene.load("tests/triangle.gltf").unwrap();
+
+        scene.draw(&mut image);
+        dump(&image, "target/gltf-triangle.png");
+    }
 }

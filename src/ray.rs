@@ -17,13 +17,14 @@ impl Ray {
 }
 
 pub struct Hit {
+    pub depth: f32,
     pub point: Vec3,
     pub uv: Vec2,
 }
 
 impl Hit {
-    pub fn new(point: Vec3, uv: Vec2) -> Self {
-        Self { point, uv }
+    pub fn new(depth: f32, point: Vec3, uv: Vec2) -> Self {
+        Self { depth, point, uv }
     }
 }
 
