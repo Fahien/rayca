@@ -106,6 +106,7 @@ impl ModelBuilder {
 
         self.load_uri_buffers()?;
         self.load_meshes(&mut model)?;
+        self.load_nodes(&mut model);
 
         Ok(model)
     }
@@ -119,6 +120,13 @@ impl ModelBuilder {
 
                 let mode = gprimitive.mode();
                 assert!(mode == gltf::mesh::Mode::Triangles);
+
+                // Load normals first, so we can process tangents later
+                for (semantic, accessor) in gprimitive.attributes() {
+                    if semantic == gltf::mesh::Semantic::Normals {
+                        self.load_normals(&mut vertices, &accessor)?;
+                    }
+                }
 
                 for (semantic, accessor) in gprimitive.attributes() {
                     match semantic {
@@ -193,6 +201,90 @@ impl ModelBuilder {
 
         Ok(())
     }
+
+    fn load_normals(
+        &self,
+        vertices: &mut Vec<Vertex>,
+        accessor: &gltf::Accessor,
+    ) -> Result<(), Box<dyn Error>> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        assert!(dimensions == gltf::accessor::Dimensions::Vec3);
+
+        let view = accessor.view().unwrap();
+        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
+        assert!(target == gltf::buffer::Target::ArrayBuffer);
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let normal = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 3) };
+
+            if vertices.len() <= i {
+                vertices.push(Vertex::default())
+            }
+            vertices[i].normal.x = normal[0];
+            vertices[i].normal.y = normal[1];
+            vertices[i].normal.z = normal[2];
+        }
+
+        Ok(())
+    }
+
+    fn load_nodes(&self, model: &mut Model) {
+        // Load scene
+        let scene = self.gltf.scenes().next().unwrap();
+        model.root = Node::builder()
+            .name("Root".into())
+            .children(
+                scene
+                    .nodes()
+                    .map(|gchild| Handle::new(gchild.index()))
+                    .collect(),
+            )
+            .build();
+
+        // Load nodes
+        for gnode in self.gltf.nodes() {
+            let mut node_builder = Node::builder()
+                .id(gnode.index())
+                .name(gnode.name().unwrap_or("Unknown").into())
+                .children(
+                    gnode
+                        .children()
+                        .map(|gchild| Handle::new(gchild.index()))
+                        .collect(),
+                );
+
+            let transform = gnode.transform().decomposed();
+
+            let translation = &transform.0;
+            let translation = Vec3::new(translation[0], translation[1], translation[2]);
+            node_builder = node_builder.translation(translation);
+
+            // xyzw
+            let rotation = &transform.1;
+            let rotation = Quat::new(rotation[0], rotation[1], rotation[2], rotation[3]);
+            node_builder = node_builder.rotation(rotation);
+
+            let scale = &transform.2;
+            let scale = Vec3::new(scale[0], scale[1], scale[2]);
+            node_builder = node_builder.scale(scale);
+
+            if let Some(mesh) = gnode.mesh() {
+                node_builder = node_builder.mesh(Handle::new(mesh.index()));
+            }
+
+            let node = node_builder.build();
+            model.nodes.push(node);
+        }
+    }
 }
 
 #[derive(Default)]
@@ -200,6 +292,8 @@ pub struct Model {
     pub id: usize,
     pub primitives: Pack<Primitive>,
     pub meshes: Pack<Mesh>,
+    pub nodes: Pack<Node>,
+    pub root: Node,
 }
 
 impl Model {
