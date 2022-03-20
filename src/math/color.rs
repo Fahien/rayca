@@ -4,6 +4,8 @@
 
 use std::ops::{Add, Mul};
 
+use crate::Vec3;
+
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
 /// This is the layout expected by the PNG class
@@ -27,6 +29,17 @@ impl From<u32> for RGBA8 {
             (color >> 16) as u8,
             (color >> 8) as u8,
             color as u8,
+        )
+    }
+}
+
+impl From<Vec3> for RGBA8 {
+    fn from(v: Vec3) -> Self {
+        Self::new(
+            (v.x * 255.0) as u8,
+            (v.y * 255.0) as u8,
+            (v.z * 255.0) as u8,
+            255,
         )
     }
 }
