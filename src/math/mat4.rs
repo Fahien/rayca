@@ -38,6 +38,24 @@ impl Mat4 {
         }
     }
 
+    pub fn from_translation(translation: &Vec3) -> Self {
+        let mut ret = Mat4::identity();
+        ret.translate(translation);
+        ret
+    }
+
+    pub fn from_rotation(rotation: &Quat) -> Self {
+        let mut ret = Mat4::identity();
+        ret.rotate(rotation);
+        ret
+    }
+
+    pub fn from_scale(scale: &Vec3) -> Self {
+        let mut ret = Mat4::identity();
+        ret.scale(scale);
+        ret
+    }
+
     pub fn scale(&mut self, scale: &Vec3) {
         self[0][0] *= scale.x;
         self[1][1] *= scale.y;
@@ -138,7 +156,14 @@ impl From<&Quat> for Mat4 {
 
 impl From<&Trs> for Mat4 {
     fn from(trs: &Trs) -> Self {
-        trs * Mat4::identity()
+        Mat4::from_translation(&trs.translation)
+            * (Mat4::from_rotation(&trs.rotation) * Mat4::from_scale(&trs.scale))
+    }
+}
+
+impl From<Trs> for Mat4 {
+    fn from(trs: Trs) -> Self {
+        Self::from(&trs)
     }
 }
 
