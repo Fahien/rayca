@@ -48,7 +48,8 @@ impl Default for Timer {
 #[derive(Debug)]
 pub struct Handle<T> {
     pub id: usize,
-    phantom: PhantomData<*const T>,
+    /// https://stackoverflow.com/a/50201389
+    phantom: PhantomData<fn() -> T>,
 }
 
 impl<T> Default for Handle<T> {
@@ -230,7 +231,7 @@ impl<T> DerefMut for Pack<T> {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, thread};
 
     use super::*;
 
@@ -314,5 +315,13 @@ mod test {
         let handle = pack.push(Box::new(Thing::new(1)));
         assert_eq!(handle.id, 0);
         assert!(pack.get(handle).unwrap().handy());
+    }
+
+    #[test]
+    fn send_handle() {
+        let handle = Handle::<u32>::none();
+        thread::spawn(move || {
+            assert!(!handle.valid());
+        });
     }
 }
