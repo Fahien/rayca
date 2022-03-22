@@ -60,6 +60,27 @@ impl Image {
         self.buffer[self.index(x, y)]
     }
 
+    pub fn pixels_mut(&mut self) -> Vec<Vec<&mut RGBA8>> {
+        let width = self.width as usize;
+        let height = self.height as usize;
+
+        let mut pixels: Vec<Vec<&mut RGBA8>> = vec![];
+        pixels.resize_with(height, || Vec::with_capacity(width));
+
+        let mut data = self.data_mut();
+
+        #[allow(clippy::needless_range_loop)]
+        for y in 0..height {
+            for _ in 0..width {
+                let (pixel, rest) = data.split_first_mut().unwrap();
+                data = rest;
+                pixels[y].push(pixel);
+            }
+        }
+
+        pixels
+    }
+
     pub fn set(&mut self, x: u32, y: u32, value: RGBA8) {
         let index = self.index(x, y);
         self.buffer[index] = value;
