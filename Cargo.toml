@@ -9,3 +9,4 @@ license = "MIT"
 gltf = "1.0.0"
 owo-colors = { version = "3.4.0", features = ["supports-colors"] }
 png = "0.17.5"
+rayon = "1.5.1"
