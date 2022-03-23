@@ -4,7 +4,10 @@
 
 use std::{error::Error, path::Path};
 
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::{
+    iter::IndexedParallelIterator,
+    prelude::{IntoParallelIterator, ParallelIterator},
+};
 
 use super::*;
 
@@ -30,7 +33,7 @@ impl Scene {
         Ok(())
     }
 
-    fn draw_pixel(&self, ray: Ray, pixel: &mut RGBA8) {
+    fn draw_pixel(&self, ray: Ray, triangles: &[Triangle], pixel: &mut RGBA8) {
         let mut depth = f32::INFINITY;
 
         for obj in &self.objects {
@@ -43,21 +46,14 @@ impl Scene {
             }
         }
 
-        for node in self.model.nodes.iter() {
-            if let Some(mesh) = self.model.meshes.get(node.mesh) {
-                for prim_handle in mesh.primitives.iter() {
-                    let prim = self.model.primitives.get(*prim_handle).unwrap();
-                    for triangle in prim.triangles(&node.trs) {
-                        if let Some(hit) = triangle.intersects(&ray) {
-                            if hit.depth < depth {
-                                depth = hit.depth;
-                                //let color = triangle.get_color(&hit);
-                                let n = triangle.get_normal(&hit);
-                                let color = Color::from(n);
-                                *pixel = color.into();
-                            }
-                        }
-                    }
+        for triangle in triangles {
+            if let Some(hit) = triangle.intersects(&ray) {
+                if hit.depth < depth {
+                    depth = hit.depth;
+                    //let color = triangle.get_color(&hit);
+                    let n = triangle.get_normal(&hit);
+                    let color = Color::from(n);
+                    *pixel = color.into();
                 }
             }
         }
@@ -66,6 +62,19 @@ impl Scene {
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
+        let mut triangles = vec![];
+
+        for node in self.model.nodes.iter() {
+            if let Some(mesh) = self.model.meshes.get(node.mesh) {
+                for prim_handle in mesh.primitives.iter() {
+                    let prim = self.model.primitives.get(*prim_handle).unwrap();
+                    let mut prim_triangles = prim.triangles(&node.trs);
+                    triangles.append(&mut prim_triangles);
+                }
+            }
+        }
+        println!("Collected {} triangles", triangles.len());
+
         let width = image.width() as f32;
         let height = image.height() as f32;
 
@@ -85,10 +94,10 @@ impl Draw for Scene {
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
-                let origin = Point3::new(0.0, 0.0, 4.0);
+                let origin = Point3::new(0.0, 0.0, 4.5);
                 let ray = Ray::new(origin, dir);
 
-                self.draw_pixel(ray, pixel);
+                self.draw_pixel(ray, &triangles, pixel);
             });
         });
     }
