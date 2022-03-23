@@ -43,9 +43,14 @@ mod gltf {
     fn cube() {
         let mut image = Image::new(1024, 1024);
         let mut scene = Scene::new();
+
+        let mut timer = Timer::new();
         scene.load("tests/model/box/box.gltf").unwrap();
+        println!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
+        println!("Scene rendered in {}ms", timer.get_delta().as_millis());
+
         dump(&image, "target/cube.png");
     }
 
@@ -57,5 +62,20 @@ mod gltf {
 
         scene.draw(&mut image);
         dump(&image, "target/gltf-triangle.png");
+    }
+
+    #[test]
+    fn model() {
+        let mut image = Image::new(512, 512);
+        let mut scene = Scene::new();
+
+        let mut timer = Timer::new();
+        scene.load("tests/model/suzanne/suzanne.gltf").unwrap();
+        println!("Scene loaded in {}ms", timer.get_delta().as_millis());
+
+        scene.draw(&mut image);
+        println!("Scene rendered in {}ms", timer.get_delta().as_millis());
+
+        dump(&image, "target/suzanne.png");
     }
 }
