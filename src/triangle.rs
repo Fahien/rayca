@@ -127,6 +127,12 @@ impl Intersect for Triangle<&Vertex> {
         let v0v2 = v2 - v0;
         // No need to normalize
         let n = v0v1.cross(&v0v2);
+
+        // Back-face test
+        if ray.dir.dot(&n) > 0.0 {
+            return None;
+        }
+
         let denom = n.dot(&n);
 
         // Step 1: finding P
