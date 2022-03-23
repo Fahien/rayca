@@ -114,9 +114,6 @@ impl GltfPrimitive {
 
                     ret.push(Triangle::new(a, b, c));
                     ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex));
-
-                    ret.push(Triangle::new(a, b, c));
-                    ret_ex.push(TriangleEx::default());
                 }
             }
             4 => {
@@ -139,9 +136,6 @@ impl GltfPrimitive {
 
                     ret.push(Triangle::new(a, b, c));
                     ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex));
-
-                    ret.push(Triangle::new(a, b, c));
-                    ret_ex.push(TriangleEx::default());
                 }
             }
             _ => panic!("Index size not supported"),

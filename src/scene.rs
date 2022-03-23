@@ -1,8 +1,11 @@
-// Copyright © 2022
+// Copyright © 2022-2023
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::{
+    iter::IndexedParallelIterator,
+    prelude::{IntoParallelIterator, ParallelIterator},
+};
 
 use super::*;
 
@@ -21,62 +24,75 @@ impl Scene {
     pub fn new() -> Self {
         Self::default()
     }
-}
 
-impl Scene {
-    fn draw_pixel(&self, ray: Ray, pixel: &mut RGBA8) {
-        let mut depth = f32::INFINITY;
-
-        for i in 0..self.triangles.len() {
-            let triangle = &self.triangles[i];
+    fn draw_pixel_triangles(
+        &self,
+        ray: Ray,
+        triangles: &[Triangle],
+        triangles_ex: &[TriangleEx],
+        depth: &mut f32,
+        pixel: &mut RGBA8,
+    ) {
+        for i in 0..triangles.len() {
+            let triangle = &triangles[i];
             if let Some(hit) = triangle.intersects(&ray) {
-                if hit.depth < depth {
-                    depth = hit.depth;
-                    let triangle_ex = &self.triangles_ex[i];
+                if hit.depth < *depth {
+                    *depth = hit.depth;
+                    let triangle_ex = &triangles_ex[i];
                     let color = triangle_ex.get_color(&hit);
                     *pixel = color.into();
                 }
             }
         }
+    }
 
-        for i in 0..self.spheres.len() {
-            let sphere = &self.spheres[i];
+    fn draw_pixel_spheres(
+        &self,
+        ray: Ray,
+        spheres: &[Sphere],
+        spheres_ex: &[SphereEx],
+        depth: &mut f32,
+        pixel: &mut RGBA8,
+    ) {
+        for i in 0..spheres.len() {
+            let sphere = &spheres[i];
             if let Some(hit) = sphere.intersects(&ray) {
-                if hit.depth < depth {
-                    depth = hit.depth;
-                    let sphere_ex = &self.spheres_ex[i];
+                if hit.depth < *depth {
+                    *depth = hit.depth;
+                    let sphere_ex = &spheres_ex[i];
                     let color = sphere_ex.get_color(sphere, &hit);
                     *pixel = color.into();
                 }
             }
         }
+    }
+
+    fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>) {
+        let mut triangles = vec![];
+        let mut triangles_ex = vec![];
 
         for node in self.gltf_model.nodes.iter() {
-            for mesh in self.gltf_model.meshes.iter() {
+            if let Some(mesh_handle) = node.mesh {
+                let mesh = self.gltf_model.meshes.get(mesh_handle).unwrap();
                 for prim_handle in mesh.primitives.iter() {
                     let prim = self.gltf_model.primitives.get(*prim_handle).unwrap();
-                    let transform = Mat4::from(&node.trs);
-                    let (triangles, triangles_ex) = prim.triangles(transform);
-                    for i in 0..triangles.len() {
-                        let triangle = &triangles[i];
-                        if let Some(hit) = triangle.intersects(&ray) {
-                            if hit.depth < depth {
-                                depth = hit.depth;
-                                let triangle_ex = &triangles_ex[i];
-                                let n = triangle_ex.get_normal(&hit);
-                                let color = Color::from(n);
-                                *pixel = color.into();
-                            }
-                        }
-                    }
+                    let transform = Mat4::identity(); //from(&node.trs);
+                    let (mut prim_triangles, mut prim_triangles_ex) = prim.triangles(transform);
+                    triangles.append(&mut prim_triangles);
+                    triangles_ex.append(&mut prim_triangles_ex);
                 }
             }
         }
+
+        println!("Collected {} triangles", triangles.len());
+        (triangles, triangles_ex)
     }
 }
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
+        let (triangles, triangles_ex) = self.collect_triangles();
+
         let width = image.width() as f32;
         let height = image.height() as f32;
 
@@ -96,10 +112,25 @@ impl Draw for Scene {
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
-                let origin = Point3::new(0.0, 0.0, 4.0);
+                let origin = Point3::new(0.0, 0.0, 4.5);
                 let ray = Ray::new(origin, dir);
 
-                self.draw_pixel(ray, pixel);
+                let mut depth = f32::INFINITY;
+                self.draw_pixel_triangles(
+                    ray.clone(),
+                    &triangles,
+                    &triangles_ex,
+                    &mut depth,
+                    pixel,
+                );
+                self.draw_pixel_triangles(
+                    ray.clone(),
+                    &self.triangles,
+                    &self.triangles_ex,
+                    &mut depth,
+                    pixel,
+                );
+                self.draw_pixel_spheres(ray, &self.spheres, &self.spheres_ex, &mut depth, pixel);
             });
         });
     }
