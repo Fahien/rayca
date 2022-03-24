@@ -4,29 +4,32 @@
 
 use super::*;
 
-pub struct Triangle<V> {
+pub struct Triangle<'m, V> {
     pub vertices: [V; 3],
+    pub material: &'m Material,
 }
 
-impl<V> Triangle<V> {
-    pub fn new(a: V, b: V, c: V) -> Self {
+impl<'m, V> Triangle<'m, V> {
+    pub fn new(a: V, b: V, c: V, material: &'m Material) -> Self {
         Self {
             vertices: [a, b, c],
+            material,
         }
     }
 }
 
-impl Default for Triangle<Vertex> {
-    fn default() -> Self {
+impl<'m> Triangle<'m, Vertex> {
+    pub fn unit(material: &'m Material) -> Self {
         Self::new(
             Vertex::new(-1.0, 0.0, 0.0),
             Vertex::new(1.0, 0.0, 0.0),
             Vertex::new(0.0, 1.0, 0.0),
+            material,
         )
     }
 }
 
-impl Intersect for Triangle<Vertex> {
+impl<'m> Intersect for Triangle<'m, Vertex> {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
     fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let v0 = &self.vertices[0].pos;
@@ -102,7 +105,7 @@ impl Intersect for Triangle<Vertex> {
         let c1 = &self.vertices[1].color;
         let c2 = &self.vertices[2].color;
 
-        (1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1
+        self.material.color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
     }
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
@@ -115,7 +118,7 @@ impl Intersect for Triangle<Vertex> {
     }
 }
 
-impl Intersect for Triangle<&Vertex> {
+impl<'m> Intersect for Triangle<'m, &Vertex> {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
     fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let v0 = &self.vertices[0].pos;
@@ -197,7 +200,7 @@ impl Intersect for Triangle<&Vertex> {
         let c1 = &self.vertices[1].color;
         let c2 = &self.vertices[2].color;
 
-        (1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1
+        self.material.color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
     }
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
@@ -216,7 +219,8 @@ mod test {
 
     #[test]
     fn intersect() {
-        let triangle = Triangle::<Vertex>::default();
+        let material = Material::new();
+        let triangle = Triangle::<Vertex>::unit(&material);
         let ray = Ray::new(Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
         assert!(triangle.intersects(&ray).is_some());
         let ray = Ray::new(Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 1.0));
