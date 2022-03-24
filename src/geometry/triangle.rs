@@ -2,7 +2,9 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Color, Dot, Hit, Intersect, Point3, Ray, Vec2, Vec3, Vertex};
+use crate::{
+    Color, Dot, GgxMaterial, Handle, Hit, Intersect, Point3, Ray, Scene, Vec2, Vec3, Vertex,
+};
 
 pub struct Triangle {
     vertices: [Point3; 3],
@@ -118,22 +120,29 @@ mod test {
 #[derive(Default)]
 pub struct TriangleEx {
     pub vertices: [Vertex; 3],
+    pub material: Handle<GgxMaterial>,
 }
 
 impl TriangleEx {
-    pub fn new(a: Vertex, b: Vertex, c: Vertex) -> Self {
+    pub fn new(a: Vertex, b: Vertex, c: Vertex, material: Handle<GgxMaterial>) -> Self {
         Self {
             vertices: [a, b, c],
+            material,
         }
     }
 
-    pub fn get_color(&self, hit: &Hit) -> Color {
+    pub fn get_color(&self, hit: &Hit, scene: &Scene) -> Color {
         // Interpolate vertex colors
         let c0 = &self.vertices[0].color;
         let c1 = &self.vertices[1].color;
         let c2 = &self.vertices[2].color;
 
-        (1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1
+        let material = scene
+            .gltf_model
+            .materials
+            .get(self.material)
+            .unwrap_or(&GgxMaterial::WHITE);
+        material.color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
     }
 
     pub fn get_normal(&self, hit: &Hit) -> Vec3 {

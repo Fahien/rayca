@@ -8,10 +8,10 @@ use std::ops::{Add, Mul};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct Color {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
 }
 
 impl Color {
@@ -24,6 +24,10 @@ impl Color {
 
     pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
+    }
+
+    pub fn white() -> Self {
+        Self::new(1.0, 1.0, 1.0, 1.0)
     }
 }
 
@@ -127,6 +131,45 @@ impl Mul<&Color> for &f32 {
     }
 }
 
+impl Mul<&Color> for &Color {
+    type Output = Color;
+
+    fn mul(self, rhs: &Color) -> Self::Output {
+        Self::Output::new(
+            self.r * rhs.r,
+            self.g * rhs.g,
+            self.b * rhs.b,
+            self.a * rhs.a,
+        )
+    }
+}
+
+impl Mul<&Color> for Color {
+    type Output = Color;
+
+    fn mul(self, rhs: &Color) -> Self::Output {
+        Self::Output::new(
+            self.r * rhs.r,
+            self.g * rhs.g,
+            self.b * rhs.b,
+            self.a * rhs.a,
+        )
+    }
+}
+
+impl Mul<Color> for Color {
+    type Output = Color;
+
+    fn mul(self, rhs: Color) -> Self::Output {
+        Self::Output::new(
+            self.r * rhs.r,
+            self.g * rhs.g,
+            self.b * rhs.b,
+            self.a * rhs.a,
+        )
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
 /// This is the layout expected by the PNG class
@@ -171,7 +214,6 @@ impl From<Color> for RGBA8 {
         )
     }
 }
-
 #[cfg(test)]
 mod test {
     use super::*;

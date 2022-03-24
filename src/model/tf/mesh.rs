@@ -10,6 +10,7 @@ pub struct GltfPrimitiveBuilder {
     vertices: Vec<GltfVertex>,
     indices: Vec<u8>,
     index_size: usize,
+    material: Handle<GgxMaterial>,
 }
 
 impl Default for GltfPrimitiveBuilder {
@@ -18,6 +19,7 @@ impl Default for GltfPrimitiveBuilder {
             vertices: Default::default(),
             indices: Default::default(),
             index_size: 1,
+            material: Handle::none(),
         }
     }
 }
@@ -42,10 +44,16 @@ impl GltfPrimitiveBuilder {
         self
     }
 
+    pub fn material(mut self, material: Handle<GgxMaterial>) -> Self {
+        self.material = material;
+        self
+    }
+
     pub fn build(self) -> GltfPrimitive {
         let mut prim = GltfPrimitive::new(self.vertices);
         prim.indices = self.indices;
         prim.index_size = self.index_size;
+        prim.material = self.material;
         prim
     }
 }
@@ -55,6 +63,7 @@ pub struct GltfPrimitive {
     pub vertices: Vec<GltfVertex>,
     pub indices: Vec<u8>,
     index_size: usize,
+    pub material: Handle<GgxMaterial>,
 }
 
 impl GltfPrimitive {
@@ -67,10 +76,15 @@ impl GltfPrimitive {
             vertices,
             indices: vec![],
             index_size: 1,
+            material: Handle::none(),
         }
     }
 
-    pub fn triangles(&self, transform: Mat4) -> (Vec<Triangle>, Vec<TriangleEx>) {
+    pub fn triangles(
+        &self,
+        transform: Mat4,
+        material: Handle<GgxMaterial>,
+    ) -> (Vec<Triangle>, Vec<TriangleEx>) {
         let mut ret = vec![];
         let mut ret_ex = vec![];
 
@@ -91,7 +105,7 @@ impl GltfPrimitive {
                     let c_ex = Vertex::new(gltf_b.normal, gltf_b.color);
 
                     ret.push(Triangle::new(a, b, c));
-                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex));
+                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex, material));
                 }
             }
             2 => {
@@ -113,7 +127,7 @@ impl GltfPrimitive {
                     let c_ex = Vertex::new(gltf_b.normal, gltf_b.color);
 
                     ret.push(Triangle::new(a, b, c));
-                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex));
+                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex, material));
                 }
             }
             4 => {
@@ -135,7 +149,7 @@ impl GltfPrimitive {
                     let c_ex = Vertex::new(gltf_b.normal, gltf_b.color);
 
                     ret.push(Triangle::new(a, b, c));
-                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex));
+                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex, material));
                 }
             }
             _ => panic!("Index size not supported"),

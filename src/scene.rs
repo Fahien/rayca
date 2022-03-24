@@ -39,7 +39,7 @@ impl Scene {
                 if hit.depth < *depth {
                     *depth = hit.depth;
                     let triangle_ex = &triangles_ex[i];
-                    let color = triangle_ex.get_color(&hit);
+                    let color = triangle_ex.get_color(&hit, self);
                     *pixel = color.into();
                 }
             }
@@ -76,8 +76,9 @@ impl Scene {
                 let mesh = self.gltf_model.meshes.get(mesh_handle).unwrap();
                 for prim_handle in mesh.primitives.iter() {
                     let prim = self.gltf_model.primitives.get(*prim_handle).unwrap();
-                    let transform = Mat4::identity(); //from(&node.trs);
-                    let (mut prim_triangles, mut prim_triangles_ex) = prim.triangles(transform);
+                    let transform = Mat4::from(&node.trs);
+                    let (mut prim_triangles, mut prim_triangles_ex) =
+                        prim.triangles(transform, prim.material);
                     triangles.append(&mut prim_triangles);
                     triangles_ex.append(&mut prim_triangles_ex);
                 }

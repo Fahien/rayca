@@ -11,7 +11,7 @@ use std::{error::Error, path::Path};
 
 use gltf::Gltf;
 
-use crate::{Handle, Node, Pack, Quat, Vec3};
+use crate::{Color, GgxMaterial, Handle, Node, Pack, Quat, Vec3};
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
     match data_type {
@@ -165,6 +165,46 @@ impl UriBuffers {
         Ok(())
     }
 
+    fn load_colors(
+        &self,
+        vertices: &mut Vec<GltfVertex>,
+        accessor: &gltf::Accessor,
+    ) -> Result<(), Box<dyn Error>> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        assert!(dimensions == gltf::accessor::Dimensions::Vec3);
+        let len = match dimensions {
+            gltf::accessor::Dimensions::Vec3 => 3,
+            gltf::accessor::Dimensions::Vec4 => 4,
+            _ => panic!("Invalid color dimensions"),
+        };
+
+        let view = accessor.view().unwrap();
+        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
+        assert!(target == gltf::buffer::Target::ArrayBuffer);
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let color = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, len) };
+
+            if vertices.len() <= i {
+                vertices.push(GltfVertex::default())
+            }
+            vertices[i].color.r = color[0];
+            vertices[i].color.g = color[1];
+            vertices[i].color.b = color[2];
+            vertices[i].color.a = if len == 4 { color[3] } else { 1.0 };
+        }
+        Ok(())
+    }
+
     fn get_data_start<'b>(&'b self, accessor: &gltf::Accessor) -> &'b [u8] {
         let view = accessor.view().unwrap();
         let view_len = view.length();
@@ -188,6 +228,7 @@ impl UriBuffers {
 
 #[derive(Default)]
 pub struct GltfModel {
+    pub materials: Pack<GgxMaterial>,
     pub primitives: Pack<GltfPrimitive>,
     pub meshes: Pack<GltfMesh>,
     pub nodes: Pack<Node>,
@@ -204,10 +245,28 @@ impl GltfModel {
             .parent()
             .ok_or("Failed to get parent directory")?;
         let uri_buffers = UriBuffers::new(&gltf, parent_dir)?;
+        ret.load_materials(&gltf)?;
         ret.load_meshes(&gltf, &uri_buffers)?;
         ret.load_nodes(&gltf);
 
         Ok(ret)
+    }
+
+    pub fn load_materials(&mut self, gltf: &Gltf) -> Result<(), Box<dyn Error>> {
+        for gmaterial in gltf.materials() {
+            let mut material = GgxMaterial::new();
+
+            let pbr = gmaterial.pbr_metallic_roughness();
+
+            // Load base color
+            let gcolor = pbr.base_color_factor();
+            let color = Color::new(gcolor[0], gcolor[1], gcolor[2], gcolor[3]);
+            material.color = color;
+
+            self.materials.push(material);
+        }
+
+        Ok(())
     }
 
     fn load_meshes(&mut self, gltf: &Gltf, uri_buffers: &UriBuffers) -> Result<(), Box<dyn Error>> {
@@ -232,16 +291,25 @@ impl GltfModel {
                         gltf::mesh::Semantic::Positions => {
                             uri_buffers.load_positions(&mut vertices, &accessor)?
                         }
+                        gltf::mesh::Semantic::Colors(_) => {
+                            uri_buffers.load_colors(&mut vertices, &accessor)?
+                        }
                         _ => println!("Semantic not implemented {:?}", semantic),
                     }
                 }
 
                 let (indices, index_size) = uri_buffers.load_indices(&gprimitive);
 
+                let material = gprimitive
+                    .material()
+                    .index()
+                    .map_or(Handle::none(), Handle::new);
+
                 let primitive = GltfPrimitive::builder()
                     .vertices(vertices)
                     .indices(indices)
                     .index_size(index_size)
+                    .material(material)
                     .build();
                 let primitive_handle = self.primitives.push(primitive);
                 primitive_handles.push(primitive_handle);

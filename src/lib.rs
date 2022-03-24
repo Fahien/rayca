@@ -4,6 +4,7 @@
 
 pub mod draw;
 pub mod geometry;
+pub mod material;
 pub mod math;
 pub mod model;
 pub mod png;
@@ -12,6 +13,7 @@ pub mod util;
 
 pub use draw::*;
 pub use geometry::*;
+pub use material::*;
 pub use math::*;
 pub use model::*;
 pub use scene::*;
