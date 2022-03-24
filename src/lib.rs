@@ -4,6 +4,7 @@
 
 pub mod draw;
 pub mod image;
+pub mod material;
 pub mod math;
 pub mod mesh;
 pub mod model;
@@ -17,6 +18,7 @@ pub mod vertex;
 
 pub use draw::*;
 pub use image::*;
+pub use material::*;
 pub use math::*;
 pub use mesh::*;
 pub use model::*;
