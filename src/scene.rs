@@ -8,12 +8,12 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 
 use super::*;
 
-pub struct Scene {
-    pub objects: Vec<Box<dyn Intersect + Send + Sync>>,
+pub struct Scene<'a> {
+    pub objects: Vec<Box<dyn Intersect + Send + Sync + 'a>>,
     pub models: Vec<Model>,
 }
 
-impl Scene {
+impl<'a> Scene<'a> {
     pub fn new() -> Self {
         Self {
             objects: Default::default(),
@@ -51,9 +51,9 @@ impl Scene {
             if let Some(hit) = triangle.intersects(&ray) {
                 if hit.depth < depth {
                     depth = hit.depth;
-                    //let color = triangle.get_color(&hit);
-                    let n = triangle.get_normal(&hit);
-                    let color = Color::from(n);
+                    let color = triangle.get_color(&hit);
+                    //let n = triangle.get_normal(&hit);
+                    //let color = RGBA8::from(n);
                     *pixel = color.into();
                 }
             }
@@ -61,16 +61,21 @@ impl Scene {
     }
 }
 
-impl Draw for Scene {
+impl<'a> Draw for Scene<'a> {
     fn draw(&self, image: &mut Image) {
         let mut triangles = vec![];
+        let white_material = Material::default();
 
         for model in &self.models {
             for node in model.nodes.iter() {
                 if let Some(mesh) = model.meshes.get(node.mesh) {
                     for prim_handle in mesh.primitives.iter() {
                         let prim = model.primitives.get(*prim_handle).unwrap();
-                        let mut prim_triangles = prim.triangles(Mat4::from(&node.trs));
+                        let mat = model
+                            .materials
+                            .get(prim.material)
+                            .unwrap_or(&white_material);
+                        let mut prim_triangles = prim.triangles(Mat4::from(&node.trs), mat);
                         triangles.append(&mut prim_triangles);
                     }
                 }
