@@ -8,18 +8,21 @@ use super::*;
 
 pub struct Triangle<'m> {
     pub vertices: [Cow<'m, Vertex>; 3],
+    pub material: &'m Material,
 }
 
 impl<'m> Triangle<'m> {
-    pub fn new(a: Vertex, b: Vertex, c: Vertex) -> Self {
+    pub fn new(a: Vertex, b: Vertex, c: Vertex, material: &'m Material) -> Self {
         Self {
             vertices: [Cow::Owned(a), Cow::Owned(b), Cow::Owned(c)],
+            material,
         }
     }
 
-    pub fn borrow(a: &'m Vertex, b: &'m Vertex, c: &'m Vertex) -> Self {
+    pub fn borrow(a: &'m Vertex, b: &'m Vertex, c: &'m Vertex, material: &'m Material) -> Self {
         Self {
             vertices: [Cow::Borrowed(a), Cow::Borrowed(b), Cow::Borrowed(c)],
+            material,
         }
     }
 
@@ -28,12 +31,13 @@ impl<'m> Triangle<'m> {
     }
 }
 
-impl<'m> Default for Triangle<'m> {
-    fn default() -> Self {
+impl<'m> Triangle<'m> {
+    pub fn unit(material: &'m Material) -> Self {
         Self::new(
             Vertex::new(-1.0, 0.0, 0.0),
             Vertex::new(1.0, 0.0, 0.0),
             Vertex::new(0.0, 1.0, 0.0),
+            material,
         )
     }
 }
@@ -114,7 +118,7 @@ impl<'m> Intersect for Triangle<'m> {
         let c1 = &self.vertices[1].color;
         let c2 = &self.vertices[2].color;
 
-        (1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1
+        self.material.color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
     }
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
@@ -133,7 +137,8 @@ mod test {
 
     #[test]
     fn intersect() {
-        let triangle = Triangle::default();
+        let material = Material::new();
+        let triangle = Triangle::unit(&material);
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
         assert!(triangle.intersects(&ray).is_some());
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 1.0));

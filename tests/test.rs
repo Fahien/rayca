@@ -1,4 +1,4 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -6,9 +6,9 @@ use rayca::{png::*, *};
 
 #[test]
 fn sphere() {
-    let mut image = Image::new(1024, 1024);
+    let mut image = Image::new(128, 128);
     let mut scene = Scene::new();
-    let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.1, RGBA8::from(0xFF0000FFu32));
+    let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 1.0, RGBA8::from(0xFF0000FFu32));
     scene.objects.push(Box::new(sphere));
     scene.draw(&mut image);
     dump(&image, "target/sphere.png");
@@ -16,12 +16,15 @@ fn sphere() {
 
 #[test]
 fn triangle() {
-    let mut image = Image::new(1024, 1024);
+    let mut image = Image::new(128, 128);
+    let material = Material::default();
     let mut scene = Scene::new();
+
     let mut triangle = Triangle::new(
-        Vertex::new(-0.1, -0.1, -1.0),
-        Vertex::new(0.1, -0.1, -1.0),
-        Vertex::new(0.0, 0.1, -1.0),
+        Vertex::new(-1.0, -1.0, -1.0),
+        Vertex::new(1.0, -1.0, -1.0),
+        Vertex::new(0.0, 1.0, -1.0),
+        &material,
     );
     triangle.get_vertex_mut(0).color = Color::from(0xFF0000FF);
     triangle.get_vertex_mut(1).color = Color::from(0x00FF00FF);
@@ -56,7 +59,7 @@ mod gltf {
 
     #[test]
     fn triangle() {
-        let mut image = Image::new(256, 256);
+        let mut image = Image::new(128, 128);
         let mut scene = Scene::new();
         scene.load("tests/model/triangle/triangle.gltf").unwrap();
 
@@ -66,7 +69,7 @@ mod gltf {
 
     #[test]
     fn suzanne() {
-        let mut image = Image::new(256, 256);
+        let mut image = Image::new(128, 128);
         let mut scene = Scene::new();
 
         let mut timer = Timer::new();
