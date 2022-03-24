@@ -10,15 +10,19 @@ use crate::Vec3;
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
 /// This is the layout expected by the PNG class
 pub struct RGBA8 {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
 }
 
 impl RGBA8 {
     pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
+    }
+
+    pub fn white() -> Self {
+        Self::new(255, 255, 255, 255)
     }
 }
 
@@ -143,6 +147,45 @@ impl Mul<&RGBA8> for &f32 {
             (self * rhs.g as f32) as u8,
             (self * rhs.b as f32) as u8,
             (self * rhs.a as f32) as u8,
+        )
+    }
+}
+
+impl Mul<&RGBA8> for &RGBA8 {
+    type Output = RGBA8;
+
+    fn mul(self, rhs: &RGBA8) -> Self::Output {
+        Self::Output::new(
+            (((self.r as f32 / 255.0) * (rhs.r as f32 / 255.0)) * 255.0) as u8,
+            (((self.g as f32 / 255.0) * (rhs.g as f32 / 255.0)) * 255.0) as u8,
+            (((self.b as f32 / 255.0) * (rhs.b as f32 / 255.0)) * 255.0) as u8,
+            (((self.a as f32 / 255.0) * (rhs.a as f32 / 255.0)) * 255.0) as u8,
+        )
+    }
+}
+
+impl Mul<&RGBA8> for RGBA8 {
+    type Output = RGBA8;
+
+    fn mul(self, rhs: &RGBA8) -> Self::Output {
+        Self::Output::new(
+            (((self.r as f32 / 255.0) * (rhs.r as f32 / 255.0)) * 255.0) as u8,
+            (((self.g as f32 / 255.0) * (rhs.g as f32 / 255.0)) * 255.0) as u8,
+            (((self.b as f32 / 255.0) * (rhs.b as f32 / 255.0)) * 255.0) as u8,
+            (((self.a as f32 / 255.0) * (rhs.a as f32 / 255.0)) * 255.0) as u8,
+        )
+    }
+}
+
+impl Mul<RGBA8> for RGBA8 {
+    type Output = RGBA8;
+
+    fn mul(self, rhs: RGBA8) -> Self::Output {
+        Self::Output::new(
+            (((self.r as f32 / 255.0) * (rhs.r as f32 / 255.0)) * 255.0) as u8,
+            (((self.g as f32 / 255.0) * (rhs.g as f32 / 255.0)) * 255.0) as u8,
+            (((self.b as f32 / 255.0) * (rhs.b as f32 / 255.0)) * 255.0) as u8,
+            (((self.a as f32 / 255.0) * (rhs.a as f32 / 255.0)) * 255.0) as u8,
         )
     }
 }

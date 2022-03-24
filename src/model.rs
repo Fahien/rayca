@@ -105,10 +105,33 @@ impl ModelBuilder {
         let mut model = Model::new();
 
         self.load_uri_buffers()?;
+        self.load_materials(&mut model.materials)?;
         self.load_meshes(&mut model)?;
         self.load_nodes(&mut model);
 
         Ok(model)
+    }
+
+    pub fn load_materials(&mut self, materials: &mut Pack<Material>) -> Result<(), Box<dyn Error>> {
+        for gmaterial in self.gltf.materials() {
+            let mut material = Material::new();
+
+            let pbr = gmaterial.pbr_metallic_roughness();
+
+            // Load base color
+            let gcolor = pbr.base_color_factor();
+            let color = RGBA8::new(
+                (gcolor[0] * 255.0) as u8,
+                (gcolor[1] * 255.0) as u8,
+                (gcolor[2] * 255.0) as u8,
+                (gcolor[3] * 255.0) as u8,
+            );
+            material.color = color;
+
+            materials.push(material);
+        }
+
+        Ok(())
     }
 
     fn load_meshes(&self, model: &mut Model) -> Result<(), Box<dyn Error>> {
@@ -133,6 +156,9 @@ impl ModelBuilder {
                         gltf::mesh::Semantic::Positions => {
                             self.load_positions(&mut vertices, &accessor)?
                         }
+                        gltf::mesh::Semantic::Colors(_) => {
+                            self.load_colors(&mut vertices, &accessor)?
+                        }
                         _ => println!("Semantic not implemented {:?}", semantic),
                     }
                 }
@@ -153,10 +179,16 @@ impl ModelBuilder {
                     indices = Vec::from(slice);
                 }
 
+                let material = gprimitive
+                    .material()
+                    .index()
+                    .map_or(Handle::none(), |id| Handle::new(id));
+
                 let primitive = Primitive::builder()
                     .vertices(vertices)
                     .indices(indices)
                     .index_size(index_size)
+                    .material(material)
                     .build();
                 let primitive_handle = model.primitives.push(primitive);
                 primitive_handles.push(primitive_handle);
@@ -240,6 +272,51 @@ impl ModelBuilder {
         Ok(())
     }
 
+    fn load_colors(
+        &self,
+        vertices: &mut Vec<Vertex>,
+        accessor: &gltf::Accessor,
+    ) -> Result<(), Box<dyn Error>> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        assert!(dimensions == gltf::accessor::Dimensions::Vec3);
+        let len = match dimensions {
+            gltf::accessor::Dimensions::Vec3 => 3,
+            gltf::accessor::Dimensions::Vec4 => 4,
+            _ => panic!("Invalid color dimensions"),
+        };
+
+        let view = accessor.view().unwrap();
+        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
+        assert!(target == gltf::buffer::Target::ArrayBuffer);
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let color = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, len) };
+
+            if vertices.len() <= i {
+                vertices.push(Vertex::default())
+            }
+            vertices[i].color.r = (color[0] * 255.0) as u8;
+            vertices[i].color.g = (color[1] * 255.0) as u8;
+            vertices[i].color.b = (color[2] * 255.0) as u8;
+            vertices[i].color.a = if len == 4 {
+                (color[3] * 255.0) as u8
+            } else {
+                255
+            };
+        }
+
+        Ok(())
+    }
+
     fn load_nodes(&self, model: &mut Model) {
         // Load scene
         let scene = self.gltf.scenes().next().unwrap();
@@ -293,6 +370,7 @@ impl ModelBuilder {
 #[derive(Default)]
 pub struct Model {
     pub id: usize,
+    pub materials: Pack<Material>,
     pub primitives: Pack<Primitive>,
     pub meshes: Pack<Mesh>,
     pub nodes: Pack<Node>,
