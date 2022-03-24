@@ -6,9 +6,9 @@ use rayca::{png::*, *};
 
 #[test]
 fn circle() {
-    let mut image = Image::new(1024, 1024);
+    let mut image = Image::new(128, 128);
     let mut scene = Scene::new();
-    let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.1, RGBA8::from(0xFF0000FFu32));
+    let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 1.0, RGBA8::from(0xFF0000FFu32));
     scene.objects.push(Box::new(sphere));
     scene.draw(&mut image);
     dump(&image, "target/sphere.png");
@@ -16,12 +16,15 @@ fn circle() {
 
 #[test]
 fn triangle() {
-    let mut image = Image::new(1024, 1024);
+    let mut image = Image::new(128, 128);
+    let material = Material::default();
     let mut scene = Scene::new();
+
     let mut triangle = Triangle::new(
-        Vertex::new(-0.1, -0.1, -1.0),
-        Vertex::new(0.1, -0.1, -1.0),
-        Vertex::new(0.0, 0.1, -1.0),
+        Vertex::new(-1.0, -1.0, -1.0),
+        Vertex::new(1.0, -1.0, -1.0),
+        Vertex::new(0.0, 1.0, -1.0),
+        &material,
     );
     triangle.vertices[0].color = RGBA8::from(0xFF0000FF);
     triangle.vertices[1].color = RGBA8::from(0x00FF00FF);
@@ -41,7 +44,7 @@ mod gltf {
 
     #[test]
     fn cube() {
-        let mut image = Image::new(1024, 1024);
+        let mut image = Image::new(128, 128);
         let mut scene = Scene::new();
 
         let mut timer = Timer::new();
@@ -56,7 +59,7 @@ mod gltf {
 
     #[test]
     fn triangle() {
-        let mut image = Image::new(256, 256);
+        let mut image = Image::new(128, 128);
         let mut scene = Scene::new();
         scene.load("tests/triangle.gltf").unwrap();
 
@@ -66,7 +69,7 @@ mod gltf {
 
     #[test]
     fn model() {
-        let mut image = Image::new(512, 512);
+        let mut image = Image::new(128, 128);
         let mut scene = Scene::new();
 
         let mut timer = Timer::new();

@@ -8,6 +8,7 @@ pub struct PrimitiveBuilder {
     vertices: Vec<Vertex>,
     indices: Vec<u8>,
     index_size: usize,
+    material: Handle<Material>,
 }
 
 impl PrimitiveBuilder {
@@ -16,6 +17,7 @@ impl PrimitiveBuilder {
             vertices: vec![],
             indices: vec![],
             index_size: 1,
+            material: Handle::none(),
         }
     }
 
@@ -34,10 +36,16 @@ impl PrimitiveBuilder {
         self
     }
 
+    pub fn material(mut self, material: Handle<Material>) -> Self {
+        self.material = material;
+        self
+    }
+
     pub fn build(self) -> Primitive {
         let mut prim = Primitive::new(self.vertices);
         prim.indices = self.indices;
         prim.index_size = self.index_size;
+        prim.material = self.material;
         prim
     }
 }
@@ -47,6 +55,7 @@ pub struct Primitive {
     vertices: Vec<Vertex>,
     indices: Vec<u8>,
     index_size: usize,
+    pub material: Handle<Material>,
 }
 
 impl Primitive {
@@ -59,10 +68,15 @@ impl Primitive {
             vertices,
             indices: vec![],
             index_size: 1,
+            material: Handle::none(),
         }
     }
 
-    pub fn triangles(&self, transform: Mat4) -> Vec<Triangle<Vertex>> {
+    pub fn triangles<'m>(
+        &self,
+        transform: Mat4,
+        material: &'m Material,
+    ) -> Vec<Triangle<'m, Vertex>> {
         let mut ret = vec![];
 
         let indices_len = self.indices.len() / self.index_size;
@@ -78,7 +92,7 @@ impl Primitive {
                     let mut c = self.vertices[self.indices[i * 3 + 2] as usize];
                     c.pos = &transform * c.pos;
 
-                    ret.push(Triangle::new(a, b, c))
+                    ret.push(Triangle::new(a, b, c, material))
                 }
             }
             2 => {
@@ -96,7 +110,7 @@ impl Primitive {
                     let mut c = self.vertices[indices[i * 3 + 2] as usize];
                     c.pos = &transform * c.pos;
 
-                    ret.push(Triangle::new(a, b, c))
+                    ret.push(Triangle::new(a, b, c, material))
                 }
             }
             4 => {
@@ -114,7 +128,7 @@ impl Primitive {
                     let mut c = self.vertices[indices[i * 3 + 2] as usize];
                     c.pos = &transform * c.pos;
 
-                    ret.push(Triangle::new(a, b, c))
+                    ret.push(Triangle::new(a, b, c, material))
                 }
             }
             _ => panic!("Index size not supported"),
