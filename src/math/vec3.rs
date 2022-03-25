@@ -53,6 +53,10 @@ impl Vec3 {
         self.y /= len;
         self.z /= len;
     }
+
+    pub fn get_reciprocal(&self) -> Self {
+        Self::new(1.0 / self.x, 1.0 / self.y, 1.0 / self.z)
+    }
 }
 
 impl Add for Vec3 {

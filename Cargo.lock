@@ -378,6 +378,7 @@ name = "rayca"
 version = "0.1.0"
 dependencies = [
  "gltf",
+ "num-traits",
  "owo-colors",
  "png 0.17.5",
  "rayon",
