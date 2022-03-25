@@ -51,9 +51,15 @@ impl<'a> Scene<'a> {
             if let Some(hit) = triangle.intersects(&ray) {
                 if hit.depth < depth {
                     depth = hit.depth;
-                    let color = triangle.get_color(&hit);
-                    //let n = triangle.get_normal(&hit);
-                    //let color = RGBA8::from(n);
+                    let mut color = triangle.get_color(&hit);
+
+                    // Facing ratio
+                    let n = triangle.get_normal(&hit);
+                    let n_dot_dir = n.dot(&-ray.dir);
+                    color.r = color.r * n_dot_dir;
+                    color.g = color.g * n_dot_dir;
+                    color.b = color.b * n_dot_dir;
+
                     *pixel = color.into();
                 }
             }
@@ -75,7 +81,7 @@ impl<'a> Draw for Scene<'a> {
                             .materials
                             .get(prim.material)
                             .unwrap_or(&white_material);
-                        let mut prim_triangles = prim.triangles(Mat4::from(&node.trs), mat);
+                        let mut prim_triangles = prim.triangles(&node.trs, mat);
                         triangles.append(&mut prim_triangles);
                     }
                 }
