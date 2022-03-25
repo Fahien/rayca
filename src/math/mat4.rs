@@ -65,6 +65,16 @@ impl Mat4 {
     pub fn get_translation(&self) -> Vec3 {
         Vec3::new(self[0][3], self[1][3], self[2][3])
     }
+
+    pub fn get_transpose(&self) -> Self {
+        let mut ret = Self::new();
+        for i in 0..4 {
+            for j in 0..4 {
+                ret[i][j] = self[j][i]
+            }
+        }
+        ret
+    }
 }
 
 impl Index<usize> for Mat4 {
@@ -138,6 +148,12 @@ impl From<&Quat> for Mat4 {
 
 impl From<&Trs> for Mat4 {
     fn from(trs: &Trs) -> Self {
+        trs * Mat4::identity()
+    }
+}
+
+impl From<Trs> for Mat4 {
+    fn from(trs: Trs) -> Self {
         trs * Mat4::identity()
     }
 }
