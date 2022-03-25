@@ -15,18 +15,30 @@ pub struct Trs {
 }
 
 impl Trs {
-    pub fn new() -> Self {
+    pub fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
         Self {
-            translation: Vec3::default(),
-            rotation: Quat::default(),
-            scale: Vec3::new(1.0, 1.0, 1.0),
+            translation,
+            rotation,
+            scale,
         }
+    }
+
+    pub fn get_inverse(&self) -> Self {
+        Self::new(
+            -self.translation,
+            self.rotation.get_inverse(),
+            self.scale.get_reciprocal(),
+        )
     }
 }
 
 impl Default for Trs {
     fn default() -> Self {
-        Self::new()
+        Self {
+            translation: Vec3::default(),
+            rotation: Quat::default(),
+            scale: Vec3::new(1.0, 1.0, 1.0),
+        }
     }
 }
 
@@ -58,7 +70,7 @@ mod test {
 
     #[test]
     fn mul() {
-        let mut trs = Trs::new();
+        let mut trs = Trs::default();
         let mut mat = Mat4::identity();
         assert!(Mat4::from(&trs) == mat);
 
