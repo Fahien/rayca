@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, Sub, Index};
+use std::ops::{Add, Index, Sub};
 
 use crate::{Dot, Vec3};
 
