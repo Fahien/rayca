@@ -8,6 +8,7 @@ use super::*;
 
 /// TRanSform, or Translation-Rotation-Scale
 /// Order of transformations: scale-rotate-translate
+#[derive(Clone)]
 pub struct Trs {
     pub translation: Vec3,
     pub rotation: Quat,
@@ -15,18 +16,26 @@ pub struct Trs {
 }
 
 impl Trs {
-    pub fn new() -> Self {
+    pub fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
         Self {
-            translation: Vec3::default(),
-            rotation: Quat::default(),
-            scale: Vec3::new(1.0, 1.0, 1.0),
+            translation,
+            rotation,
+            scale,
         }
+    }
+
+    pub fn get_inversed(&self) -> Inversed<Self> {
+        Inversed::from(self.clone())
     }
 }
 
 impl Default for Trs {
     fn default() -> Self {
-        Self::new()
+        Self {
+            translation: Vec3::default(),
+            rotation: Quat::default(),
+            scale: Vec3::new(1.0, 1.0, 1.0),
+        }
     }
 }
 
@@ -52,13 +61,37 @@ impl Mul<Mat4> for &Trs {
     }
 }
 
+pub struct Inversed<T> {
+    pub source: T,
+}
+
+impl Mul<&Mat4> for &Inversed<Trs> {
+    type Output = Mat4;
+
+    fn mul(self, rhs: &Mat4) -> Self::Output {
+        Mat4::from(self) * rhs
+    }
+}
+
+impl From<Trs> for Inversed<Trs> {
+    fn from(source: Trs) -> Self {
+        Self { source }
+    }
+}
+
+impl<'a> From<&'a Trs> for Inversed<&'a Trs> {
+    fn from(source: &'a Trs) -> Self {
+        Self { source }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn mul() {
-        let mut trs = Trs::new();
+        let mut trs = Trs::default();
         let mut mat = Mat4::identity();
         assert!(Mat4::from(&trs) == mat);
 
