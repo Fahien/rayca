@@ -83,6 +83,16 @@ impl Mat4 {
     pub fn get_translation(&self) -> Vec3 {
         Vec3::new(self[0][3], self[1][3], self[2][3])
     }
+
+    pub fn get_transpose(&self) -> Self {
+        let mut ret = Self::new();
+        for i in 0..4 {
+            for j in 0..4 {
+                ret[i][j] = self[j][i]
+            }
+        }
+        ret
+    }
 }
 
 impl Index<usize> for Mat4 {
@@ -164,6 +174,34 @@ impl From<&Trs> for Mat4 {
 impl From<Trs> for Mat4 {
     fn from(trs: Trs) -> Self {
         Self::from(&trs)
+    }
+}
+
+impl From<&Inversed<&Trs>> for Mat4 {
+    fn from(inv_trs: &Inversed<&Trs>) -> Self {
+        Mat4::from_scale(&inv_trs.get_scale())
+            * (Mat4::from_rotation(&inv_trs.get_rotation())
+                * Mat4::from_translation(&inv_trs.get_translation()))
+    }
+}
+
+impl From<Inversed<&Trs>> for Mat4 {
+    fn from(inv_trs: Inversed<&Trs>) -> Self {
+        Self::from(&inv_trs)
+    }
+}
+
+impl From<&Inversed<Trs>> for Mat4 {
+    fn from(inv_trs: &Inversed<Trs>) -> Self {
+        Mat4::from_scale(&inv_trs.get_scale())
+            * (Mat4::from_rotation(&inv_trs.get_rotation())
+                * Mat4::from_translation(&inv_trs.get_translation()))
+    }
+}
+
+impl From<Inversed<Trs>> for Mat4 {
+    fn from(inv_trs: Inversed<Trs>) -> Self {
+        Self::from(&inv_trs)
     }
 }
 

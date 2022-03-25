@@ -5,6 +5,7 @@
 use crate::Mat4;
 
 /// Quaternion structure
+#[derive(Copy, Clone)]
 pub struct Quat {
     pub x: f32,
     pub y: f32,
@@ -33,6 +34,20 @@ impl Quat {
         self.y /= len;
         self.z /= len;
         self.w /= len;
+    }
+
+    pub fn is_normalized(&self) -> bool {
+        (self.len() - 1.0).abs() < 0.001
+    }
+
+    pub fn get_conjugate(&self) -> Self {
+        Self::new(-self.x, -self.y, -self.z, self.w)
+    }
+
+    pub fn get_inverse(&self) -> Self {
+        // The inverse of a unit quaternion is its conjugate
+        assert!(self.is_normalized());
+        self.get_conjugate()
     }
 }
 
@@ -82,5 +97,24 @@ impl From<&Mat4> for Quat {
 impl From<Mat4> for Quat {
     fn from(matrix: Mat4) -> Self {
         Quat::from(&matrix)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::f32::consts::FRAC_PI_4;
+
+    use super::*;
+
+    #[test]
+    fn invert() {
+        // Rotation of PI/2 around Y axis (notice we use angle/2.0)
+        let a = Quat::new(0.0, FRAC_PI_4.sin(), 0.0, FRAC_PI_4.cos());
+        let b = a.get_inverse();
+        assert!(a.x == b.x);
+        assert!(a.y == -b.y);
+        assert!(a.z == b.z);
+        assert!(a.w == b.w);
+        assert!(b.is_normalized());
     }
 }

@@ -58,7 +58,7 @@ fn gltf_triangle() {
 
 #[test]
 fn gltf_suzanne() {
-    let mut image = Image::new(64, 64);
+    let mut image = Image::new(128, 128);
     let mut scene = Scene::new();
 
     let mut timer = Timer::new();

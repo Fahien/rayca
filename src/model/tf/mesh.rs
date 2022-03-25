@@ -2,9 +2,12 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Handle, Mat4, Triangle, TriangleEx, Vertex};
+use num_traits::NumCast;
 
-use super::*;
+use crate::{
+    GgxMaterial, GltfVertex, Handle, Inversed, Mat4, Point3, Triangle, TriangleEx, Trs, Vec3,
+    Vertex,
+};
 
 pub struct GltfPrimitiveBuilder {
     vertices: Vec<GltfVertex>,
@@ -80,82 +83,66 @@ impl GltfPrimitive {
         }
     }
 
-    pub fn triangles(
+    fn process_vertex(&self, matrix: &Mat4, normal_matrix: &Mat4, i: usize) -> (Point3, Vertex) {
+        let gltf_vertex = &self.vertices[i];
+        let pos = matrix * gltf_vertex.pos;
+        let normal = normal_matrix * gltf_vertex.normal;
+        let ex = Vertex::new(normal, gltf_vertex.color);
+        (pos, ex)
+    }
+
+    pub fn triangles_impl<Index: NumCast>(
         &self,
-        transform: Mat4,
-        material: Handle<GgxMaterial>,
+        transform: &Trs,
+        indices: &[Index],
     ) -> (Vec<Triangle>, Vec<TriangleEx>) {
         let mut ret = vec![];
         let mut ret_ex = vec![];
+        let matrix = Mat4::from(transform);
 
+        let mut normal_trs = Inversed::from(transform.clone());
+        normal_trs.source.translation = Vec3::default();
+
+        let normal_matrix = Mat4::from(normal_trs).get_transpose();
+
+        for i in 0..(indices.len() / 3) {
+            let a_i = indices[i * 3].to_usize().unwrap();
+            let (a, a_ex) = self.process_vertex(&matrix, &normal_matrix, a_i);
+
+            let b_i = indices[i * 3 + 1].to_usize().unwrap();
+            let (b, b_ex) = self.process_vertex(&matrix, &normal_matrix, b_i);
+
+            let c_i = indices[i * 3 + 2].to_usize().unwrap();
+            let (c, c_ex) = self.process_vertex(&matrix, &normal_matrix, c_i);
+
+            ret.push(Triangle::new(a, b, c));
+            ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex, self.material));
+        }
+
+        (ret, ret_ex)
+    }
+
+    pub fn triangles(&self, transform: &Trs) -> (Vec<Triangle>, Vec<TriangleEx>) {
         let indices_len = self.indices.len() / self.index_size;
+
         match self.index_size {
-            1 => {
-                for i in 0..(self.indices.len() / 3) {
-                    let gltf_a = &self.vertices[self.indices[i * 3] as usize];
-                    let a = &transform * gltf_a.pos;
-                    let a_ex = Vertex::new(gltf_a.normal, gltf_a.color);
-
-                    let gltf_b = &self.vertices[self.indices[i * 3 + 1] as usize];
-                    let b = &transform * gltf_b.pos;
-                    let b_ex = Vertex::new(gltf_b.normal, gltf_b.color);
-
-                    let gltf_c = &self.vertices[self.indices[i * 3 + 2] as usize];
-                    let c = &transform * gltf_c.pos;
-                    let c_ex = Vertex::new(gltf_b.normal, gltf_b.color);
-
-                    ret.push(Triangle::new(a, b, c));
-                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex, material));
-                }
-            }
+            1 => self.triangles_impl(transform, &self.indices),
             2 => {
                 let indices = unsafe {
                     std::slice::from_raw_parts(self.indices.as_ptr() as *const u16, indices_len)
                 };
 
-                for i in 0..(indices.len() / 3) {
-                    let gltf_a = &self.vertices[indices[i * 3] as usize];
-                    let a = &transform * gltf_a.pos;
-                    let a_ex = Vertex::new(gltf_a.normal, gltf_a.color);
-
-                    let gltf_b = &self.vertices[indices[i * 3 + 1] as usize];
-                    let b = &transform * gltf_b.pos;
-                    let b_ex = Vertex::new(gltf_b.normal, gltf_b.color);
-
-                    let gltf_c = &self.vertices[indices[i * 3 + 2] as usize];
-                    let c = &transform * gltf_c.pos;
-                    let c_ex = Vertex::new(gltf_b.normal, gltf_b.color);
-
-                    ret.push(Triangle::new(a, b, c));
-                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex, material));
-                }
+                self.triangles_impl(transform, indices)
             }
             4 => {
                 let indices = unsafe {
                     std::slice::from_raw_parts(self.indices.as_ptr() as *const u32, indices_len)
                 };
 
-                for i in 0..(indices.len() / 3) {
-                    let gltf_a = &self.vertices[indices[i * 3] as usize];
-                    let a = &transform * gltf_a.pos;
-                    let a_ex = Vertex::new(gltf_a.normal, gltf_a.color);
-
-                    let gltf_b = &self.vertices[indices[i * 3 + 1] as usize];
-                    let b = &transform * gltf_b.pos;
-                    let b_ex = Vertex::new(gltf_b.normal, gltf_b.color);
-
-                    let gltf_c = &self.vertices[indices[i * 3 + 2] as usize];
-                    let c = &transform * gltf_c.pos;
-                    let c_ex = Vertex::new(gltf_b.normal, gltf_b.color);
-
-                    ret.push(Triangle::new(a, b, c));
-                    ret_ex.push(TriangleEx::new(a_ex, b_ex, c_ex, material));
-                }
+                self.triangles_impl(transform, indices)
             }
             _ => panic!("Index size not supported"),
         }
-
-        (ret, ret_ex)
     }
 }
 
