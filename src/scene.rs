@@ -50,9 +50,15 @@ impl<'a> Scene<'a> {
             if let Some(hit) = triangle.intersects(&ray) {
                 if hit.depth < depth {
                     depth = hit.depth;
-                    let color = triangle.get_color(&hit);
-                    //let n = triangle.get_normal(&hit);
-                    //let color = RGBA8::from(n);
+                    let mut color = triangle.get_color(&hit);
+
+                    // Facing ratio
+                    let n = triangle.get_normal(&hit);
+                    let n_dot_dir = n.dot(&-ray.dir);
+                    color.r *= n_dot_dir;
+                    color.g *= n_dot_dir;
+                    color.b *= n_dot_dir;
+
                     *pixel = color.into();
                 }
             }

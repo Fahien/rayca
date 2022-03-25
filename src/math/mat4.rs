@@ -27,6 +27,24 @@ impl Mat4 {
         }
     }
 
+    pub fn from_translation(translation: &Vec3) -> Self {
+        let mut ret = Mat4::identity();
+        ret.translate(translation);
+        ret
+    }
+
+    pub fn from_rotation(rotation: &Quat) -> Self {
+        let mut ret = Mat4::identity();
+        ret.rotate(rotation);
+        ret
+    }
+
+    pub fn from_scale(scale: &Vec3) -> Self {
+        let mut ret = Mat4::identity();
+        ret.scale(scale);
+        ret
+    }
+
     pub fn identity() -> Self {
         Self {
             values: [
@@ -64,6 +82,16 @@ impl Mat4 {
 
     pub fn get_translation(&self) -> Vec3 {
         Vec3::new(self[0][3], self[1][3], self[2][3])
+    }
+
+    pub fn get_transpose(&self) -> Self {
+        let mut ret = Self::new();
+        for i in 0..4 {
+            for j in 0..4 {
+                ret[i][j] = self[j][i]
+            }
+        }
+        ret
     }
 }
 
@@ -138,7 +166,42 @@ impl From<&Quat> for Mat4 {
 
 impl From<&Trs> for Mat4 {
     fn from(trs: &Trs) -> Self {
-        trs * Mat4::identity()
+        Mat4::from_scale(&trs.scale)
+            * (Mat4::from_rotation(&trs.rotation) * Mat4::from_translation(&trs.translation))
+    }
+}
+
+impl From<Trs> for Mat4 {
+    fn from(trs: Trs) -> Self {
+        Self::from(&trs)
+    }
+}
+
+impl From<&Inversed<&Trs>> for Mat4 {
+    fn from(inv_trs: &Inversed<&Trs>) -> Self {
+        Mat4::from_translation(&inv_trs.get_translation())
+            * (Mat4::from_rotation(&inv_trs.get_rotation())
+                * Mat4::from_scale(&inv_trs.get_scale()))
+    }
+}
+
+impl From<Inversed<&Trs>> for Mat4 {
+    fn from(inv_trs: Inversed<&Trs>) -> Self {
+        Self::from(&inv_trs)
+    }
+}
+
+impl From<&Inversed<Trs>> for Mat4 {
+    fn from(inv_trs: &Inversed<Trs>) -> Self {
+        Mat4::from_translation(&inv_trs.get_translation())
+            * (Mat4::from_rotation(&inv_trs.get_rotation())
+                * Mat4::from_scale(&inv_trs.get_scale()))
+    }
+}
+
+impl From<Inversed<Trs>> for Mat4 {
+    fn from(inv_trs: Inversed<Trs>) -> Self {
+        Self::from(&inv_trs)
     }
 }
 
