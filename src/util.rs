@@ -2,6 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::iter::FromIterator;
 use std::ops::Deref;
 use std::time::{Duration, Instant};
 use std::{
@@ -180,6 +181,30 @@ impl<T> Pack<T> {
 
         // Index of the removed element can be added to free list
         self.free.push(handle.id);
+    }
+}
+
+impl<T> From<Vec<T>> for Pack<T> {
+    fn from(vec: Vec<T>) -> Self {
+        let mut ret = Self::new();
+
+        for elem in vec {
+            ret.push(elem);
+        }
+
+        ret
+    }
+}
+
+impl<T> FromIterator<T> for Pack<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut ret = Self::new();
+
+        for elem in iter {
+            ret.push(elem);
+        }
+
+        ret
     }
 }
 
