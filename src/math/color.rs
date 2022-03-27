@@ -41,6 +41,17 @@ impl From<Vec3> for Color {
     }
 }
 
+impl From<RGBA8> for Color {
+    fn from(color: RGBA8) -> Self {
+        Self::new(
+            color.r as f32 / 255.0,
+            color.g as f32 / 255.0,
+            color.b as f32 / 255.0,
+            color.a as f32 / 255.0,
+        )
+    }
+}
+
 impl Add for Color {
     type Output = Color;
 
