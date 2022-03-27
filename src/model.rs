@@ -8,6 +8,7 @@ use std::{
 };
 
 use gltf::Gltf;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use super::*;
 
@@ -65,6 +66,34 @@ impl ModelBuilder {
         Ok(ret)
     }
 
+    pub fn load_images(&mut self, model: &mut Model) {
+        let mut timer = Timer::new();
+
+        // Let us load textures first
+        let images: Vec<Image> = self
+            .gltf
+            .images()
+            .par_bridge()
+            .map(|image| {
+                match image.source() {
+                    gltf::image::Source::View { .. } => todo!("Implement image source view"),
+                    gltf::image::Source::Uri { uri, .. } => {
+                        // Join gltf parent dir to URI
+                        let path = self.parent_dir.join(uri);
+                        Image::load_png(&path)
+                    }
+                }
+            })
+            .collect();
+
+        println!(
+            "Loaded images from file ({}s)",
+            timer.get_delta().as_secs_f32()
+        );
+
+        model.images = Pack::from(images);
+    }
+
     fn load_uri_buffers(&mut self) -> Result<(), Box<dyn Error>> {
         for buffer in self.gltf.buffers() {
             match buffer.source() {
@@ -104,6 +133,7 @@ impl ModelBuilder {
     pub fn build(&mut self) -> Result<Model, Box<dyn Error>> {
         let mut model = Model::new();
 
+        self.load_images(&mut model);
         self.load_uri_buffers()?;
         self.load_materials(&mut model.materials)?;
         self.load_meshes(&mut model)?;
@@ -370,6 +400,7 @@ impl ModelBuilder {
 #[derive(Default)]
 pub struct Model {
     pub id: usize,
+    pub images: Pack<Image>,
     pub materials: Pack<Material>,
     pub primitives: Pack<Primitive>,
     pub meshes: Pack<Mesh>,
@@ -386,5 +417,20 @@ impl Model {
         Self {
             ..Default::default()
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn load() {
+        let model = Model::builder("tests/model/suzanne/suzanne.gltf")
+            .unwrap()
+            .build()
+            .unwrap();
+
+        assert!(model.images.len() == 2);
     }
 }
