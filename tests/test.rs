@@ -17,14 +17,16 @@ fn sphere() {
 #[test]
 fn triangle() {
     let mut image = Image::new(128, 128);
-    let material = Material::default();
+    let mut model = Model::new();
+    let material = model.materials.push(Material::default());
     let mut scene = Scene::new();
 
     let mut triangle = Triangle::new(
         Vertex::new(-1.0, -1.0, -1.0),
         Vertex::new(1.0, -1.0, -1.0),
         Vertex::new(0.0, 1.0, -1.0),
-        &material,
+        material,
+        &model,
     );
     triangle.get_vertex_mut(0).color = Color::from(0xFF0000FF);
     triangle.get_vertex_mut(1).color = Color::from(0x00FF00FF);

@@ -69,18 +69,12 @@ impl<'a> Scene<'a> {
 impl<'a> Draw for Scene<'a> {
     fn draw(&self, image: &mut Image) {
         let mut triangles = vec![];
-        let white_material = Material::default();
 
         for node in self.model.nodes.iter() {
             if let Some(mesh) = self.model.meshes.get(node.mesh) {
                 for prim_handle in mesh.primitives.iter() {
                     let prim = self.model.primitives.get(*prim_handle).unwrap();
-                    let mat = self
-                        .model
-                        .materials
-                        .get(prim.material)
-                        .unwrap_or(&white_material);
-                    let mut prim_triangles = prim.triangles(&node.trs, mat);
+                    let mut prim_triangles = prim.triangles(&node.trs, prim.material, &self.model);
                     triangles.append(&mut prim_triangles);
                 }
             }

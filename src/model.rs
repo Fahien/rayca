@@ -66,32 +66,50 @@ impl ModelBuilder {
         Ok(ret)
     }
 
-    pub fn load_images(&mut self, model: &mut Model) {
+    pub fn load_images(&mut self, images: &mut Pack<Image>) {
         let mut timer = Timer::new();
 
-        // Let us load textures first
-        let images: Vec<Image> = self
+        let mut vec: Vec<Image> = self
             .gltf
             .images()
+            .enumerate()
             .par_bridge()
-            .map(|image| {
+            .map(|(id, image)| {
                 match image.source() {
                     gltf::image::Source::View { .. } => todo!("Implement image source view"),
                     gltf::image::Source::Uri { uri, .. } => {
                         // Join gltf parent dir to URI
                         let path = self.parent_dir.join(uri);
-                        Image::load_png(&path)
+                        let mut i = Image::load_png(&path);
+                        i.id = id;
+                        i
                     }
                 }
             })
             .collect();
+
+        vec.sort_by_key(|image| image.id);
 
         println!(
             "Loaded images from file ({}s)",
             timer.get_delta().as_secs_f32()
         );
 
-        model.images = Pack::from(images);
+        *images = Pack::from(vec);
+    }
+
+    pub fn load_textures(&mut self, textures: &mut Pack<Texture>) {
+        let vec: Vec<Texture> = self
+            .gltf
+            .textures()
+            .map(|gtexture| {
+                let image = Handle::new(gtexture.source().index());
+                let sampler = Handle::none();
+                Texture::new(image, sampler)
+            })
+            .collect();
+
+        *textures = Pack::from(vec);
     }
 
     fn load_uri_buffers(&mut self) -> Result<(), Box<dyn Error>> {
@@ -133,7 +151,8 @@ impl ModelBuilder {
     pub fn build(&mut self) -> Result<Model, Box<dyn Error>> {
         let mut model = Model::new();
 
-        self.load_images(&mut model);
+        self.load_images(&mut model.images);
+        self.load_textures(&mut model.textures);
         self.load_uri_buffers()?;
         self.load_materials(&mut model.materials)?;
         self.load_meshes(&mut model)?;
@@ -152,6 +171,11 @@ impl ModelBuilder {
             let gcolor = pbr.base_color_factor();
             let color = Color::new(gcolor[0], gcolor[1], gcolor[2], gcolor[3]);
             material.color = color;
+
+            // Load albedo
+            if let Some(gtexture) = pbr.base_color_texture() {
+                material.albedo = Handle::new(gtexture.texture().index());
+            }
 
             materials.push(material);
         }
@@ -180,6 +204,9 @@ impl ModelBuilder {
                     match semantic {
                         gltf::mesh::Semantic::Positions => {
                             self.load_positions(&mut vertices, &accessor)?
+                        }
+                        gltf::mesh::Semantic::TexCoords(_) => {
+                            self.load_uvs(&mut vertices, &accessor)?
                         }
                         gltf::mesh::Semantic::Colors(_) => {
                             self.load_colors(&mut vertices, &accessor)?
@@ -257,6 +284,41 @@ impl ModelBuilder {
             vertices[i].pos.x = position[0];
             vertices[i].pos.y = position[1];
             vertices[i].pos.z = position[2];
+        }
+
+        Ok(())
+    }
+
+    fn load_uvs(
+        &self,
+        vertices: &mut Vec<Vertex>,
+        accessor: &gltf::Accessor,
+    ) -> Result<(), Box<dyn Error>> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        assert!(dimensions == gltf::accessor::Dimensions::Vec2);
+
+        let view = accessor.view().unwrap();
+
+        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
+        assert!(target == gltf::buffer::Target::ArrayBuffer);
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let uv = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 2) };
+
+            if vertices.len() <= i {
+                vertices.push(Vertex::default())
+            }
+            vertices[i].uv.x = uv[0];
+            vertices[i].uv.y = uv[1];
         }
 
         Ok(())
@@ -391,7 +453,9 @@ impl ModelBuilder {
 #[derive(Default)]
 pub struct Model {
     pub id: usize,
+    pub samplers: Pack<Sampler>,
     pub images: Pack<Image>,
+    pub textures: Pack<Texture>,
     pub materials: Pack<Material>,
     pub primitives: Pack<Primitive>,
     pub meshes: Pack<Mesh>,
@@ -414,6 +478,20 @@ impl Model {
     pub fn append(&mut self, mut model: Model) {
         // Create a new root node for the new model
         let new_model_root = self.nodes.push(model.root);
+
+        let sampler_offset = self.samplers.append(&mut model.samplers);
+        let image_offset = self.images.append(&mut model.images);
+        // Update sampler and image handles
+        for texture in model.textures.iter_mut() {
+            texture.sampler.offset(sampler_offset);
+            texture.image.offset(image_offset);
+        }
+
+        let texture_offset = self.textures.append(&mut model.textures);
+        // Update texture handles
+        for material in model.materials.iter_mut() {
+            material.albedo.offset(texture_offset);
+        }
 
         let mat_offset = self.materials.append(&mut model.materials);
         // Update material handles
