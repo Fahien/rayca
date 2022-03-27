@@ -13,12 +13,14 @@ impl Sampler {
     }
 
     pub fn sample(&self, image: &Image, uv: &Vec2) -> RGBA8 {
-        let x = (uv.x * image.width() as f32) as u32;
-        let y = (uv.y * image.height() as f32) as u32;
+        let width = image.width() as f32;
+        let height = image.height() as f32;
+        let x = uv.x * width;
+        let y = uv.y * height;
 
         // TODO: fix according to sampling method
-        let x = x.clamp(0, image.width() - 1);
-        let y = y.clamp(0, image.height() - 1);
+        let x = (x as u32) % image.width();
+        let y = (y as u32) % image.height();
 
         image.get(x, y)
     }

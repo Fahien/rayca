@@ -18,6 +18,32 @@ impl Vec2 {
     }
 }
 
+impl Add for Vec2 {
+    type Output = Vec2;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self
+    }
+}
+
+impl Mul<f32> for Vec2 {
+    type Output = Vec2;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::Output::new(self.x * rhs, self.y * rhs)
+    }
+}
+
+impl Mul<f32> for &Vec2 {
+    type Output = Vec2;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::Output::new(self.x * rhs, self.y * rhs)
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct Vec3 {

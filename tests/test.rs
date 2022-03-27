@@ -17,14 +17,16 @@ fn circle() {
 #[test]
 fn triangle() {
     let mut image = Image::new(128, 128);
-    let material = Material::default();
+    let mut model = Model::new();
+    let material = model.materials.push(Material::default());
     let mut scene = Scene::new();
 
     let mut triangle = Triangle::new(
         Vertex::new(-1.0, -1.0, -1.0),
         Vertex::new(1.0, -1.0, -1.0),
         Vertex::new(0.0, 1.0, -1.0),
-        &material,
+        material,
+        &model,
     );
     triangle.vertices[0].color = RGBA8::from(0xFF0000FF);
     triangle.vertices[1].color = RGBA8::from(0x00FF00FF);
@@ -48,7 +50,9 @@ mod gltf {
         let mut scene = Scene::new();
 
         let mut timer = Timer::new();
-        scene.load("tests/box.gltf").unwrap();
+        scene
+            .load("tests/box.gltf")
+            .unwrap();
         println!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
@@ -80,22 +84,5 @@ mod gltf {
         println!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
         image.dump_png("target/suzanne.png");
-    }
-
-    #[test]
-    fn sponza() {
-        let mut image = Image::new(64, 64);
-        let mut scene = Scene::new();
-
-        let mut timer = Timer::new();
-        scene
-            .load("../model/gltf/2.0/Sponza/glTF/Sponza.gltf")
-            .unwrap();
-        println!("Scene loaded in {}ms", timer.get_delta().as_millis());
-
-        scene.draw(&mut image);
-        println!("Scene rendered in {}ms", timer.get_delta().as_millis());
-
-        image.dump_png("target/lantern.png");
     }
 }

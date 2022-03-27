@@ -6,25 +6,28 @@ use super::*;
 
 pub struct Triangle<'m, V> {
     pub vertices: [V; 3],
-    pub material: &'m Material,
+    pub material: Handle<Material>,
+    pub model: &'m Model,
 }
 
 impl<'m, V> Triangle<'m, V> {
-    pub fn new(a: V, b: V, c: V, material: &'m Material) -> Self {
+    pub fn new(a: V, b: V, c: V, material: Handle<Material>, model: &'m Model) -> Self {
         Self {
             vertices: [a, b, c],
             material,
+            model,
         }
     }
 }
 
 impl<'m> Triangle<'m, Vertex> {
-    pub fn unit(material: &'m Material) -> Self {
+    pub fn unit(material: Handle<Material>, model: &'m Model) -> Self {
         Self::new(
             Vertex::new(-1.0, 0.0, 0.0),
             Vertex::new(1.0, 0.0, 0.0),
             Vertex::new(0.0, 1.0, 0.0),
             material,
+            model,
         )
     }
 }
@@ -105,7 +108,29 @@ impl<'m> Intersect for Triangle<'m, Vertex> {
         let c1 = &self.vertices[1].color;
         let c2 = &self.vertices[2].color;
 
-        self.material.color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
+        let white_material = Material::default();
+        let material = self
+            .model
+            .materials
+            .get(self.material)
+            .unwrap_or(&white_material);
+
+        let mut color = RGBA8::white();
+
+        if let Some(texture) = self.model.textures.get(material.albedo) {
+            let sampler = Sampler::default();
+            let image = self.model.images.get(texture.image).unwrap();
+
+            let uvs = [
+                &self.vertices[0].uv,
+                &self.vertices[1].uv,
+                &self.vertices[2].uv,
+            ];
+            let uv = uvs[2] * (1.0 - hit.uv.x - hit.uv.y) + uvs[0] * hit.uv.x + uvs[1] * hit.uv.y;
+            color = color * sampler.sample(image, &uv);
+        }
+
+        color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
     }
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
@@ -200,7 +225,14 @@ impl<'m> Intersect for Triangle<'m, &Vertex> {
         let c1 = &self.vertices[1].color;
         let c2 = &self.vertices[2].color;
 
-        self.material.color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
+        let white_material = Material::default();
+        let material = self
+            .model
+            .materials
+            .get(self.material)
+            .unwrap_or(&white_material);
+
+        material.color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
     }
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
@@ -219,8 +251,9 @@ mod test {
 
     #[test]
     fn intersect() {
-        let material = Material::new();
-        let triangle = Triangle::<Vertex>::unit(&material);
+        let mut model = Model::new();
+        let material = model.materials.push(Material::new());
+        let triangle = Triangle::<Vertex>::unit(material, &model);
         let ray = Ray::new(Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
         assert!(triangle.intersects(&ray).is_some());
         let ray = Ray::new(Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 1.0));
