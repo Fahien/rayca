@@ -9,7 +9,6 @@ pub mod math;
 pub mod mesh;
 pub mod model;
 pub mod node;
-pub mod png;
 pub mod ray;
 pub mod scene;
 pub mod sphere;

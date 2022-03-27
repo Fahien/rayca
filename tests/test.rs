@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use rayca::{png::*, *};
+use rayca::*;
 
 #[test]
 fn circle() {
@@ -11,7 +11,7 @@ fn circle() {
     let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 1.0, RGBA8::from(0xFF0000FFu32));
     scene.objects.push(Box::new(sphere));
     scene.draw(&mut image);
-    dump(&image, "target/sphere.png");
+    image.dump_png("target/sphere.png");
 }
 
 #[test]
@@ -36,7 +36,7 @@ fn triangle() {
 
     scene.objects.push(Box::new(triangle));
     scene.draw(&mut image);
-    dump(&image, "target/triangle.png");
+    image.dump_png("target/triangle.png");
 }
 
 mod gltf {
@@ -54,7 +54,7 @@ mod gltf {
         scene.draw(&mut image);
         println!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
-        dump(&image, "target/cube.png");
+        image.dump_png("target/cube.png");
     }
 
     #[test]
@@ -64,7 +64,7 @@ mod gltf {
         scene.load("tests/triangle.gltf").unwrap();
 
         scene.draw(&mut image);
-        dump(&image, "target/gltf-triangle.png");
+        image.dump_png("target/gltf-triangle.png");
     }
 
     #[test]
@@ -79,6 +79,23 @@ mod gltf {
         scene.draw(&mut image);
         println!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
-        dump(&image, "target/suzanne.png");
+        image.dump_png("target/suzanne.png");
+    }
+
+    #[test]
+    fn sponza() {
+        let mut image = Image::new(64, 64);
+        let mut scene = Scene::new();
+
+        let mut timer = Timer::new();
+        scene
+            .load("../model/gltf/2.0/Sponza/glTF/Sponza.gltf")
+            .unwrap();
+        println!("Scene loaded in {}ms", timer.get_delta().as_millis());
+
+        scene.draw(&mut image);
+        println!("Scene rendered in {}ms", timer.get_delta().as_millis());
+
+        image.dump_png("target/lantern.png");
     }
 }
