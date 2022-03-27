@@ -7,7 +7,6 @@ pub mod geometry;
 pub mod material;
 pub mod math;
 pub mod model;
-pub mod png;
 pub mod scene;
 pub mod util;
 

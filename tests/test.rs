@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use rayca::{png::*, *};
+use rayca::*;
 
 #[test]
 fn circle() {
@@ -13,7 +13,7 @@ fn circle() {
     scene.spheres.push(sphere);
     scene.spheres_ex.push(sphere_ex);
     scene.draw(&mut image);
-    dump(&image, "target/sphere.png");
+    image.dump_png("target/sphere.png");
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn triangle() {
     scene.triangles.push(triangle);
     scene.triangles_ex.push(triangle_ex);
     scene.draw(&mut image);
-    dump(&image, "target/triangle.png");
+    image.dump_png("target/triangle.png");
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn gltf_box() {
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load("tests/model/box/box.gltf").unwrap();
     scene.draw(&mut image);
-    dump(&image, "target/gltf-box.png");
+    image.dump_png("target/gltf-box.png");
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn gltf_triangle() {
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load("tests/model/triangle/triangle.gltf").unwrap();
     scene.draw(&mut image);
-    dump(&image, "target/gltf-triangle.png");
+    image.dump_png("target/gltf-triangle.png");
 }
 
 #[test]
@@ -68,5 +68,5 @@ fn gltf_suzanne() {
     scene.draw(&mut image);
     println!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
-    dump(&image, "target/gltf-suzanne.png");
+    image.dump_png("target/gltf-suzanne.png");
 }

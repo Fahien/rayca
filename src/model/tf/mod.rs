@@ -10,8 +10,9 @@ pub use vertex::*;
 use std::{error::Error, path::Path};
 
 use gltf::Gltf;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::{Color, GgxMaterial, Handle, Node, Pack, Quat, Vec3};
+use crate::{Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Timer, Vec3};
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
     match data_type {
@@ -228,6 +229,7 @@ impl UriBuffers {
 
 #[derive(Default)]
 pub struct GltfModel {
+    pub images: Pack<Image>,
     pub materials: Pack<GgxMaterial>,
     pub primitives: Pack<GltfPrimitive>,
     pub meshes: Pack<GltfMesh>,
@@ -244,12 +246,42 @@ impl GltfModel {
             .as_ref()
             .parent()
             .ok_or("Failed to get parent directory")?;
-        let uri_buffers = UriBuffers::new(&gltf, parent_dir)?;
+        ret.load_images(&gltf, parent_dir);
         ret.load_materials(&gltf)?;
+        let uri_buffers = UriBuffers::new(&gltf, parent_dir)?;
         ret.load_meshes(&gltf, &uri_buffers)?;
         ret.load_nodes(&gltf);
 
         Ok(ret)
+    }
+
+    pub fn load_images(&mut self, gltf: &Gltf, parent_dir: &Path) {
+        let mut timer = Timer::new();
+
+        // Let us load textures first
+        let images: Vec<Image> = gltf
+            .images()
+            .par_bridge()
+            .map(|image| {
+                match image.source() {
+                    gltf::image::Source::View { .. } => todo!("Implement image source view"),
+                    gltf::image::Source::Uri { uri, .. } => {
+                        // Join gltf parent dir to URI
+                        let path = parent_dir.join(uri);
+                        Image::load_png(&path)
+                    }
+                }
+            })
+            .collect();
+
+        println!(
+            "Loaded images from file ({}s)",
+            timer.get_delta().as_secs_f32()
+        );
+
+        for image in images {
+            self.images.push(image);
+        }
     }
 
     pub fn load_materials(&mut self, gltf: &Gltf) -> Result<(), Box<dyn Error>> {
@@ -376,7 +408,7 @@ impl GltfModel {
 mod test {
     use owo_colors::{OwoColorize, Stream::Stdout};
 
-    use super::*;
+    use crate::GltfModel;
 
     #[test]
     fn load_gltf() {
@@ -391,5 +423,11 @@ mod test {
                 err
             );
         }
+    }
+
+    #[test]
+    fn load() {
+        let model = GltfModel::load("tests/model/suzanne/suzanne.gltf").unwrap();
+        assert!(model.images.len() == 2);
     }
 }
