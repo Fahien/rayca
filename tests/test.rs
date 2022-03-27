@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use rayca::{png::*, *};
+use rayca::*;
 
 #[test]
 fn sphere() {
@@ -11,7 +11,7 @@ fn sphere() {
     let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 1.0, RGBA8::from(0xFF0000FFu32));
     scene.objects.push(Box::new(sphere));
     scene.draw(&mut image);
-    dump(&image, "target/sphere.png");
+    image.dump_png("target/sphere.png");
 }
 
 #[test]
@@ -36,7 +36,7 @@ fn triangle() {
 
     scene.objects.push(Box::new(triangle));
     scene.draw(&mut image);
-    dump(&image, "target/triangle.png");
+    image.dump_png("target/triangle.png");
 }
 
 mod gltf {
@@ -54,7 +54,7 @@ mod gltf {
         scene.draw(&mut image);
         println!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
-        dump(&image, "target/gltf-cube.png");
+        image.dump_png("target/gltf-cube.png");
     }
 
     #[test]
@@ -64,7 +64,7 @@ mod gltf {
         scene.load("tests/model/triangle/triangle.gltf").unwrap();
 
         scene.draw(&mut image);
-        dump(&image, "target/gltf-triangle.png");
+        image.dump_png("target/gltf-triangle.png");
     }
 
     #[test]
@@ -79,6 +79,6 @@ mod gltf {
         scene.draw(&mut image);
         println!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
-        dump(&image, "target/suzanne.png");
+        image.dump_png("target/suzanne.png");
     }
 }

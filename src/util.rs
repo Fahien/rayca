@@ -1,7 +1,8 @@
-// Copyright © 2020-2022
+// Copyright © 2020-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut};
 use std::time::{Duration, Instant};
 use std::{
@@ -210,6 +211,30 @@ impl<T> Pack<T> {
         self.vec.append(&mut other.vec);
         self.indices.append(&mut other.indices);
         self.free.append(&mut other.free);
+
+        ret
+    }
+}
+
+impl<T> From<Vec<T>> for Pack<T> {
+    fn from(vec: Vec<T>) -> Self {
+        let mut ret = Self::new();
+
+        for elem in vec {
+            ret.push(elem);
+        }
+
+        ret
+    }
+}
+
+impl<T> FromIterator<T> for Pack<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut ret = Self::new();
+
+        for elem in iter {
+            ret.push(elem);
+        }
 
         ret
     }

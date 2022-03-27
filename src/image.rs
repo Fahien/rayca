@@ -2,8 +2,11 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::{fs::File, io::BufWriter, path::Path};
+
 use super::RGBA8;
 
+#[derive(Default)]
 pub struct Image {
     /// Row major, top-left origin
     buffer: Vec<RGBA8>,
@@ -37,6 +40,15 @@ impl Image {
         unsafe {
             std::slice::from_raw_parts(
                 self.buffer.as_ptr() as *const u8,
+                self.buffer.len() * std::mem::size_of::<u32>(),
+            )
+        }
+    }
+
+    pub fn bytes_mut(&mut self) -> &mut [u8] {
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                self.buffer.as_mut_ptr() as *mut u8,
                 self.buffer.len() * std::mem::size_of::<u32>(),
             )
         }
@@ -89,6 +101,54 @@ impl Image {
     pub fn clear(&mut self, color: RGBA8) {
         self.buffer.fill(color);
     }
+
+    /// Opens a PNG file without loading data yet
+    pub fn load_png<P: AsRef<Path>>(path: P) -> Image {
+        let current_dir = std::env::current_dir().expect("Failed to get current dir");
+        let err_msg = format!(
+            "Failed to load PNG file: {}/{}",
+            current_dir.display(),
+            path.as_ref().display()
+        );
+        let file = File::open(path.as_ref()).expect(&err_msg);
+
+        let decoder = png::Decoder::new(file);
+        let mut reader = decoder.read_info().unwrap();
+        let info = reader.info();
+
+        let mut ret = Self::new(info.width, info.height);
+        let err_msg = format!(
+            "Failed to read frame from PNG file: {}/{}",
+            current_dir.display(),
+            path.as_ref().display()
+        );
+        reader.next_frame(ret.bytes_mut()).expect(&err_msg);
+        ret
+    }
+
+    pub fn dump_png<P: AsRef<Path>>(&self, path: P) {
+        let file = File::create(path).unwrap();
+        let w = BufWriter::new(file);
+
+        let mut encoder = png::Encoder::new(w, self.width, self.height);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        // 1.0 / 2.2, scaled by 100000
+        encoder.set_source_gamma(png::ScaledFloat::from_scaled(45455));
+        // 1.0 / 2.2, unscaled, but rounded
+        encoder.set_source_gamma(png::ScaledFloat::new(1.0 / 2.2));
+        // Using unscaled instantiation here
+        let source_chromaticities = png::SourceChromaticities::new(
+            (0.31270, 0.32900),
+            (0.64000, 0.33000),
+            (0.30000, 0.60000),
+            (0.15000, 0.06000),
+        );
+        encoder.set_source_chromaticities(source_chromaticities);
+        let mut writer = encoder.write_header().unwrap();
+
+        writer.write_image_data(self.bytes()).unwrap(); // Save
+    }
 }
 
 #[cfg(test)]
@@ -108,6 +168,25 @@ mod test {
         let mut image = Image::new(1, 2);
         let color = RGBA8::from(0xFFFFFFFF);
         image.clear(color);
+        assert!(image.data().iter().all(|&value| value == color));
+    }
+
+    #[test]
+    fn dump() {
+        let image = Image::new(32, 32);
+        image.dump_png("target/image.png");
+    }
+
+    #[test]
+    fn load() {
+        let mut image = Image::new(1, 1);
+        let color = RGBA8::from(0x0000FFFF);
+        image.clear(color);
+
+        let blue_path = "target/blue.png";
+        image.dump_png(blue_path);
+
+        let image = Image::load_png(blue_path);
         assert!(image.data().iter().all(|&value| value == color));
     }
 }
