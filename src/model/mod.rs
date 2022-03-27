@@ -4,8 +4,10 @@
 
 pub mod image;
 pub mod node;
+pub mod sampler;
 pub mod tf;
 
 pub use image::*;
 pub use node::*;
+pub use sampler::*;
 pub use tf::*;
