@@ -9,6 +9,7 @@ use super::*;
 pub struct Vertex {
     pub pos: Vec3,
     pub normal: Vec3,
+    pub uv: Vec2,
     pub color: RGBA8,
 }
 
@@ -17,6 +18,7 @@ impl Vertex {
         Self {
             pos: Vec3::new(x, y, z),
             normal: Vec3::new(0.0, 0.0, 1.0),
+            uv: Vec2::default(),
             color: RGBA8::from(0xFFFFFFFF),
         }
     }
