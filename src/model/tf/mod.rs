@@ -12,7 +12,7 @@ use std::{error::Error, path::Path};
 use gltf::Gltf;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::{Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Timer, Vec3};
+use crate::{Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Sampler, Texture, Timer, Vec3};
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
     match data_type {
@@ -131,6 +131,41 @@ impl UriBuffers {
         Ok(())
     }
 
+    fn load_uvs(
+        &self,
+        vertices: &mut Vec<GltfVertex>,
+        accessor: &gltf::Accessor,
+    ) -> Result<(), Box<dyn Error>> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        assert!(dimensions == gltf::accessor::Dimensions::Vec2);
+
+        let view = accessor.view().unwrap();
+
+        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
+        assert!(target == gltf::buffer::Target::ArrayBuffer);
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let uv = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 2) };
+
+            if vertices.len() <= i {
+                vertices.push(GltfVertex::default())
+            }
+            vertices[i].uv.x = uv[0];
+            vertices[i].uv.y = uv[1];
+        }
+
+        Ok(())
+    }
+
     fn load_normals(
         &self,
         vertices: &mut Vec<GltfVertex>,
@@ -229,6 +264,8 @@ impl UriBuffers {
 
 #[derive(Default)]
 pub struct GltfModel {
+    pub textures: Pack<Texture>,
+    pub samplers: Pack<Sampler>,
     pub images: Pack<Image>,
     pub materials: Pack<GgxMaterial>,
     pub primitives: Pack<GltfPrimitive>,
@@ -247,6 +284,7 @@ impl GltfModel {
             .parent()
             .ok_or("Failed to get parent directory")?;
         ret.load_images(&gltf, parent_dir);
+        ret.load_textures(&gltf);
         ret.load_materials(&gltf)?;
         let uri_buffers = UriBuffers::new(&gltf, parent_dir)?;
         ret.load_meshes(&gltf, &uri_buffers)?;
@@ -258,30 +296,44 @@ impl GltfModel {
     pub fn load_images(&mut self, gltf: &Gltf, parent_dir: &Path) {
         let mut timer = Timer::new();
 
-        // Let us load textures first
-        let images: Vec<Image> = gltf
+        let mut vec: Vec<Image> = gltf
             .images()
+            .enumerate()
             .par_bridge()
-            .map(|image| {
+            .map(|(id, image)| {
                 match image.source() {
                     gltf::image::Source::View { .. } => todo!("Implement image source view"),
                     gltf::image::Source::Uri { uri, .. } => {
                         // Join gltf parent dir to URI
                         let path = parent_dir.join(uri);
-                        Image::load_png(&path)
+                        let mut i = Image::load_png(&path);
+                        i.id = id;
+                        i
                     }
                 }
             })
             .collect();
+
+        vec.sort_by_key(|image| image.id);
 
         println!(
             "Loaded images from file ({}s)",
             timer.get_delta().as_secs_f32()
         );
 
-        for image in images {
-            self.images.push(image);
-        }
+        self.images = Pack::from(vec);
+    }
+
+    pub fn load_textures(&mut self, gltf: &Gltf) {
+        let vec: Vec<Texture> = gltf
+            .textures()
+            .map(|gtexture| {
+                let image = Handle::new(gtexture.source().index());
+                let sampler = Handle::none();
+                Texture::new(image, sampler)
+            })
+            .collect();
+        self.textures = Pack::from(vec);
     }
 
     pub fn load_materials(&mut self, gltf: &Gltf) -> Result<(), Box<dyn Error>> {
@@ -294,6 +346,11 @@ impl GltfModel {
             let gcolor = pbr.base_color_factor();
             let color = Color::new(gcolor[0], gcolor[1], gcolor[2], gcolor[3]);
             material.color = color;
+
+            // Load albedo
+            if let Some(gtexture) = pbr.base_color_texture() {
+                material.albedo = Handle::new(gtexture.texture().index());
+            }
 
             self.materials.push(material);
         }
@@ -323,6 +380,9 @@ impl GltfModel {
                         gltf::mesh::Semantic::Positions => {
                             uri_buffers.load_positions(&mut vertices, &accessor)?
                         }
+                        gltf::mesh::Semantic::TexCoords(_) => {
+                            uri_buffers.load_uvs(&mut vertices, &accessor)?
+                        }
                         gltf::mesh::Semantic::Colors(_) => {
                             uri_buffers.load_colors(&mut vertices, &accessor)?
                         }
@@ -332,10 +392,11 @@ impl GltfModel {
 
                 let (indices, index_size) = uri_buffers.load_indices(&gprimitive);
 
-                let material = gprimitive
-                    .material()
-                    .index()
-                    .map_or(Handle::none(), Handle::new);
+                let material = if let Some(index) = gprimitive.material().index() {
+                    Handle::new(index)
+                } else {
+                    Handle::none()
+                };
 
                 let primitive = GltfPrimitive::builder()
                     .vertices(vertices)

@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    Color, Dot, GgxMaterial, Handle, Hit, Intersect, Point3, Ray, Scene, Vec2, Vec3, Vertex,
+    Color, Dot, GgxMaterial, Handle, Hit, Intersect, Point3, Ray, Sampler, Scene, Vec2, Vec3,
+    Vertex,
 };
 
 pub struct Triangle {
@@ -137,12 +138,27 @@ impl TriangleEx {
         let c1 = &self.vertices[1].color;
         let c2 = &self.vertices[2].color;
 
-        let material = scene
-            .gltf_model
-            .materials
-            .get(self.material)
-            .unwrap_or(&GgxMaterial::WHITE);
-        material.color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
+        let material = if self.material.valid() {
+            scene.gltf_model.materials.get(self.material).unwrap()
+        } else {
+            &GgxMaterial::WHITE
+        };
+        let mut color = material.color;
+
+        if let Some(texture) = scene.gltf_model.textures.get(material.albedo) {
+            let sampler = Sampler::default();
+            let image = scene.gltf_model.images.get(texture.image).unwrap();
+
+            let uvs = [
+                &self.vertices[0].uv,
+                &self.vertices[1].uv,
+                &self.vertices[2].uv,
+            ];
+            let uv = uvs[2] * (1.0 - hit.uv.x - hit.uv.y) + uvs[0] * hit.uv.x + uvs[1] * hit.uv.y;
+            color = color * sampler.sample(image, &uv);
+        }
+
+        color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
     }
 
     pub fn get_normal(&self, hit: &Hit) -> Vec3 {

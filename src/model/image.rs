@@ -8,6 +8,8 @@ use crate::RGBA8;
 
 #[derive(Default)]
 pub struct Image {
+    pub id: usize,
+
     /// Row major, top-left origin
     buffer: Vec<RGBA8>,
 
@@ -22,6 +24,7 @@ impl Image {
         buffer.resize(width as usize * height as usize, RGBA8::default());
 
         Self {
+            id: 0,
             buffer,
             width,
             height,

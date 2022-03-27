@@ -5,9 +5,11 @@
 pub mod image;
 pub mod node;
 pub mod sampler;
+pub mod texture;
 pub mod tf;
 
 pub use image::*;
 pub use node::*;
 pub use sampler::*;
+pub use texture::*;
 pub use tf::*;

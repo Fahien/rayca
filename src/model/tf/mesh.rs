@@ -87,7 +87,7 @@ impl GltfPrimitive {
         let gltf_vertex = &self.vertices[i];
         let pos = matrix * gltf_vertex.pos;
         let normal = normal_matrix * gltf_vertex.normal;
-        let ex = Vertex::new(normal, gltf_vertex.color);
+        let ex = Vertex::new(normal, gltf_vertex.color, gltf_vertex.uv);
         (pos, ex)
     }
 

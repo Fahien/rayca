@@ -2,10 +2,11 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::Color;
+use crate::{Color, Handle, Texture};
 
 pub struct GgxMaterial {
     pub color: Color,
+    pub albedo: Handle<Texture>,
 }
 
 impl GgxMaterial {
@@ -16,11 +17,13 @@ impl GgxMaterial {
             b: 1.0,
             a: 1.0,
         },
+        albedo: Handle::NONE,
     };
 
     pub fn new() -> Self {
         Self {
             color: Color::white(),
+            albedo: Handle::NONE,
         }
     }
 }

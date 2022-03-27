@@ -60,6 +60,11 @@ impl<T> Default for Handle<T> {
 }
 
 impl<T> Handle<T> {
+    pub const NONE: Self = Self {
+        id: usize::MAX,
+        phantom: PhantomData,
+    };
+
     pub fn new(id: usize) -> Self {
         Self {
             id,
