@@ -78,7 +78,8 @@ impl Primitive {
     fn triangles_impl<'m, Index: NumCast>(
         &self,
         transform: &Trs,
-        material: &'m Material,
+        material: Handle<Material>,
+        model: &'m Model,
         indices: &[Index],
     ) -> Vec<Triangle<'m>> {
         let mut ret = vec![];
@@ -102,30 +103,35 @@ impl Primitive {
             c.pos = &matrix * c.pos;
             c.normal = &normal_matrix * c.normal;
 
-            ret.push(Triangle::new(a, b, c, material));
+            ret.push(Triangle::new(a, b, c, material, model));
         }
 
         ret
     }
 
-    pub fn triangles<'m>(&self, transform: &Trs, material: &'m Material) -> Vec<Triangle<'m>> {
+    pub fn triangles<'m>(
+        &self,
+        transform: &Trs,
+        material: Handle<Material>,
+        model: &'m Model,
+    ) -> Vec<Triangle<'m>> {
         let indices_len = self.indices.len() / self.index_size;
 
         match self.index_size {
-            1 => self.triangles_impl(transform, material, &self.indices),
+            1 => self.triangles_impl(transform, material, model, &self.indices),
             2 => {
                 let indices = unsafe {
                     std::slice::from_raw_parts(self.indices.as_ptr() as *const u16, indices_len)
                 };
 
-                self.triangles_impl(transform, material, indices)
+                self.triangles_impl(transform, material, model, indices)
             }
             4 => {
                 let indices = unsafe {
                     std::slice::from_raw_parts(self.indices.as_ptr() as *const u32, indices_len)
                 };
 
-                self.triangles_impl(transform, material, indices)
+                self.triangles_impl(transform, material, model, indices)
             }
             _ => panic!("Index size not supported"),
         }
