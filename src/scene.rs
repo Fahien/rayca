@@ -4,6 +4,7 @@
 
 use std::{error::Error, path::Path};
 
+use owo_colors::OwoColorize;
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use super::*;
@@ -71,6 +72,8 @@ impl<'a> Draw for Scene<'a> {
     fn draw(&self, image: &mut Image) {
         let mut triangles = vec![];
 
+        let mut timer = Timer::new();
+
         for model in &self.models {
             for node in model.nodes.iter() {
                 if let Some(mesh) = model.meshes.get(node.mesh) {
@@ -82,7 +85,12 @@ impl<'a> Draw for Scene<'a> {
                 }
             }
         }
-        println!("Collected {} triangles", triangles.len());
+        println!(
+            "{:>12} {} triangles in {:.2}s",
+            "Collected".green().bold(),
+            triangles.len(),
+            timer.get_delta().as_secs_f32()
+        );
 
         let width = image.width() as f32;
         let height = image.height() as f32;
