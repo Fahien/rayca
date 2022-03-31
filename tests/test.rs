@@ -50,9 +50,7 @@ mod gltf {
         let mut scene = Scene::new();
 
         let mut timer = Timer::new();
-        scene
-            .load("tests/box.gltf")
-            .unwrap();
+        scene.load("tests/box.gltf").unwrap();
         println!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
