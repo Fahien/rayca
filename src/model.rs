@@ -8,6 +8,7 @@ use std::{
 };
 
 use gltf::Gltf;
+use owo_colors::OwoColorize;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use super::*;
@@ -91,7 +92,8 @@ impl ModelBuilder {
         vec.sort_by_key(|image| image.id);
 
         println!(
-            "Loaded images from file ({}s)",
+            "{:>12} images from file in {:.2}s",
+            "Loaded".green().bold(),
             timer.get_delta().as_secs_f32()
         );
 
@@ -169,12 +171,7 @@ impl ModelBuilder {
 
             // Load base color
             let gcolor = pbr.base_color_factor();
-            let color = Color::new(
-                gcolor[0],
-                gcolor[1],
-                gcolor[2],
-                gcolor[3],
-            );
+            let color = Color::new(gcolor[0], gcolor[1], gcolor[2], gcolor[3]);
             material.color = color;
 
             // Load albedo
@@ -188,74 +185,118 @@ impl ModelBuilder {
         Ok(())
     }
 
+    fn load_vertices(&self, gprimitive: &gltf::Primitive) -> Result<Vec<Vertex>, Box<dyn Error>> {
+        let mut vertices = vec![];
+
+        let mode = gprimitive.mode();
+        assert!(mode == gltf::mesh::Mode::Triangles);
+
+        // Load normals first, so we can process tangents later
+        for (semantic, accessor) in gprimitive.attributes() {
+            if semantic == gltf::mesh::Semantic::Normals {
+                self.load_normals(&mut vertices, &accessor)?;
+            }
+        }
+
+        for (semantic, accessor) in gprimitive.attributes() {
+            match semantic {
+                gltf::mesh::Semantic::Positions => self.load_positions(&mut vertices, &accessor)?,
+                gltf::mesh::Semantic::TexCoords(_) => self.load_uvs(&mut vertices, &accessor)?,
+                gltf::mesh::Semantic::Colors(_) => self.load_colors(&mut vertices, &accessor)?,
+                _ => println!("Semantic not implemented {:?}", semantic),
+            }
+        }
+
+        Ok(vertices)
+    }
+
+    fn load_indices(&self, gprimitive: &gltf::Primitive) -> (Vec<u8>, usize) {
+        let mut indices = vec![];
+        let mut index_size = 1;
+
+        if let Some(accessor) = gprimitive.indices() {
+            let data_type = accessor.data_type();
+            index_size = data_type_as_size(data_type);
+
+            // Data type can vary
+            let data = self.get_data_start(&accessor);
+            let d = &data[0];
+            let len = accessor.count() * data_type_as_size(data_type);
+            // Use bytes regardless of the index data type
+            let slice: &[u8] = unsafe { std::slice::from_raw_parts(d as *const u8 as _, len) };
+            indices = Vec::from(slice);
+        }
+
+        (indices, index_size)
+    }
+
+    fn load_primitive(
+        &self,
+        model: &mut Model,
+        gprimitive: &gltf::Primitive,
+    ) -> Result<Handle<Primitive>, Box<dyn Error>> {
+        let vertices = self.load_vertices(gprimitive)?;
+        let (indices, index_size) = self.load_indices(gprimitive);
+
+        let material = gprimitive
+            .material()
+            .index()
+            .map_or(Handle::none(), |id| Handle::new(id));
+
+        let primitive = Primitive::builder()
+            .vertices(vertices)
+            .indices(indices)
+            .index_size(index_size)
+            .material(material)
+            .build();
+
+        Ok(model.primitives.push(primitive))
+    }
+
     fn load_meshes(&self, model: &mut Model) -> Result<(), Box<dyn Error>> {
         for gmesh in self.gltf.meshes() {
-            let mut primitive_handles = vec![];
-
-            for gprimitive in gmesh.primitives() {
-                let mut vertices = vec![];
-
-                let mode = gprimitive.mode();
-                assert!(mode == gltf::mesh::Mode::Triangles);
-
-                // Load normals first, so we can process tangents later
-                for (semantic, accessor) in gprimitive.attributes() {
-                    if semantic == gltf::mesh::Semantic::Normals {
-                        self.load_normals(&mut vertices, &accessor)?;
-                    }
-                }
-
-                for (semantic, accessor) in gprimitive.attributes() {
-                    match semantic {
-                        gltf::mesh::Semantic::Positions => {
-                            self.load_positions(&mut vertices, &accessor)?
-                        }
-                        gltf::mesh::Semantic::TexCoords(_) => {
-                            self.load_uvs(&mut vertices, &accessor)?
-                        }
-                        gltf::mesh::Semantic::Colors(_) => {
-                            self.load_colors(&mut vertices, &accessor)?
-                        }
-                        _ => println!("Semantic not implemented {:?}", semantic),
-                    }
-                }
-
-                let mut indices = vec![];
-                let mut index_size = 1;
-                if let Some(accessor) = gprimitive.indices() {
-                    let data_type = accessor.data_type();
-                    index_size = data_type_as_size(data_type);
-
-                    // Data type can vary
-                    let data = self.get_data_start(&accessor);
-                    let d = &data[0];
-                    let length = accessor.count() * data_type_as_size(data_type);
-                    // Use bytes regardless of the index data type
-                    let slice: &[u8] =
-                        unsafe { std::slice::from_raw_parts(d as *const u8 as _, length) };
-                    indices = Vec::from(slice);
-                }
-
-                let material = gprimitive
-                    .material()
-                    .index()
-                    .map_or(Handle::none(), |id| Handle::new(id));
-
-                let primitive = Primitive::builder()
-                    .vertices(vertices)
-                    .indices(indices)
-                    .index_size(index_size)
-                    .material(material)
-                    .build();
-                let primitive_handle = model.primitives.push(primitive);
-                primitive_handles.push(primitive_handle);
-            }
+            let primitive_handles = gmesh
+                .primitives()
+                .into_iter()
+                .map(|gprimitive| {
+                    self.load_primitive(model, &gprimitive)
+                        .expect("Failed to load a primitive")
+                })
+                .collect();
 
             let mesh = Mesh::new(primitive_handles);
             model.meshes.push(mesh);
         }
-
         Ok(())
+    }
+
+    fn get_slices<'g>(&self, accessor: &'g gltf::Accessor) -> Vec<&'g [f32]> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        let len = match dimensions {
+            gltf::accessor::Dimensions::Vec2 => 2,
+            gltf::accessor::Dimensions::Vec3 => 3,
+            gltf::accessor::Dimensions::Vec4 => 4,
+            _ => panic!("Invalid dimensions"),
+        };
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        let mut ret = vec![];
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let slice = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, len) };
+            ret.push(slice);
+        }
+
+        ret
     }
 
     fn load_positions(
@@ -263,34 +304,13 @@ impl ModelBuilder {
         vertices: &mut Vec<Vertex>,
         accessor: &gltf::Accessor,
     ) -> Result<(), Box<dyn Error>> {
-        let data_type = accessor.data_type();
-        assert!(data_type == gltf::accessor::DataType::F32);
-        let count = accessor.count();
-        let dimensions = accessor.dimensions();
-        assert!(dimensions == gltf::accessor::Dimensions::Vec3);
-
-        let view = accessor.view().unwrap();
-
-        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
-        assert!(target == gltf::buffer::Target::ArrayBuffer);
-
-        let data = self.get_data_start(accessor);
-        let stride = get_stride(accessor);
-
-        for i in 0..count {
-            let offset = i * stride;
-            assert!(offset < data.len());
-            let d = &data[offset];
-            let position = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 3) };
-
-            if vertices.len() <= i {
-                vertices.push(Vertex::default())
-            }
+        let positions = self.get_slices(accessor);
+        vertices.resize(positions.len(), Vertex::default());
+        for (i, position) in positions.into_iter().enumerate() {
             vertices[i].pos.x = position[0];
             vertices[i].pos.y = position[1];
             vertices[i].pos.z = position[2];
         }
-
         Ok(())
     }
 
@@ -299,33 +319,12 @@ impl ModelBuilder {
         vertices: &mut Vec<Vertex>,
         accessor: &gltf::Accessor,
     ) -> Result<(), Box<dyn Error>> {
-        let data_type = accessor.data_type();
-        assert!(data_type == gltf::accessor::DataType::F32);
-        let count = accessor.count();
-        let dimensions = accessor.dimensions();
-        assert!(dimensions == gltf::accessor::Dimensions::Vec2);
-
-        let view = accessor.view().unwrap();
-
-        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
-        assert!(target == gltf::buffer::Target::ArrayBuffer);
-
-        let data = self.get_data_start(accessor);
-        let stride = get_stride(accessor);
-
-        for i in 0..count {
-            let offset = i * stride;
-            assert!(offset < data.len());
-            let d = &data[offset];
-            let uv = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 2) };
-
-            if vertices.len() <= i {
-                vertices.push(Vertex::default())
-            }
+        let uvs = self.get_slices(accessor);
+        vertices.resize(uvs.len(), Vertex::default());
+        for (i, uv) in uvs.into_iter().enumerate() {
             vertices[i].uv.x = uv[0];
             vertices[i].uv.y = uv[1];
         }
-
         Ok(())
     }
 
@@ -334,33 +333,13 @@ impl ModelBuilder {
         vertices: &mut Vec<Vertex>,
         accessor: &gltf::Accessor,
     ) -> Result<(), Box<dyn Error>> {
-        let data_type = accessor.data_type();
-        assert!(data_type == gltf::accessor::DataType::F32);
-        let count = accessor.count();
-        let dimensions = accessor.dimensions();
-        assert!(dimensions == gltf::accessor::Dimensions::Vec3);
-
-        let view = accessor.view().unwrap();
-        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
-        assert!(target == gltf::buffer::Target::ArrayBuffer);
-
-        let data = self.get_data_start(accessor);
-        let stride = get_stride(accessor);
-
-        for i in 0..count {
-            let offset = i * stride;
-            assert!(offset < data.len());
-            let d = &data[offset];
-            let normal = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 3) };
-
-            if vertices.len() <= i {
-                vertices.push(Vertex::default())
-            }
+        let normals = self.get_slices(accessor);
+        vertices.resize(normals.len(), Vertex::default());
+        for (i, normal) in normals.into_iter().enumerate() {
             vertices[i].normal.x = normal[0];
             vertices[i].normal.y = normal[1];
             vertices[i].normal.z = normal[2];
         }
-
         Ok(())
     }
 
@@ -369,46 +348,19 @@ impl ModelBuilder {
         vertices: &mut Vec<Vertex>,
         accessor: &gltf::Accessor,
     ) -> Result<(), Box<dyn Error>> {
-        let data_type = accessor.data_type();
-        assert!(data_type == gltf::accessor::DataType::F32);
-        let count = accessor.count();
-        let dimensions = accessor.dimensions();
-        assert!(dimensions == gltf::accessor::Dimensions::Vec3);
-        let len = match dimensions {
-            gltf::accessor::Dimensions::Vec3 => 3,
-            gltf::accessor::Dimensions::Vec4 => 4,
-            _ => panic!("Invalid color dimensions"),
-        };
-
-        let view = accessor.view().unwrap();
-        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
-        assert!(target == gltf::buffer::Target::ArrayBuffer);
-
-        let data = self.get_data_start(accessor);
-        let stride = get_stride(accessor);
-
-        for i in 0..count {
-            let offset = i * stride;
-            assert!(offset < data.len());
-            let d = &data[offset];
-            let color = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, len) };
-
-            if vertices.len() <= i {
-                vertices.push(Vertex::default())
-            }
+        let colors = self.get_slices(accessor);
+        vertices.resize(colors.len(), Vertex::default());
+        for (i, color) in colors.into_iter().enumerate() {
             vertices[i].color.r = color[0];
             vertices[i].color.g = color[1];
             vertices[i].color.b = color[2];
-            vertices[i].color.a = if len == 4 { color[3] } else { 1.0 };
+            vertices[i].color.a = if color.len() == 4 { color[3] } else { 1.0 };
         }
-
         Ok(())
     }
 
-    fn load_nodes(&self, model: &mut Model) {
-        // Load scene
-        let scene = self.gltf.scenes().next().unwrap();
-        model.root = Node::builder()
+    fn create_root(scene: &gltf::Scene) -> Node {
+        Node::builder()
             .name("Root".into())
             .children(
                 scene
@@ -416,40 +368,49 @@ impl ModelBuilder {
                     .map(|gchild| Handle::new(gchild.index()))
                     .collect(),
             )
-            .build();
+            .build()
+    }
+
+    fn create_node(gnode: &gltf::Node) -> Node {
+        let transform = gnode.transform().decomposed();
+
+        let translation = &transform.0;
+        let translation = Vec3::new(translation[0], translation[1], translation[2]);
+
+        let rotation = &transform.1;
+        let rotation = Quat::new(rotation[0], rotation[1], rotation[2], rotation[3]);
+
+        let scale = &transform.2;
+        let scale = Vec3::new(scale[0], scale[1], scale[2]);
+
+        let mut node_builder = Node::builder()
+            .id(gnode.index())
+            .name(gnode.name().unwrap_or("Unknown").into())
+            .children(
+                gnode
+                    .children()
+                    .map(|gchild| Handle::new(gchild.index()))
+                    .collect(),
+            )
+            .translation(translation)
+            .rotation(rotation)
+            .scale(scale);
+
+        if let Some(mesh) = gnode.mesh() {
+            node_builder = node_builder.mesh(Handle::new(mesh.index()));
+        }
+
+        node_builder.build()
+    }
+
+    fn load_nodes(&self, model: &mut Model) {
+        // Load scene
+        let scene = self.gltf.scenes().next().unwrap();
+        model.root = Self::create_root(&scene);
 
         // Load nodes
         for gnode in self.gltf.nodes() {
-            let mut node_builder = Node::builder()
-                .id(gnode.index())
-                .name(gnode.name().unwrap_or("Unknown").into())
-                .children(
-                    gnode
-                        .children()
-                        .map(|gchild| Handle::new(gchild.index()))
-                        .collect(),
-                );
-
-            let transform = gnode.transform().decomposed();
-
-            let translation = &transform.0;
-            let translation = Vec3::new(translation[0], translation[1], translation[2]);
-            node_builder = node_builder.translation(translation);
-
-            // xyzw
-            let rotation = &transform.1;
-            let rotation = Quat::new(rotation[0], rotation[1], rotation[2], rotation[3]);
-            node_builder = node_builder.rotation(rotation);
-
-            let scale = &transform.2;
-            let scale = Vec3::new(scale[0], scale[1], scale[2]);
-            node_builder = node_builder.scale(scale);
-
-            if let Some(mesh) = gnode.mesh() {
-                node_builder = node_builder.mesh(Handle::new(mesh.index()));
-            }
-
-            let node = node_builder.build();
+            let node = Self::create_node(&gnode);
             model.nodes.push(node);
         }
     }
