@@ -4,10 +4,8 @@
 
 use std::{error::Error, path::Path};
 
-use rayon::{
-    iter::IndexedParallelIterator,
-    prelude::{IntoParallelIterator, ParallelIterator},
-};
+use owo_colors::OwoColorize;
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use super::*;
 
@@ -70,16 +68,23 @@ impl<'a> Draw for Scene<'a> {
     fn draw(&self, image: &mut Image) {
         let mut triangles = vec![];
 
-        for node in self.model.nodes.iter() {
-            if let Some(mesh) = self.model.meshes.get(node.mesh) {
-                for prim_handle in mesh.primitives.iter() {
-                    let prim = self.model.primitives.get(*prim_handle).unwrap();
-                    let mut prim_triangles = prim.triangles(&node.trs, prim.material, &self.model);
-                    triangles.append(&mut prim_triangles);
-                }
+        let mut timer = Timer::new();
+
+            for node in self.model.nodes.iter() {
+                if let Some(mesh) = self.model.meshes.get(node.mesh) {
+                    for prim_handle in mesh.primitives.iter() {
+                        let prim = self.model.primitives.get(*prim_handle).unwrap();
+                        let mut prim_triangles = prim.triangles(&node.trs, prim.material, &self.model);
+                        triangles.append(&mut prim_triangles);
+                    }
             }
         }
-        println!("Collected {} triangles", triangles.len());
+        println!(
+            "{:>12} {} triangles in {:.2}s",
+            "Collected".green().bold(),
+            triangles.len(),
+            timer.get_delta().as_secs_f32()
+        );
 
         let width = image.width() as f32;
         let height = image.height() as f32;
