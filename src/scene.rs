@@ -2,10 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use rayon::{
-    iter::IndexedParallelIterator,
-    prelude::{IntoParallelIterator, ParallelIterator},
-};
+use owo_colors::OwoColorize;
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use super::*;
 
@@ -79,6 +77,8 @@ impl Scene {
         let mut triangles = vec![];
         let mut triangles_ex = vec![];
 
+        let mut timer = Timer::new();
+
         for node in self.gltf_model.nodes.iter() {
             if let Some(mesh_handle) = node.mesh {
                 let mesh = self.gltf_model.meshes.get(mesh_handle).unwrap();
@@ -91,7 +91,12 @@ impl Scene {
             }
         }
 
-        println!("Collected {} triangles", triangles.len());
+        println!(
+            "{:>12} {} triangles in {:.2}s",
+            "Collected".green().bold(),
+            triangles.len(),
+            timer.get_delta().as_secs_f32()
+        );
         (triangles, triangles_ex)
     }
 }
