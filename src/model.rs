@@ -9,6 +9,8 @@ use std::{
 
 use gltf::Gltf;
 use owo_colors::OwoColorize;
+
+#[cfg(feature = "parallel")]
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use super::*;
@@ -70,11 +72,12 @@ impl ModelBuilder {
     pub fn load_images(&mut self, images: &mut Pack<Image>) {
         let mut timer = Timer::new();
 
-        let mut vec: Vec<Image> = self
-            .gltf
-            .images()
-            .enumerate()
-            .par_bridge()
+        #[cfg(feature = "parallel")]
+        let images_iter = self.gltf.images().enumerate().par_bridge();
+        #[cfg(not(feature = "parallel"))]
+        let images_iter = self.gltf.images().enumerate();
+
+        let mut vec: Vec<Image> = images_iter
             .map(|(id, image)| {
                 match image.source() {
                     gltf::image::Source::View { .. } => todo!("Implement image source view"),
