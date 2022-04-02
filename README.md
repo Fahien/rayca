@@ -13,3 +13,4 @@ Rayca should work on Linux, MacOS, and Windows without issues, but if you need a
 1. Install [Rust](https://rustup.rs/)
 2. Compile with `cargo build`.
 3. Pull test models: `git submodule update --init`.
+4. Run tests with `cargo test --release --features=parallel`.
