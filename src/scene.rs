@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use owo_colors::OwoColorize;
+
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use super::*;
@@ -128,10 +130,18 @@ impl Draw for Scene {
 
         let angle = (fov * 0.5).tan();
 
+        #[cfg(feature = "parallel")]
         let row_iter = image.pixels_mut().into_par_iter();
+        #[cfg(not(feature = "parallel"))]
+        let row_iter = image.pixels_mut().into_iter();
 
         row_iter.enumerate().for_each(|(y, row)| {
-            row.into_par_iter().enumerate().for_each(|(x, pixel)| {
+            #[cfg(feature = "parallel")]
+            let pixel_iter = row.into_par_iter();
+            #[cfg(not(feature = "parallel"))]
+            let pixel_iter = row.into_iter();
+
+            pixel_iter.enumerate().for_each(|(x, pixel)| {
                 // Generate primary ray
                 let xx = (2.0 * ((x as f32 + 0.5) * inv_width) - 1.0) * angle * aspectratio;
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;

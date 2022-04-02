@@ -10,4 +10,8 @@ gltf = "1.1.0"
 num-traits = "0.2.15"
 owo-colors = { version = "3.5.0", features = ["supports-colors"] }
 png = "0.17.7"
-rayon = "1.6.1"
+rayon = { version = "1.6.1", optional = true }
+
+[features]
+default = ["parallel"]
+parallel = [ "rayon" ]

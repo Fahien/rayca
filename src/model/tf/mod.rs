@@ -11,6 +11,8 @@ use std::{error::Error, path::Path};
 
 use gltf::Gltf;
 use owo_colors::OwoColorize;
+
+#[cfg(feature = "parallel")]
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
@@ -244,10 +246,12 @@ impl GltfModel {
     pub fn load_images(&mut self, gltf: &Gltf, parent_dir: &Path) {
         let mut timer = Timer::new();
 
-        let mut vec: Vec<Image> = gltf
-            .images()
-            .enumerate()
-            .par_bridge()
+        #[cfg(feature = "parallel")]
+        let images_iter = gltf.images().enumerate().par_bridge();
+        #[cfg(not(feature = "parallel"))]
+        let images_iter = gltf.images().enumerate();
+
+        let mut vec: Vec<Image> = images_iter
             .map(|(id, image)| {
                 match image.source() {
                     gltf::image::Source::View { .. } => todo!("Implement image source view"),
