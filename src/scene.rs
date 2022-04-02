@@ -5,6 +5,8 @@
 use std::{error::Error, path::Path};
 
 use owo_colors::OwoColorize;
+
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use super::*;
@@ -115,23 +117,24 @@ impl<'a> Draw for Scene<'a> {
 
         let angle = (fov * 0.5).tan();
 
-        image
-            .pixels_mut()
-            .into_par_iter()
-            .enumerate()
-            .for_each(|(y, mut row)| {
-                for x in 0..row.len() {
-                    // Generate primary ray
-                    let xx = (2.0 * ((x as f32 + 0.5) * inv_width) - 1.0) * angle * aspectratio;
-                    let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
-                    let mut dir = Vec3::new(xx, yy, -1.0);
-                    dir.normalize();
-                    let origin = Vec3::new(0.0, 0.0, 4.5);
-                    let ray = Ray::new(origin, dir);
+        #[cfg(feature = "parallel")]
+        let pixel_iter = image.pixels_mut().into_par_iter();
+        #[cfg(not(feature = "parallel"))]
+        let pixel_iter = image.pixels_mut().into_iter();
 
-                    self.draw_pixel(ray, &triangles, row[x]);
-                }
-            });
+        pixel_iter.enumerate().for_each(|(y, mut row)| {
+            for x in 0..row.len() {
+                // Generate primary ray
+                let xx = (2.0 * ((x as f32 + 0.5) * inv_width) - 1.0) * angle * aspectratio;
+                let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
+                let mut dir = Vec3::new(xx, yy, -1.0);
+                dir.normalize();
+                let origin = Vec3::new(0.0, 0.0, 4.5);
+                let ray = Ray::new(origin, dir);
+
+                self.draw_pixel(ray, &triangles, row[x]);
+            }
+        });
     }
 }
 
