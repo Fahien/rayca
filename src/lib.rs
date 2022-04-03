@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 pub mod camera;
+pub mod context;
 pub mod draw;
 pub mod image;
 pub mod material;
@@ -20,6 +21,7 @@ pub mod util;
 pub mod vertex;
 
 pub use camera::*;
+pub use context::*;
 pub use draw::*;
 pub use image::*;
 pub use material::*;

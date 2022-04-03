@@ -51,10 +51,10 @@ mod gltf {
 
         let mut timer = Timer::new();
         scene.load("tests/box.gltf").unwrap();
-        println!("Scene loaded in {}ms", timer.get_delta().as_millis());
+        rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
-        println!("Scene rendered in {}ms", timer.get_delta().as_millis());
+        rlog!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
         image.dump_png("target/cube.png");
     }
@@ -76,10 +76,10 @@ mod gltf {
 
         let mut timer = Timer::new();
         scene.load("tests/suzanne.gltf").unwrap();
-        println!("Scene loaded in {}ms", timer.get_delta().as_millis());
+        rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
-        println!("Scene rendered in {}ms", timer.get_delta().as_millis());
+        rlog!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
         image.dump_png("target/suzanne.png");
     }
