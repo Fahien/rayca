@@ -158,9 +158,36 @@ impl ModelBuilder {
         self.load_uri_buffers()?;
         self.load_materials(&mut model.materials)?;
         self.load_meshes(&mut model)?;
+        self.load_cameras(&mut model.cameras)?;
         self.load_nodes(&mut model);
 
         Ok(model)
+    }
+
+    pub fn load_cameras(&mut self, cameras: &mut Pack<Camera>) -> Result<(), Box<dyn Error>> {
+        for gcamera in self.gltf.cameras() {
+            let camera = match gcamera.projection() {
+                gltf::camera::Projection::Perspective(p) => {
+                    let aspect_ratio = p.aspect_ratio().unwrap_or(1.0);
+                    let yfov = p.yfov();
+                    let near = p.znear();
+                    if let Some(far) = p.zfar() {
+                        Camera::finite_perspective(aspect_ratio, yfov, near, far)
+                    } else {
+                        Camera::infinite_perspective(aspect_ratio, yfov, near)
+                    }
+                }
+                gltf::camera::Projection::Orthographic(o) => {
+                    let width = o.xmag();
+                    let height = o.ymag();
+                    let near = o.znear();
+                    let far = o.zfar();
+                    Camera::orthographic(width, height, near, far)
+                }
+            };
+            cameras.push(camera);
+        }
+        Ok(())
     }
 
     pub fn load_materials(&mut self, materials: &mut Pack<Material>) -> Result<(), Box<dyn Error>> {
@@ -409,6 +436,10 @@ impl ModelBuilder {
             node_builder = node_builder.mesh(Handle::new(mesh.index()));
         }
 
+        if let Some(camera) = gnode.camera() {
+            node_builder = node_builder.camera(Handle::new(camera.index()));
+        }
+
         node_builder.build()
     }
 
@@ -434,6 +465,7 @@ pub struct Model {
     pub materials: Pack<Material>,
     pub primitives: Pack<Primitive>,
     pub meshes: Pack<Mesh>,
+    pub cameras: Pack<Camera>,
     pub nodes: Pack<Node>,
     pub root: Node,
 }
