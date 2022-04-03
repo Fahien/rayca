@@ -63,10 +63,10 @@ fn gltf_suzanne() {
 
     let mut timer = Timer::new();
     scene.gltf_model = GltfModel::load("tests/model/suzanne/suzanne.gltf").unwrap();
-    println!("Scene loaded in {}ms", timer.get_delta().as_millis());
+    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
     scene.draw(&mut image);
-    println!("Scene rendered in {}ms", timer.get_delta().as_millis());
+    rlog!("Scene rendered in {}ms", timer.get_delta().as_millis());
 
     image.dump_png("target/gltf-suzanne.png");
 }

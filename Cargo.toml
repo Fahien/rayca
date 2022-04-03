@@ -1,9 +1,13 @@
 [package]
 name = "rayca"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Antonio Caggiano <info@antoniocaggiano.eu>"]
 edition = "2018"
 license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 
 [dependencies]
 gltf = "1.1.0"
@@ -11,6 +15,27 @@ num-traits = "0.2.15"
 owo-colors = { version = "3.5.0", features = ["supports-colors"] }
 png = "0.17.7"
 rayon = { version = "1.6.1", optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+instant = "0.1.12"
+
+# Web dependencies
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.84"
+console_error_panic_hook = "0.1.7"
+instant = { version = "0.1.12", features = [ "wasm-bindgen", "inaccurate" ] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "0.3.61"
+features = [
+    "console",
+    "Window",
+    "Document",
+    "Performance",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "ImageData"
+]
 
 [features]
 default = ["parallel"]

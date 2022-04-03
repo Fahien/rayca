@@ -135,6 +135,8 @@ impl Draw for Scene {
         #[cfg(not(feature = "parallel"))]
         let row_iter = image.pixels_mut().into_iter();
 
+        let mut timer = Timer::new();
+
         row_iter.enumerate().for_each(|(y, row)| {
             #[cfg(feature = "parallel")]
             let pixel_iter = row.into_par_iter();
@@ -168,5 +170,11 @@ impl Draw for Scene {
                 self.draw_pixel_spheres(ray, &self.spheres, &self.spheres_ex, &mut depth, pixel);
             });
         });
+
+        rlog!(
+            "{:>12} in {:.2}ms",
+            "Rendered".green().bold(),
+            timer.get_delta().as_millis()
+        );
     }
 }

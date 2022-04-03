@@ -16,7 +16,8 @@ use owo_colors::OwoColorize;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
-    Camera, Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Sampler, Texture, Timer, Vec3,
+    rlog, Camera, Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Sampler, Texture, Timer,
+    Vec3,
 };
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
@@ -268,7 +269,7 @@ impl GltfModel {
 
         vec.sort_by_key(|image| image.id);
 
-        println!(
+        rlog!(
             "{:>12} images from file in {:.2}s",
             "Loaded".green().bold(),
             timer.get_delta().as_secs_f32()
@@ -339,7 +340,7 @@ impl GltfModel {
                 gltf::mesh::Semantic::Colors(_) => {
                     uri_buffers.load_colors(&mut vertices, &accessor)?
                 }
-                _ => println!("Semantic not implemented {:?}", semantic),
+                _ => rlog!("Semantic not implemented {:?}", semantic),
             }
         }
 
