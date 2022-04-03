@@ -73,13 +73,15 @@ impl Scene {
         }
     }
 
-    fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>) {
+    fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>, Vec<&Camera>) {
         let mut triangles = vec![];
         let mut triangles_ex = vec![];
+        let mut cameras = vec![];
 
         let mut timer = Timer::new();
 
         for node in self.gltf_model.nodes.iter() {
+            // Collect triangles
             if let Some(mesh_handle) = node.mesh {
                 let mesh = self.gltf_model.meshes.get(mesh_handle).unwrap();
                 for prim_handle in mesh.primitives.iter() {
@@ -89,6 +91,12 @@ impl Scene {
                     triangles_ex.append(&mut prim_triangles_ex);
                 }
             }
+
+            // Collect cameras
+            if let Some(camera_handle) = node.camera {
+                let camera = self.gltf_model.cameras.get(camera_handle).unwrap();
+                cameras.push(camera);
+            }
         }
 
         println!(
@@ -97,13 +105,13 @@ impl Scene {
             triangles.len(),
             timer.get_delta().as_secs_f32()
         );
-        (triangles, triangles_ex)
+        (triangles, triangles_ex, cameras)
     }
 }
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
-        let (triangles, triangles_ex) = self.collect_triangles();
+        let (triangles, triangles_ex, cameras) = self.collect_triangles();
 
         let width = image.width() as f32;
         let height = image.height() as f32;
@@ -111,9 +119,14 @@ impl Draw for Scene {
         let inv_width = 1.0 / width;
         let inv_height = 1.0 / height;
 
-        let fov = 30.0;
+        let mut fov = 0.7; // 0.7 rads == 40 degrees
         let aspectratio = width / height;
-        let angle = (std::f32::consts::FRAC_PI_2 * fov / 180.0).tan();
+
+        if !cameras.is_empty() {
+            fov = cameras[0].yfov_radians;
+        }
+
+        let angle = (fov * 0.5).tan();
 
         let row_iter = image.pixels_mut().into_par_iter();
 

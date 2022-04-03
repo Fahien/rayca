@@ -2,12 +2,14 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+pub mod camera;
 pub mod image;
 pub mod node;
 pub mod sampler;
 pub mod texture;
 pub mod tf;
 
+pub use camera::*;
 pub use image::*;
 pub use node::*;
 pub use sampler::*;

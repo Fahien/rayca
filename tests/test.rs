@@ -70,3 +70,12 @@ fn gltf_suzanne() {
 
     image.dump_png("target/gltf-suzanne.png");
 }
+
+#[test]
+fn gltf_cameras() {
+    let mut image = Image::new(256, 256);
+    let mut scene = Scene::new();
+    scene.gltf_model = GltfModel::load("tests/model/cameras/cameras.gltf").unwrap();
+    scene.draw(&mut image);
+    image.dump_png("target/gltf-cameras.png");
+}

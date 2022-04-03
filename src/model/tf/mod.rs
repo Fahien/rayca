@@ -13,7 +13,9 @@ use gltf::Gltf;
 use owo_colors::OwoColorize;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::{Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Sampler, Texture, Timer, Vec3};
+use crate::{
+    Camera, Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Sampler, Texture, Timer, Vec3,
+};
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
     match data_type {
@@ -214,6 +216,7 @@ pub struct GltfModel {
     pub materials: Pack<GgxMaterial>,
     pub primitives: Pack<GltfPrimitive>,
     pub meshes: Pack<GltfMesh>,
+    pub cameras: Pack<Camera>,
     pub nodes: Pack<Node>,
     pub root: Node,
 }
@@ -232,6 +235,7 @@ impl GltfModel {
         ret.load_materials(&gltf)?;
         let uri_buffers = UriBuffers::new(&gltf, parent_dir)?;
         ret.load_meshes(&gltf, &uri_buffers)?;
+        ret.load_cameras(&gltf);
         ret.load_nodes(&gltf);
 
         Ok(ret)
@@ -379,6 +383,31 @@ impl GltfModel {
         Ok(())
     }
 
+    fn load_cameras(&mut self, gltf: &Gltf) {
+        for gcamera in gltf.cameras() {
+            let camera = match gcamera.projection() {
+                gltf::camera::Projection::Perspective(p) => {
+                    let aspect_ratio = p.aspect_ratio().unwrap_or(1.0);
+                    let yfov = p.yfov();
+                    let near = p.znear();
+                    if let Some(far) = p.zfar() {
+                        Camera::finite_perspective(aspect_ratio, yfov, near, far)
+                    } else {
+                        Camera::infinite_perspective(aspect_ratio, yfov, near)
+                    }
+                }
+                gltf::camera::Projection::Orthographic(o) => {
+                    let width = o.xmag();
+                    let height = o.ymag();
+                    let near = o.znear();
+                    let far = o.zfar();
+                    Camera::orthographic(width, height, near, far)
+                }
+            };
+            self.cameras.push(camera);
+        }
+    }
+
     fn create_root(scene: &gltf::Scene) -> Node {
         Node::builder()
             .name("Root".into())
@@ -418,6 +447,10 @@ impl GltfModel {
 
         if let Some(mesh) = gnode.mesh() {
             node_builder = node_builder.mesh(Handle::new(mesh.index()));
+        }
+
+        if let Some(camera) = gnode.camera() {
+            node_builder = node_builder.camera(Handle::new(camera.index()));
         }
 
         node_builder.build()

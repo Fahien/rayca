@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{GltfMesh, Handle, Mat4, Quat, Trs, Vec3};
+use crate::{Camera, GltfMesh, Handle, Mat4, Quat, Trs, Vec3};
 
 pub struct NodeBuilder {
     pub id: usize,
@@ -12,6 +12,7 @@ pub struct NodeBuilder {
     pub scale: Vec3,
     pub children: Vec<Handle<Node>>,
     pub mesh: Option<Handle<GltfMesh>>,
+    pub camera: Option<Handle<Camera>>,
 }
 
 impl NodeBuilder {
@@ -24,6 +25,7 @@ impl NodeBuilder {
             scale: Vec3::new(1.0, 1.0, 1.0),
             children: vec![],
             mesh: None,
+            camera: None,
         }
     }
 
@@ -69,6 +71,11 @@ impl NodeBuilder {
         self
     }
 
+    pub fn camera(mut self, camera: Handle<Camera>) -> Self {
+        self.camera = Some(camera);
+        self
+    }
+
     pub fn build(self) -> Node {
         let mut node = Node::new();
         node.id = self.id;
@@ -79,6 +86,7 @@ impl NodeBuilder {
         node.trs.translation = self.translation;
 
         node.children = self.children;
+        node.camera = self.camera;
         node.mesh = self.mesh;
 
         node
@@ -95,6 +103,7 @@ impl Default for NodeBuilder {
 pub struct Node {
     pub id: usize,
     pub name: String,
+    pub camera: Option<Handle<Camera>>,
     pub mesh: Option<Handle<GltfMesh>>,
     pub trs: Trs,
     pub children: Vec<Handle<Node>>,
