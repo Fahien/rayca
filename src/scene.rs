@@ -67,18 +67,26 @@ impl<'a> Scene<'a> {
 impl<'a> Draw for Scene<'a> {
     fn draw(&self, image: &mut Image) {
         let mut triangles = vec![];
+        let mut cameras = vec![];
 
         let mut timer = Timer::new();
 
-            for node in self.model.nodes.iter() {
-                if let Some(mesh) = self.model.meshes.get(node.mesh) {
-                    for prim_handle in mesh.primitives.iter() {
-                        let prim = self.model.primitives.get(*prim_handle).unwrap();
-                        let mut prim_triangles = prim.triangles(&node.trs, prim.material, &self.model);
-                        triangles.append(&mut prim_triangles);
-                    }
+        for node in self.model.nodes.iter() {
+            // Collect triangles
+            if let Some(mesh) = self.model.meshes.get(node.mesh) {
+                for prim_handle in mesh.primitives.iter() {
+                    let prim = self.model.primitives.get(*prim_handle).unwrap();
+                    let mut prim_triangles = prim.triangles(&node.trs, prim.material, &self.model);
+                    triangles.append(&mut prim_triangles);
+                }
+            }
+
+            // Collect cameras
+            if let Some(camera) = self.model.cameras.get(node.camera) {
+                cameras.push(camera);
             }
         }
+
         println!(
             "{:>12} {} triangles in {:.2}s",
             "Collected".green().bold(),
@@ -92,9 +100,14 @@ impl<'a> Draw for Scene<'a> {
         let inv_width = 1.0 / width;
         let inv_height = 1.0 / height;
 
-        let fov = 30.0;
+        let mut fov = 0.7; // 0.7 rads == 40 degrees
         let aspectratio = width / height;
-        let angle = (std::f32::consts::FRAC_PI_2 * fov / 180.0).tan();
+
+        if cameras.len() > 0 {
+            fov = cameras[0].yfov_radians;
+        }
+
+        let angle = (fov * 0.5).tan();
 
         let row_iter = image.pixels_mut().into_par_iter();
 

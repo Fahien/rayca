@@ -12,6 +12,7 @@ pub struct NodeBuilder {
     pub scale: Vec3,
     pub children: Vec<Handle<Node>>,
     pub mesh: Handle<Mesh>,
+    pub camera: Handle<Camera>,
 }
 
 impl NodeBuilder {
@@ -24,6 +25,7 @@ impl NodeBuilder {
             scale: Vec3::new(1.0, 1.0, 1.0),
             children: vec![],
             mesh: Handle::NONE,
+            camera: Handle::NONE,
         }
     }
 
@@ -69,6 +71,11 @@ impl NodeBuilder {
         self
     }
 
+    pub fn camera(mut self, camera: Handle<Camera>) -> Self {
+        self.camera = camera;
+        self
+    }
+
     pub fn build(self) -> Node {
         let mut node = Node::new();
         node.id = self.id;
@@ -80,6 +87,8 @@ impl NodeBuilder {
 
         node.children = self.children;
         node.mesh = self.mesh;
+        node.camera = self.camera;
+
         node
     }
 }
@@ -94,6 +103,7 @@ impl Default for NodeBuilder {
 pub struct Node {
     pub id: usize,
     pub name: String,
+    pub camera: Handle<Camera>,
     pub mesh: Handle<Mesh>,
     pub trs: Trs,
     pub children: Vec<Handle<Node>>,
@@ -107,7 +117,6 @@ impl Node {
     pub fn new() -> Self {
         Self {
             name: String::from("Unknown"),
-            mesh: Handle::none(),
             ..Default::default()
         }
     }
