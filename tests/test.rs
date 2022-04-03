@@ -83,4 +83,13 @@ mod gltf {
 
         image.dump_png("target/suzanne.png");
     }
+
+    #[test]
+    fn cameras() {
+        let mut image = Image::new(256, 256);
+        let mut scene = Scene::new();
+        scene.load("tests/model/cameras/cameras.gltf").unwrap();
+        scene.draw(&mut image);
+        image.dump_png("target/cameras.png");
+    }
 }
