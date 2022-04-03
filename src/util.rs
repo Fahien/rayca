@@ -2,13 +2,14 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::iter::FromIterator;
-use std::ops::{Deref, DerefMut};
-use std::time::{Duration, Instant};
 use std::{
     hash::{Hash, Hasher},
+    iter::FromIterator,
     marker::PhantomData,
+    ops::{Deref, DerefMut},
 };
+
+use instant::{Duration, Instant};
 
 /// Useful timer to get delta time, and previous time
 pub struct Timer {

@@ -3,8 +3,12 @@
 // SPDX-License-Identifier: MIT
 
 pub mod camera;
+
+#[cfg(target_arch = "wasm32")]
+pub mod context;
 pub mod draw;
 pub mod image;
+pub mod log;
 pub mod material;
 pub mod math;
 pub mod mesh;
@@ -19,6 +23,8 @@ pub mod util;
 pub mod vertex;
 
 pub use camera::*;
+#[cfg(target_arch = "wasm32")]
+pub use context::*;
 pub use draw::*;
 pub use image::*;
 pub use material::*;
