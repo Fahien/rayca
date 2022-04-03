@@ -94,7 +94,7 @@ impl ModelBuilder {
 
         vec.sort_by_key(|image| image.id);
 
-        println!(
+        rlog!(
             "{:>12} images from file in {:.2}s",
             "Loaded".green().bold(),
             timer.get_delta().as_secs_f32()
@@ -233,7 +233,7 @@ impl ModelBuilder {
                 gltf::mesh::Semantic::Positions => self.load_positions(&mut vertices, &accessor)?,
                 gltf::mesh::Semantic::TexCoords(_) => self.load_uvs(&mut vertices, &accessor)?,
                 gltf::mesh::Semantic::Colors(_) => self.load_colors(&mut vertices, &accessor)?,
-                _ => println!("Semantic not implemented {:?}", semantic),
+                _ => rlog!("Semantic not implemented {:?}", semantic),
             }
         }
 
