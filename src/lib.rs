@@ -2,6 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+pub mod camera;
 pub mod draw;
 pub mod image;
 pub mod material;
@@ -18,6 +19,7 @@ pub mod triangle;
 pub mod util;
 pub mod vertex;
 
+pub use camera::*;
 pub use draw::*;
 pub use image::*;
 pub use material::*;
