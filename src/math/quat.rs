@@ -2,9 +2,12 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::ops::Mul;
+
 use crate::Mat4;
 
 /// Quaternion structure
+#[derive(Copy, Clone)]
 pub struct Quat {
     pub x: f32,
     pub y: f32,
@@ -92,6 +95,19 @@ impl From<&Mat4> for Quat {
         ret.normalize();
 
         ret
+    }
+}
+
+impl Mul<Quat> for Quat {
+    type Output = Quat;
+
+    fn mul(self, rhs: Quat) -> Self::Output {
+        Self::new(
+            self.x * rhs.w + self.y * rhs.z - self.z * rhs.y + self.w * rhs.x,
+            -self.x * rhs.z + self.y * rhs.w + self.z * rhs.x + self.w * rhs.y,
+            self.x * rhs.y - self.y * rhs.x + self.z * rhs.w + self.w * rhs.z,
+            -self.x * rhs.x - self.y * rhs.y - self.z * rhs.z + self.w * rhs.w,
+        )
     }
 }
 
