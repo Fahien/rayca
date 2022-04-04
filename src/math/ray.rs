@@ -14,6 +14,14 @@ impl Ray {
     pub fn new(origin: Vec3, dir: Vec3) -> Self {
         Self { origin, dir }
     }
+
+    pub fn translate(&mut self, translation: &Vec3) {
+        self.origin += translation;
+    }
+
+    pub fn rotate(&mut self, rotation: &Quat) {
+        self.dir.rotate(rotation);
+    }
 }
 
 pub struct Hit {
