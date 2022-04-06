@@ -55,8 +55,8 @@
 /******/ 		"../pkg/rayca_bg.wasm": function() {
 /******/ 			return {
 /******/ 				"./rayca_bg.js": {
-/******/ 					"__wbg_log_a76b7ed73215b0dd": function(p0i32,p1i32) {
-/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_log_a76b7ed73215b0dd"](p0i32,p1i32);
+/******/ 					"__wbg_log_2feb82fa0d1e872a": function(p0i32,p1i32) {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_log_2feb82fa0d1e872a"](p0i32,p1i32);
 /******/ 					},
 /******/ 					"__wbindgen_object_drop_ref": function(p0i32) {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_object_drop_ref"](p0i32);
@@ -228,7 +228,7 @@
 /******/ 				promises.push(installedWasmModuleData);
 /******/ 			else {
 /******/ 				var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/rayca_bg.wasm":"1f9b0f9f1a8fefc25fca"}[wasmModuleId] + ".module.wasm");
+/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/rayca_bg.wasm":"3bfc88ae859d9ccf6294"}[wasmModuleId] + ".module.wasm");
 /******/ 				var promise;
 /******/ 				if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 					promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
