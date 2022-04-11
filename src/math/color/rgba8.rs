@@ -4,16 +4,21 @@
 
 use std::ops::{Add, Mul};
 
-use crate::Vec3;
+use crate::{Color, Vec3, ColorType, RGB8};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
-/// This is the layout expected by the PNG class
 pub struct RGBA8 {
     pub r: u8,
     pub g: u8,
     pub b: u8,
     pub a: u8,
+}
+
+impl Color for RGBA8 {
+    fn color_type() -> ColorType {
+        ColorType::RGBA8
+    }
 }
 
 impl RGBA8 {
@@ -187,6 +192,12 @@ impl Mul<RGBA8> for RGBA8 {
             (((self.b as f32 / 255.0) * (rhs.b as f32 / 255.0)) * 255.0) as u8,
             (((self.a as f32 / 255.0) * (rhs.a as f32 / 255.0)) * 255.0) as u8,
         )
+    }
+}
+
+impl From<RGB8> for RGBA8 {
+    fn from(rgb8: RGB8) -> Self {
+        Self::new(rgb8.r, rgb8.g, rgb8.b, 255)
     }
 }
 

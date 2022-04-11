@@ -6,7 +6,7 @@ use rayca::*;
 
 #[test]
 fn circle() {
-    let mut image = Image::new(128, 128);
+    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
     let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 1.0, RGBA8::from(0xFF0000FFu32));
     scene.objects.push(Box::new(sphere));
@@ -16,7 +16,7 @@ fn circle() {
 
 #[test]
 fn triangle() {
-    let mut image = Image::new(128, 128);
+    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut model = Model::new();
     let material = model.materials.push(Material::default());
     let mut scene = Scene::new();
@@ -46,7 +46,7 @@ mod gltf {
 
     #[test]
     fn cube() {
-        let mut image = Image::new(256, 256);
+        let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         let mut timer = Timer::new();
@@ -61,7 +61,7 @@ mod gltf {
 
     #[test]
     fn triangle() {
-        let mut image = Image::new(128, 128);
+        let mut image = Image::new(128, 128, ColorType::RGBA8);
         let mut scene = Scene::new();
         scene.load("tests/model/triangle/triangle.gltf").unwrap();
 
@@ -71,7 +71,7 @@ mod gltf {
 
     #[test]
     fn suzanne() {
-        let mut image = Image::new(128, 128);
+        let mut image = Image::new(128, 128, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         let mut timer = Timer::new();
@@ -86,7 +86,7 @@ mod gltf {
 
     #[test]
     fn cameras() {
-        let mut image = Image::new(256, 256);
+        let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
         scene.load("tests/model/cameras/cameras.gltf").unwrap();
         scene.draw(&mut image);
