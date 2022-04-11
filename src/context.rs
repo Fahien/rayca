@@ -2,6 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+pub use owo_colors::OwoColorize;
 use wasm_bindgen::{prelude::*, Clamped, JsCast};
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
@@ -24,6 +25,20 @@ extern "C" {
     // `log(..)`
     #[wasm_bindgen(js_namespace = console)]
     pub fn log(s: &str);
+}
+
+#[macro_export]
+macro_rules! rfmt {
+    ( $( $t:tt )* ) => {
+        format!($( $t )*)
+    }
+}
+
+#[macro_export]
+macro_rules! fail {
+    ( $( $t:tt )* ) => {
+        format!("{:>12} {}", "Failed".red().bold(), $( $t )*)
+    }
 }
 
 // Wrap web-sys console log function in a println! style macro
@@ -74,7 +89,7 @@ impl Context {
         let canvas = get_canvas("area")?;
 
         let width = 256;
-        let mut image = Image::new(width, width);
+        let mut image = Image::new(width, width, ColorType::RGBA8);
         let mut scene = Scene::new();
         let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 1.0, RGBA8::from(0xFF0000FFu32));
         scene.objects.push(Box::new(sphere));
