@@ -4,27 +4,28 @@
 
 use std::{fs::File, io::BufWriter, path::Path};
 
-use super::RGBA8;
+use super::*;
 
 #[derive(Default)]
 pub struct Image {
     pub id: usize,
 
     /// Row major, top-left origin
-    buffer: Vec<RGBA8>,
+    pub color_type: ColorType,
+    buffer: Vec<u8>,
 
     width: u32,
     height: u32,
 }
 
 impl Image {
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(width: u32, height: u32, color_type: ColorType) -> Self {
         let mut buffer = Vec::new();
-
-        buffer.resize(width as usize * height as usize, RGBA8::default());
+        buffer.resize(width as usize * height as usize * color_type.channels(), 0);
 
         Self {
             id: 0,
+            color_type,
             buffer,
             width,
             height,
@@ -40,29 +41,31 @@ impl Image {
     }
 
     pub fn bytes(&self) -> &[u8] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.buffer.as_ptr() as *const u8,
-                self.buffer.len() * std::mem::size_of::<u32>(),
-            )
-        }
-    }
-
-    pub fn bytes_mut(&mut self) -> &mut [u8] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.buffer.as_mut_ptr() as *mut u8,
-                self.buffer.len() * std::mem::size_of::<u32>(),
-            )
-        }
-    }
-
-    pub fn data(&self) -> &[RGBA8] {
         &self.buffer
     }
 
-    pub fn data_mut(&mut self) -> &mut [RGBA8] {
+    pub fn bytes_mut(&mut self) -> &mut [u8] {
         &mut self.buffer
+    }
+
+    pub fn data<Col: ColorTyped>(&self) -> &[Col] {
+        assert!(Col::color_type() == self.color_type);
+        unsafe {
+            std::slice::from_raw_parts(
+                self.buffer.as_ptr() as *const Col,
+                self.buffer.len() / std::mem::size_of::<Col>(),
+            )
+        }
+    }
+
+    pub fn data_mut<Col: ColorTyped>(&mut self) -> &mut [Col] {
+        assert!(Col::color_type() == self.color_type);
+        unsafe {
+            std::slice::from_raw_parts_mut(
+                self.buffer.as_mut_ptr() as *mut Col,
+                self.buffer.len() / std::mem::size_of::<Col>(),
+            )
+        }
     }
 
     fn index(&self, x: u32, y: u32) -> usize {
@@ -71,15 +74,17 @@ impl Image {
         y as usize * self.width as usize + x as usize
     }
 
-    pub fn get(&self, x: u32, y: u32) -> RGBA8 {
-        self.buffer[self.index(x, y)]
+    pub fn get<Col: ColorTyped>(&self, x: u32, y: u32) -> Col {
+        assert!(Col::color_type() == self.color_type);
+        self.data()[self.index(x, y)]
     }
 
-    pub fn pixels_mut(&mut self) -> Vec<Vec<&mut RGBA8>> {
+    pub fn pixels_mut<Col: ColorTyped>(&mut self) -> Vec<Vec<&mut Col>> {
+        assert!(Col::color_type() == self.color_type);
         let width = self.width as usize;
         let height = self.height as usize;
 
-        let mut pixels: Vec<Vec<&mut RGBA8>> = vec![];
+        let mut pixels: Vec<Vec<&mut Col>> = vec![];
         pixels.resize_with(height, || Vec::with_capacity(width));
 
         let mut data = self.data_mut();
@@ -94,13 +99,15 @@ impl Image {
         pixels
     }
 
-    pub fn set(&mut self, x: u32, y: u32, value: RGBA8) {
+    pub fn set<Col: ColorTyped>(&mut self, x: u32, y: u32, value: Col) {
+        assert!(Col::color_type() == self.color_type);
         let index = self.index(x, y);
-        self.buffer[index] = value;
+        self.data_mut()[index] = value;
     }
 
-    pub fn clear(&mut self, color: RGBA8) {
-        self.buffer.fill(color);
+    pub fn clear<Col: ColorTyped>(&mut self, color: Col) {
+        assert!(Col::color_type() == self.color_type);
+        self.data_mut().fill(color);
     }
 
     /// Opens a PNG file without loading data yet
@@ -116,7 +123,14 @@ impl Image {
         let mut reader = decoder.read_info().unwrap();
         let info = reader.info();
 
-        let mut ret = Self::new(info.width, info.height);
+        let color_type = match info.color_type {
+            png::ColorType::Rgb => ColorType::RGB8,
+            png::ColorType::Rgba => ColorType::RGBA8,
+            png::ColorType::Indexed => ColorType::RGB8,
+            _ => panic!("Color type not supported: {:?}", info.color_type),
+        };
+
+        let mut ret = Self::new(info.width, info.height, color_type);
         reader.next_frame(ret.bytes_mut()).expect(&format!(
             "Failed to read frame from PNG file: {}/{}",
             current_dir.display(),
@@ -126,11 +140,16 @@ impl Image {
     }
 
     pub fn dump_png<P: AsRef<Path>>(&self, path: P) {
-        let file = File::create(path).unwrap();
+        let file = File::create(path).expect(&fail!("to create PNG file"));
         let ref mut w = BufWriter::new(file);
 
         let mut encoder = png::Encoder::new(w, self.width, self.height);
-        encoder.set_color(png::ColorType::Rgba);
+
+        let png_color_type = match self.color_type {
+            ColorType::RGB8 => png::ColorType::Rgb,
+            ColorType::RGBA8 => png::ColorType::Rgba,
+        };
+        encoder.set_color(png_color_type);
         encoder.set_depth(png::BitDepth::Eight);
         // 1.0 / 2.2, scaled by 100000
         encoder.set_source_gamma(png::ScaledFloat::from_scaled(45455));
@@ -157,28 +176,28 @@ mod test {
     #[test]
     fn default() {
         let (width, height) = (2, 1);
-        let image = Image::new(width, height);
+        let image = Image::new(width, height, ColorType::RGBA8);
         assert!(image.height() == height && image.width() == width);
-        assert!(image.get(1, 0) == RGBA8::from(0));
+        assert!(image.get::<RGBA8>(1, 0) == RGBA8::from(0));
     }
 
     #[test]
     fn clear() {
-        let mut image = Image::new(1, 2);
+        let mut image = Image::new(1, 2, ColorType::RGBA8);
         let color = RGBA8::from(0xFFFFFFFF);
         image.clear(color);
-        assert!(image.data().iter().all(|&value| value == color));
+        assert!(image.data().iter().all(|&value: &RGBA8| value == color));
     }
 
     #[test]
     fn dump() {
-        let image = Image::new(32, 32);
+        let image = Image::new(32, 32, ColorType::RGBA8);
         image.dump_png("target/image.png");
     }
 
     #[test]
     fn load() {
-        let mut image = Image::new(1, 1);
+        let mut image = Image::new(1, 1, ColorType::RGBA8);
         let color = RGBA8::from(0x0000FFFF);
         image.clear(color);
 
@@ -186,6 +205,9 @@ mod test {
         image.dump_png(blue_path);
 
         let image = Image::load_png(blue_path);
-        assert!(image.data().iter().all(|&value| value == color));
+        assert!(image
+            .data::<RGBA8>()
+            .iter()
+            .all(|&value: &RGBA8| value == color));
     }
 }
