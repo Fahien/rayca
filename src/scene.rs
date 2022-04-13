@@ -63,7 +63,7 @@ impl<'a> Scene<'a> {
                     color.g = color.g * n_dot_dir;
                     color.b = color.b * n_dot_dir;
 
-                    *pixel = color.into();
+                    pixel.over(color);
                 }
             }
         }
