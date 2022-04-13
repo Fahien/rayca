@@ -53,6 +53,13 @@ impl Color {
     pub fn white() -> Self {
         Self::new(1.0, 1.0, 1.0, 1.0)
     }
+
+    pub fn over(&mut self, top: Color) {
+        self.r = top.r * top.a + self.r * (1.0 - top.a);
+        self.g = top.g * top.a + self.g * (1.0 - top.a);
+        self.b = top.b * top.a + self.b * (1.0 - top.a);
+        self.a = 1.0;
+    }
 }
 
 impl From<u32> for Color {
