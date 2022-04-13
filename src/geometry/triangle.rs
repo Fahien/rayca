@@ -50,7 +50,13 @@ impl Intersect for Triangle {
         // Step 1: finding P
 
         // Check if ray and plane are parallel
-        let n_dot_ray_dir = n.dot(&ray.dir);
+        let n_dot_ray_dir = n.dot(ray.dir);
+
+        if n_dot_ray_dir > 0.0 {
+            // Back-facing triangle
+            return None;
+        }
+
         if n_dot_ray_dir.abs() < f32::EPSILON {
             // Parallel do not intersect
             return None;
