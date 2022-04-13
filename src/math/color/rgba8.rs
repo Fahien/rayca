@@ -4,7 +4,7 @@
 
 use std::ops::{Add, Mul};
 
-use crate::{Color, Vec3, ColorType, RGB8};
+use crate::{Color, ColorType, Vec3, RGB8};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
@@ -28,6 +28,15 @@ impl RGBA8 {
 
     pub fn white() -> Self {
         Self::new(255, 255, 255, 255)
+    }
+
+    /// Over blend this color with another on top of itself
+    pub fn over(&mut self, top: RGBA8) {
+        let a = top.a as f32 / 255.0;
+        self.r = (top.r as f32 * a) as u8 + (self.r as f32 * (1.0 - a)) as u8;
+        self.g = (top.g as f32 * a) as u8 + (self.g as f32 * (1.0 - a)) as u8;
+        self.b = (top.b as f32 * a) as u8 + (self.b as f32 * (1.0 - a)) as u8;
+        self.a = 255;
     }
 }
 
