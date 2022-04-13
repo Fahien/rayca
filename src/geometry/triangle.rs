@@ -143,6 +143,7 @@ impl TriangleEx {
         let c0 = &self.vertices[0].color;
         let c1 = &self.vertices[1].color;
         let c2 = &self.vertices[2].color;
+        let vertex_color = (1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1;
 
         let material = if self.material.valid() {
             scene.gltf_model.materials.get(self.material).unwrap()
@@ -164,7 +165,7 @@ impl TriangleEx {
             color = color * sampler.sample(image, &uv);
         }
 
-        color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
+        color * vertex_color
     }
 
     pub fn get_normal(&self, hit: &Hit) -> Vec3 {

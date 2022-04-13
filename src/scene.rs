@@ -48,7 +48,8 @@ impl Scene {
                     color.g *= n_dot_dir;
                     color.b *= n_dot_dir;
 
-                    *pixel = color.into();
+                    pixel.over(color);
+                    //*pixel = color.into();
                 }
             }
         }

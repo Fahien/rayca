@@ -34,6 +34,13 @@ impl RGBA8 {
     pub fn white() -> Self {
         Self::new(255, 255, 255, 255)
     }
+
+    /// Over blend this color with another on top of itself
+    pub fn over(&mut self, top: Color) {
+        let mut self_color: Color = (*self).into();
+        self_color.over(top);
+        *self = self_color.into();
+    }
 }
 
 impl From<u32> for RGBA8 {

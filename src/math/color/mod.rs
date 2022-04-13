@@ -60,6 +60,13 @@ impl Color {
     pub fn white() -> Self {
         Self::new(1.0, 1.0, 1.0, 1.0)
     }
+
+    pub fn over(&mut self, top: Color) {
+        self.r = top.r * top.a + self.r * (1.0 - top.a);
+        self.g = top.g * top.a + self.g * (1.0 - top.a);
+        self.b = top.b * top.a + self.b * (1.0 - top.a);
+        self.a = 1.0;
+    }
 }
 
 impl From<u32> for Color {
@@ -145,7 +152,7 @@ impl Mul<f32> for Color {
     type Output = Color;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        Self::Output::new(self.r * rhs, self.g * rhs, self.b * rhs, self.a)
+        Self::Output::new(self.r * rhs, self.g * rhs, self.b * rhs, self.a * rhs)
     }
 }
 
@@ -153,7 +160,7 @@ impl Mul<f32> for &Color {
     type Output = Color;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        Self::Output::new(self.r * rhs, self.g * rhs, self.b * rhs, self.a)
+        Self::Output::new(self.r * rhs, self.g * rhs, self.b * rhs, self.a * rhs)
     }
 }
 
@@ -161,7 +168,7 @@ impl Mul<&Color> for f32 {
     type Output = Color;
 
     fn mul(self, rhs: &Color) -> Self::Output {
-        Self::Output::new(self * rhs.r, self * rhs.g, self * rhs.b, rhs.a)
+        Self::Output::new(self * rhs.r, self * rhs.g, self * rhs.b, self * rhs.a)
     }
 }
 
@@ -169,7 +176,7 @@ impl Mul<&Color> for &f32 {
     type Output = Color;
 
     fn mul(self, rhs: &Color) -> Self::Output {
-        Self::Output::new(self * rhs.r, self * rhs.g, self * rhs.b, rhs.a)
+        Self::Output::new(self * rhs.r, self * rhs.g, self * rhs.b, self * rhs.a)
     }
 }
 
