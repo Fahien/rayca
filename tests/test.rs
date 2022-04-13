@@ -92,4 +92,43 @@ mod gltf {
         scene.draw(&mut image);
         image.dump_png("target/cameras.png");
     }
+
+    #[test]
+    fn orientation() {
+        let mut image = Image::new(1024, 1024, ColorType::RGBA8);
+        let mut scene = Scene::new();
+        scene.load("tests/model/orientation/OrientationTest.gltf").unwrap();
+
+        // Custom camera
+        let mut camera_node = Node::builder()
+            .id(scene.models[0].nodes.len())
+            .translation(Vec3::new(0.0, 0.32, 24.0))
+            .build();
+        camera_node.camera = Some(scene.models[0].cameras.push(Camera::default()));
+        let camera_node_handle = scene.models[0].nodes.push(camera_node);
+        scene.models[0].root.children.push(camera_node_handle);
+
+        scene.draw(&mut image);
+        image.dump_png("target/orientation.png");
+    }
+
+    #[test]
+    fn flight() {
+        let mut image = Image::new(64, 64, ColorType::RGBA8);
+        let mut scene = Scene::new();
+
+        scene.load("tests/model/flight-helmet/FlightHelmet.gltf").unwrap();
+
+        // Custom camera
+        let mut camera_node = Node::builder()
+            .id(scene.models[0].nodes.len())
+            .translation(Vec3::new(0.0, 0.32, 1.0))
+            .build();
+        camera_node.camera = Some(scene.models[0].cameras.push(Camera::default()));
+        let camera_node_handle = scene.models[0].nodes.push(camera_node);
+        scene.models[0].root.children.push(camera_node_handle);
+
+        scene.draw(&mut image);
+        image.dump_png("target/flight.png");
+    }
 }
