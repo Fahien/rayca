@@ -90,7 +90,7 @@ impl Primitive {
         material: Handle<Material>,
         model: &'m Model,
         indices: &[Index],
-    ) -> Vec<Triangle<'m>> {
+    ) -> Vec<BvhTriangle<'m>> {
         let mut ret = vec![];
         let matrix = transform.into();
 
@@ -112,7 +112,7 @@ impl Primitive {
             c.pos = &matrix * c.pos;
             c.normal = &normal_matrix * c.normal;
 
-            ret.push(Triangle::new(a, b, c, material, model));
+            ret.push(BvhTriangle::new(a, b, c, material, model));
         }
 
         ret
@@ -123,7 +123,7 @@ impl Primitive {
         transform: &Trs,
         material: Handle<Material>,
         model: &'m Model,
-    ) -> Vec<Triangle<'m>> {
+    ) -> Vec<BvhTriangle<'m>> {
         let indices_len = self.indices.len() / self.index_size;
 
         match self.index_size {

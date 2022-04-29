@@ -35,26 +35,22 @@ impl Scene {
         Ok(())
     }
 
-    fn draw_pixel(&self, ray: Ray, triangles: &[Triangle], pixel: &mut RGBA8) {
-        let mut depth = f32::INFINITY;
+    fn draw_pixel(&self, ray: Ray, bvh: &Bvh, pixel: &mut RGBA8) -> usize {
+        let mut triangle_count = 0;
+        if let Some((hit, triangle)) = bvh.intersects_stats(&ray, &mut triangle_count) {
+            let mut color = triangle.get_color(&hit);
 
-        for triangle in triangles {
-            if let Some(hit) = triangle.intersects(&ray) {
-                if hit.depth < depth {
-                    depth = hit.depth;
-                    let mut color = triangle.get_color(&hit);
+            // Facing ratio
+            let n = triangle.get_normal(&hit);
+            let n_dot_dir = n.dot(&-ray.dir);
+            color.r = color.r * n_dot_dir;
+            color.g = color.g * n_dot_dir;
+            color.b = color.b * n_dot_dir;
 
-                    // Facing ratio
-                    let n = triangle.get_normal(&hit);
-                    let n_dot_dir = n.dot(&-ray.dir);
-                    color.r = color.r * n_dot_dir;
-                    color.g = color.g * n_dot_dir;
-                    color.b = color.b * n_dot_dir;
-
-                    pixel.over(color);
-                }
-            }
+            // No over operation here as transparency should be handled by the lighting model
+            *pixel = color.into();
         }
+        triangle_count
     }
 }
 
@@ -84,6 +80,8 @@ impl Draw for Scene {
                 }
             }
         }
+
+        let bvh = Bvh::new(triangles);
 
         let width = image.width() as f32;
         let height = image.height() as f32;
@@ -123,7 +121,7 @@ impl Draw for Scene {
                 let origin = Vec3::new(0.0, 0.0, 0.0);
                 let ray = &camera_trs * Ray::new(origin, dir);
 
-                self.draw_pixel(ray, &triangles, row[x]);
+                self.draw_pixel(ray, &bvh, row[x]);
             }
         });
 

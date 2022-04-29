@@ -2,16 +2,16 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use super::*;
+use crate::*;
 
-pub struct Triangle<'m> {
+pub struct BvhTriangle<'m> {
     pub vertices: [Vertex; 3],
     pub centroid: Vec3,
     pub material: Handle<Material>,
     pub model: &'m Model,
 }
 
-impl<'m> Triangle<'m> {
+impl<'m> BvhTriangle<'m> {
     pub fn new(
         a: Vertex,
         b: Vertex,
@@ -43,7 +43,7 @@ impl<'m> Triangle<'m> {
     }
 }
 
-impl<'m> Intersect for Triangle<'m> {
+impl<'m> Intersect for BvhTriangle<'m> {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
     fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let v0 = &self.vertices[0].pos;

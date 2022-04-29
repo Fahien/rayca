@@ -2,6 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+pub mod bvh;
 pub mod camera;
 pub mod context;
 pub mod draw;
@@ -15,10 +16,10 @@ pub mod sampler;
 pub mod scene;
 pub mod sphere;
 pub mod texture;
-pub mod triangle;
 pub mod util;
 pub mod vertex;
 
+pub use bvh::*;
 pub use camera::*;
 pub use context::*;
 pub use draw::*;
@@ -32,6 +33,5 @@ pub use sampler::*;
 pub use scene::*;
 pub use sphere::*;
 pub use texture::*;
-pub use triangle::*;
 pub use util::*;
 pub use vertex::*;
