@@ -43,8 +43,6 @@ mod gltf {
         rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
-        rlog!("Scene rendered in {}ms", timer.get_delta().as_millis());
-
         image.dump_png("target/cube.png");
     }
 
@@ -68,8 +66,6 @@ mod gltf {
         rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
-        rlog!("Scene rendered in {}ms", timer.get_delta().as_millis());
-
         image.dump_png("target/suzanne.png");
     }
 
@@ -86,7 +82,9 @@ mod gltf {
     fn orientation() {
         let mut image = Image::new(1024, 1024, ColorType::RGBA8);
         let mut scene = Scene::new();
-        scene.load("tests/model/orientation/OrientationTest.gltf").unwrap();
+        scene
+            .load("tests/model/orientation/OrientationTest.gltf")
+            .unwrap();
 
         // Custom camera
         let mut camera_node = Node::builder()
@@ -103,10 +101,12 @@ mod gltf {
 
     #[test]
     fn flight() {
-        let mut image = Image::new(64, 64, ColorType::RGBA8);
+        let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
 
-        scene.load("tests/model/flight-helmet/FlightHelmet.gltf").unwrap();
+        scene
+            .load("tests/model/flight-helmet/FlightHelmet.gltf")
+            .unwrap();
 
         // Custom camera
         let mut camera_node = Node::builder()
