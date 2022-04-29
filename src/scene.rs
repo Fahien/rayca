@@ -11,12 +11,6 @@ use super::*;
 
 #[derive(Default)]
 pub struct Scene {
-    pub triangles: Vec<Triangle>,
-    pub triangles_ex: Vec<TriangleEx>,
-
-    pub spheres: Vec<Sphere>,
-    pub spheres_ex: Vec<SphereEx>,
-
     pub gltf_model: GltfModel,
 }
 
@@ -25,55 +19,50 @@ impl Scene {
         Self::default()
     }
 
-    fn draw_pixel_triangles(
-        &self,
-        ray: Ray,
-        triangles: &[Triangle],
-        triangles_ex: &[TriangleEx],
-        depth: &mut f32,
-        pixel: &mut RGBA8,
-    ) {
-        for i in 0..triangles.len() {
-            let triangle = &triangles[i];
-            if let Some(hit) = triangle.intersects(&ray) {
-                if hit.depth < *depth {
-                    *depth = hit.depth;
-                    let triangle_ex = &triangles_ex[i];
-                    let mut color = triangle_ex.get_color(&hit, self);
+    fn draw_pixel_triangle(&self, ray: Ray, bvh: &Bvh, hit: &Hit, pixel: &mut RGBA8) {
+        let triangle_ex = &bvh.triangles_ex[hit.primitive as usize];
+        let mut color = triangle_ex.get_color(hit, self);
 
-                    // Facing ratio
-                    let n = triangle_ex.get_normal(&hit);
-                    let n_dot_dir = n.dot(&-ray.dir);
-                    color.r *= n_dot_dir;
-                    color.g *= n_dot_dir;
-                    color.b *= n_dot_dir;
+        // Facing ratio
+        let n = triangle_ex.get_normal(hit);
+        let n_dot_dir = n.dot(&-ray.dir);
+        color.r *= n_dot_dir;
+        color.g *= n_dot_dir;
+        color.b *= n_dot_dir;
 
-                    pixel.over(color);
-                    //*pixel = color.into();
-                }
-            }
-        }
+        // No over operation here as transparency should be handled by the lighting model
+        *pixel = color.into();
     }
 
-    fn draw_pixel_spheres(
-        &self,
-        ray: Ray,
-        spheres: &[Sphere],
-        spheres_ex: &[SphereEx],
-        depth: &mut f32,
-        pixel: &mut RGBA8,
-    ) {
-        for i in 0..spheres.len() {
-            let sphere = &spheres[i];
-            if let Some(hit) = sphere.intersects(&ray) {
-                if hit.depth < *depth {
-                    *depth = hit.depth;
-                    let sphere_ex = &spheres_ex[i];
-                    let color = sphere_ex.get_color(sphere, &hit);
-                    *pixel = color.into();
-                }
+    fn draw_pixel_sphere(&self, ray: Ray, bvh: &Bvh, hit: &Hit, pixel: &mut RGBA8) {
+        assert!(hit.primitive as usize >= bvh.triangles.len());
+        let sphere_index = hit.primitive as usize - bvh.triangles.len();
+        let sphere = &bvh.spheres[sphere_index];
+        let sphere_ex = &bvh.spheres_ex[sphere_index];
+        let mut color = sphere_ex.get_color(sphere, hit);
+
+        // Facing ratio
+        let n = sphere_ex.get_normal(sphere, hit);
+        let n_dot_dir = n.dot(&-ray.dir);
+        color.r *= n_dot_dir;
+        color.g *= n_dot_dir;
+        color.b *= n_dot_dir;
+
+        // No over operation here as transparency should be handled by the lighting model
+        *pixel = color.into();
+    }
+
+    fn draw_pixel_bvh(&self, ray: Ray, bvh: &Bvh, pixel: &mut RGBA8) -> usize {
+        let mut triangle_count = 0;
+        if let Some(hit) = bvh.intersects_stats(&ray, &mut triangle_count) {
+            let primitive_index = hit.primitive as usize;
+            if primitive_index < bvh.triangles.len() {
+                self.draw_pixel_triangle(ray, bvh, &hit, pixel);
+            } else if primitive_index - bvh.triangles.len() < bvh.spheres.len() {
+                self.draw_pixel_sphere(ray, bvh, &hit, pixel);
             }
         }
+        triangle_count
     }
 
     fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>, Vec<(&Camera, Trs)>) {
@@ -116,6 +105,7 @@ impl Scene {
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
         let (triangles, triangles_ex, cameras) = self.collect_triangles();
+        let bvh = Bvh::new(triangles, triangles_ex);
 
         let width = image.width() as f32;
         let height = image.height() as f32;
@@ -162,22 +152,7 @@ impl Draw for Scene {
                 let origin = Point3::new(0.0, 0.0, 0.0);
                 let ray = &camera_trs * Ray::new(origin, dir);
 
-                let mut depth = f32::INFINITY;
-                self.draw_pixel_triangles(
-                    ray.clone(),
-                    &triangles,
-                    &triangles_ex,
-                    &mut depth,
-                    pixel,
-                );
-                self.draw_pixel_triangles(
-                    ray.clone(),
-                    &self.triangles,
-                    &self.triangles_ex,
-                    &mut depth,
-                    pixel,
-                );
-                self.draw_pixel_spheres(ray, &self.spheres, &self.spheres_ex, &mut depth, pixel);
+                self.draw_pixel_bvh(ray, &bvh, pixel);
             });
         });
 

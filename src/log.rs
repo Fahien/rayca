@@ -11,6 +11,15 @@ macro_rules! rlog {
 }
 
 #[macro_export]
+macro_rules! print_success {
+    ( $s:expr, $( $t:tt )* ) => {
+        println!("{:>12} {}",
+            owo_colors::OwoColorize::bold(
+                &owo_colors::OwoColorize::green(&$s)), format!($( $t )*))
+    }
+}
+
+#[macro_export]
 macro_rules! fail {
     ( $( $t:tt )* ) => {
         format!("{:>12} {}", owo_colors::OwoColorize::red(&owo_colors::OwoColorize::bold(&"Failed")), $( $t )*)

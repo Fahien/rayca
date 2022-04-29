@@ -2,6 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+pub mod bvh;
 #[cfg(target_arch = "wasm32")]
 pub mod context;
 pub mod draw;
@@ -13,6 +14,7 @@ pub mod model;
 pub mod scene;
 pub mod util;
 
+pub use bvh::*;
 #[cfg(target_arch = "wasm32")]
 pub use context::*;
 pub use draw::*;

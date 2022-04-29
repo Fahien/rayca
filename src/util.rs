@@ -83,6 +83,14 @@ impl<T> Handle<T> {
     pub fn valid(&self) -> bool {
         self.id != std::usize::MAX
     }
+
+    pub fn is_some(&self) -> bool {
+        self.id != std::usize::MAX
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.id == std::usize::MAX
+    }
 }
 
 impl<'a, T> Handle<T> {

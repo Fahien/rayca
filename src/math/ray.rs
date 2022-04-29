@@ -31,6 +31,10 @@ impl Default for Ray {
 }
 
 pub struct Hit {
+    /// Primitive index hit in this intersection
+    /// If this index goes beyond the final triangle, try with spheres
+    pub primitive: u32,
+
     pub depth: f32,
     pub point: Vec3,
 
@@ -40,8 +44,13 @@ pub struct Hit {
 }
 
 impl Hit {
-    pub fn new(depth: f32, point: Vec3, uv: Vec2) -> Self {
-        Self { depth, point, uv }
+    pub fn new(primitive: u32, depth: f32, point: Vec3, uv: Vec2) -> Self {
+        Self {
+            primitive,
+            depth,
+            point,
+            uv,
+        }
     }
 }
 

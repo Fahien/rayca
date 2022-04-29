@@ -24,6 +24,20 @@ impl Triangle {
     pub fn get_vertex_mut(&mut self, index: usize) -> &mut Point3 {
         &mut self.vertices[index]
     }
+
+    pub fn min(&self) -> Point3 {
+        Point3::new(f32::MAX, f32::MAX, f32::MAX)
+            .min(&self.vertices[0])
+            .min(&self.vertices[1])
+            .min(&self.vertices[2])
+    }
+
+    pub fn max(&self) -> Point3 {
+        Point3::new(f32::MIN, f32::MIN, f32::MIN)
+            .max(&self.vertices[0])
+            .max(&self.vertices[1])
+            .max(&self.vertices[2])
+    }
 }
 
 impl Default for Triangle {
@@ -108,7 +122,10 @@ impl Intersect for Triangle {
         }
 
         let uv = Vec2::new(u / denom, v / denom);
-        let hit = Hit::new(t, p, uv);
+
+        // A triangle does not know its primitive index
+        // Setting the primitive index is responsiblity of the caller
+        let hit = Hit::new(u32::MAX, t, p, uv);
         Some(hit) // This ray hits the triangle
     }
 }

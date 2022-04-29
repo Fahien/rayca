@@ -22,6 +22,13 @@ impl GltfVertex {
             uv,
         }
     }
+
+    pub fn from_position(pos: Point3) -> Self {
+        Self {
+            pos,
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for GltfVertex {
