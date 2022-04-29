@@ -2,18 +2,16 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::borrow::Cow;
+use crate::*;
 
-use super::*;
-
-pub struct Triangle<'m> {
-    pub vertices: [Cow<'m, Vertex>; 3],
+pub struct BvhTriangle<'m> {
+    pub vertices: [Vertex; 3],
     pub centroid: Vec3,
     pub material: Handle<Material>,
     pub model: &'m Model,
 }
 
-impl<'m> Triangle<'m> {
+impl<'m> BvhTriangle<'m> {
     pub fn new(
         a: Vertex,
         b: Vertex,
@@ -23,7 +21,7 @@ impl<'m> Triangle<'m> {
     ) -> Self {
         let centroid = (a.pos + (b.pos + Vec3::from(c.pos))) * 0.3333;
         Self {
-            vertices: [Cow::Owned(a), Cow::Owned(b), Cow::Owned(c)],
+            vertices: [a, b, c],
             centroid,
             material,
             model,
@@ -40,28 +38,22 @@ impl<'m> Triangle<'m> {
         )
     }
 
-    pub fn borrow(
-        a: &'m Vertex,
-        b: &'m Vertex,
-        c: &'m Vertex,
-        material: Handle<Material>,
-        model: &'m Model,
-    ) -> Self {
-        let centroid = (a.pos + (b.pos + Vec3::from(c.pos))) * 0.3333;
-        Self {
-            vertices: [Cow::Borrowed(a), Cow::Borrowed(b), Cow::Borrowed(c)],
-            centroid,
-            material,
-            model,
-        }
+    pub fn min(&self) -> Point3 {
+        Point3::new(f32::MAX, f32::MAX, f32::MAX)
+            .min(&self.vertices[0].pos)
+            .min(&self.vertices[1].pos)
+            .min(&self.vertices[2].pos)
     }
 
-    pub fn get_vertex_mut(&mut self, index: usize) -> &mut Vertex {
-        self.vertices[index].to_mut()
+    pub fn max(&self) -> Point3 {
+        Point3::new(f32::MIN, f32::MIN, f32::MIN)
+            .max(&self.vertices[0].pos)
+            .max(&self.vertices[1].pos)
+            .max(&self.vertices[2].pos)
     }
 }
 
-impl<'m> Intersect for Triangle<'m> {
+impl<'m> Intersect for BvhTriangle<'m> {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
     fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let v0 = Vec3::from(self.vertices[0].pos);

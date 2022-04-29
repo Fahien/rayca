@@ -43,6 +43,22 @@ impl Point3 {
         // `translation.w == 0` hence this is fine
         *self += translation;
     }
+
+    pub fn min(&self, other: &Self) -> Self {
+        Self::new(
+            self.x.min(other.x),
+            self.y.min(other.y),
+            self.z.min(other.z),
+        )
+    }
+
+    pub fn max(&self, other: &Self) -> Self {
+        Self::new(
+            self.x.max(other.x),
+            self.y.max(other.y),
+            self.z.max(other.z),
+        )
+    }
 }
 
 impl From<Vec3> for Point3 {
@@ -110,6 +126,18 @@ impl Index<usize> for Point3 {
             1 => &self.y,
             2 => &self.z,
             _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+impl Index<Axis3> for Point3 {
+    type Output = f32;
+
+    fn index(&self, index: Axis3) -> &Self::Output {
+        match index {
+            Axis3::X => &self.x,
+            Axis3::Y => &self.y,
+            Axis3::Z => &self.z,
         }
     }
 }

@@ -89,6 +89,10 @@ impl<T> Handle<T> {
             self.id += offset;
         }
     }
+
+    pub fn is_none(&self) -> bool {
+        !self.valid()
+    }
 }
 
 impl<'a, T> Handle<T> {

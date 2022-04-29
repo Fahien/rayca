@@ -43,8 +43,6 @@ mod gltf {
         rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
-        rlog!("Scene rendered in {}ms", timer.get_delta().as_millis());
-
         image.dump_png("target/gltf-cube.png");
     }
 
@@ -68,8 +66,6 @@ mod gltf {
         rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
-        rlog!("Scene rendered in {}ms", timer.get_delta().as_millis());
-
         image.dump_png("target/suzanne.png");
     }
 
