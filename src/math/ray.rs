@@ -30,7 +30,10 @@ impl Default for Ray {
     }
 }
 
-pub struct Hit {
+pub struct Hit<'m> {
+    /// Primitive hit in this intersection
+    pub primitive: &'m dyn Intersect<'m>,
+
     pub depth: f32,
     pub point: Vec3,
 
@@ -39,14 +42,19 @@ pub struct Hit {
     pub uv: Vec2,
 }
 
-impl Hit {
-    pub fn new(depth: f32, point: Vec3, uv: Vec2) -> Self {
-        Self { depth, point, uv }
+impl<'m> Hit<'m> {
+    pub fn new(primitive: &'m dyn Intersect<'m>, depth: f32, point: Vec3, uv: Vec2) -> Self {
+        Self {
+            primitive,
+            depth,
+            point,
+            uv,
+        }
     }
 }
 
-pub trait Intersect {
-    fn intersects(&self, ray: &Ray) -> Option<Hit>;
+pub trait Intersect<'m> {
+    fn intersects(&'m self, ray: &Ray) -> Option<Hit<'m>>;
     fn get_color(&self, hit: &Hit) -> Color;
     fn get_normal(&self, hit: &Hit) -> Vec3;
 }

@@ -67,9 +67,9 @@ impl Mul<&Trs> for &Trs {
     type Output = Trs;
 
     fn mul(self, rhs: &Trs) -> Self::Output {
-        let translation = self.translation + rhs.translation;
+        let translation = self.translation + self.rotation * (self.scale * rhs.translation);
         let rotation = self.rotation * rhs.rotation;
-        let scale = self.scale * rhs.scale;
+        let scale = rhs.rotation.get_inverse() * (self.scale * (rhs.rotation * rhs.scale));
         Trs::new(translation, rotation, scale)
     }
 }
@@ -79,7 +79,7 @@ impl Mul<Ray> for &Trs {
 
     fn mul(self, mut rhs: Ray) -> Self::Output {
         rhs.rotate(&self.rotation);
-        rhs.translate(&(self.rotation * self.translation));
+        rhs.translate(&self.translation);
         rhs
     }
 }

@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::ray::Intersect;
+//use crate::ray::Intersect;
 
 use super::*;
 
@@ -36,7 +36,7 @@ impl Default for Sphere {
     }
 }
 
-impl Intersect for Sphere {
+impl<'m> Intersect<'m> for Sphere {
     /// [Ray-sphere intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection)
     fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let l = self.center - ray.origin;
@@ -67,7 +67,7 @@ impl Intersect for Sphere {
         }
 
         let point = ray.origin + ray.dir * t0;
-        let hit = Hit::new(t0, point, Vec2::default());
+        let hit = Hit::new(self, t0, point, Vec2::default());
 
         Some(hit)
     }
