@@ -11,15 +11,13 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 
 use super::*;
 
-pub struct Scene<'a> {
-    pub objects: Vec<Box<dyn Intersect + Send + Sync + 'a>>,
+pub struct Scene {
     pub models: Vec<Model>,
 }
 
-impl<'a> Scene<'a> {
+impl Scene {
     pub fn new() -> Self {
         Self {
-            objects: Default::default(),
             models: Default::default(),
         }
     }
@@ -39,16 +37,6 @@ impl<'a> Scene<'a> {
 
     fn draw_pixel(&self, ray: Ray, triangles: &[Triangle<Vertex>], pixel: &mut RGBA8) {
         let mut depth = f32::INFINITY;
-
-        for obj in &self.objects {
-            if let Some(hit) = obj.intersects(&ray) {
-                if hit.depth < depth {
-                    depth = hit.depth;
-                    let color = obj.get_color(&hit);
-                    *pixel = color.into();
-                }
-            }
-        }
 
         for triangle in triangles {
             if let Some(hit) = triangle.intersects(&ray) {
@@ -70,7 +58,7 @@ impl<'a> Scene<'a> {
     }
 }
 
-impl<'a> Draw for Scene<'a> {
+impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
         let mut triangles = vec![];
         let mut cameras = vec![];

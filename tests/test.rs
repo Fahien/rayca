@@ -5,38 +5,27 @@
 use rayca::*;
 
 #[test]
-fn circle() {
-    let mut image = Image::new(128, 128, ColorType::RGBA8);
-    let mut scene = Scene::new();
-    let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 1.0, RGBA8::from(0xFF0000FFu32));
-    scene.objects.push(Box::new(sphere));
-    scene.draw(&mut image);
-    image.dump_png("target/sphere.png");
-}
-
-#[test]
 fn triangle() {
-    let mut image = Image::new(128, 128, ColorType::RGBA8);
-    let mut model = Model::new();
-    let material = model.materials.push(Material::default());
+    let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();
 
-    let mut triangle = Triangle::new(
-        Vertex::new(-1.0, -1.0, -1.0),
-        Vertex::new(1.0, -1.0, -1.0),
-        Vertex::new(0.0, 1.0, -1.0),
-        material,
-        &model,
-    );
-    triangle.vertices[0].color = Color::from(0xFF0000FF);
-    triangle.vertices[1].color = Color::from(0x00FF00FF);
-    triangle.vertices[2].color = Color::from(0x0000FFFF);
+    let mut model = Model::new();
+    let mut prim = Primitive::unit_triangle();
+    prim.vertices[0].color = Color::from(0xFF0000FF);
+    prim.vertices[1].color = Color::from(0x00FF00FF);
+    prim.vertices[2].color = Color::from(0x0000FFFF);
+    let prim_handle = model.primitives.push(prim);
+    let mesh = Mesh::new(vec![prim_handle]);
+    let mesh_handle = model.meshes.push(mesh);
+    let node = Node::builder()
+        .mesh(mesh_handle)
+        .translation(Vec3::new(0.0, -1.0, 0.0))
+        .scale(Vec3::new(1.0, 2.0, 1.0))
+        .build();
+    let node_handle = model.nodes.push(node);
+    model.root.children.push(node_handle);
+    scene.models.push(model);
 
-    triangle.vertices[0].normal = Vec3::new(0.0, 0.0, 1.0);
-    triangle.vertices[1].normal = Vec3::new(1.0, 0.0, 0.0);
-    triangle.vertices[2].normal = Vec3::new(0.0, 1.0, 0.0);
-
-    scene.objects.push(Box::new(triangle));
     scene.draw(&mut image);
     image.dump_png("target/triangle.png");
 }

@@ -91,8 +91,17 @@ impl Context {
         let width = 256;
         let mut image = Image::new(width, width, ColorType::RGBA8);
         let mut scene = Scene::new();
-        let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 1.0, RGBA8::from(0xFF0000FFu32));
-        scene.objects.push(Box::new(sphere));
+        
+        let mut model = Model::new();
+        let prim = Primitive::unit_triangle();
+        let prim_handle = model.primitives.push(prim);
+        let mesh = Mesh::new(vec![prim_handle]);
+        let mesh_handle = model.meshes.push(mesh);
+        let node = Node::builder().mesh(mesh_handle).build();
+        let node_handle = model.nodes.push(node);
+        model.root.children.push(node_handle);
+
+        scene.models.push(model);
         scene.draw(&mut image);
 
         let data = Clamped(image.bytes());

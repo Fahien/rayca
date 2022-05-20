@@ -54,7 +54,7 @@ impl PrimitiveBuilder {
 
 #[derive(Default)]
 pub struct Primitive {
-    vertices: Vec<Vertex>,
+    pub vertices: Vec<Vertex>,
     indices: Vec<u8>,
     index_size: usize,
     pub material: Handle<Material>,
@@ -72,6 +72,17 @@ impl Primitive {
             index_size: 1,
             material: Handle::none(),
         }
+    }
+
+    pub fn unit_triangle() -> Self {
+        Self::builder()
+            .vertices(vec![
+                Vertex::new(-1.0, 0.0, 0.0),
+                Vertex::new(1.0, 0.0, 0.0),
+                Vertex::new(0.0, 1.0, 0.0),
+            ])
+            .indices(vec![0, 1, 2])
+            .build()
     }
 
     fn triangles_impl<'m, Index: NumCast>(
