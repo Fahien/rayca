@@ -9,6 +9,7 @@ pub use vertex::*;
 
 use std::{collections::HashMap, error::Error, path::Path};
 
+use base64::Engine;
 use gltf::Gltf;
 use owo_colors::OwoColorize;
 
@@ -58,19 +59,31 @@ struct UriBuffers {
 }
 
 impl UriBuffers {
-    fn new(gltf: &Gltf, parent_dir: &Path) -> Result<Self, Box<dyn Error>> {
+    fn new(gltf: &Gltf, parent_dir: Option<&Path>) -> Result<Self, Box<dyn Error>> {
         Ok(Self {
             data: Self::load_uri_buffers(gltf, parent_dir)?,
         })
     }
 
-    fn load_uri_buffers(gltf: &Gltf, parent_dir: &Path) -> Result<Vec<Vec<u8>>, Box<dyn Error>> {
+    fn load_uri_buffers(
+        gltf: &Gltf,
+        parent_dir: Option<&Path>,
+    ) -> Result<Vec<Vec<u8>>, Box<dyn Error>> {
         let mut uri_buffers = vec![];
         for buffer in gltf.buffers() {
             match buffer.source() {
                 gltf::buffer::Source::Uri(uri) => {
-                    let uri = parent_dir.join(uri);
-                    let data = std::fs::read(uri)?;
+                    const DATA_URI: &str = "data:application/octet-stream;base64,";
+
+                    let data = if uri.starts_with(DATA_URI) {
+                        let (_, data_base64) = uri.split_at(DATA_URI.len());
+                        base64::engine::general_purpose::STANDARD.decode(data_base64)?
+                    } else if let Some(parent_dir) = &parent_dir {
+                        let uri = parent_dir.join(uri);
+                        std::fs::read(uri)?
+                    } else {
+                        unimplemented!();
+                    };
                     assert!(buffer.index() == uri_buffers.len());
                     uri_buffers.push(data);
                 }
@@ -225,14 +238,8 @@ pub struct GltfModel {
 }
 
 impl GltfModel {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<GltfModel, Box<dyn Error>> {
+    fn load(gltf: Gltf, parent_dir: Option<&Path>) -> Result<Self, Box<dyn Error>> {
         let mut ret = Self::default();
-
-        let gltf = Gltf::open(path.as_ref())?;
-        let parent_dir = path
-            .as_ref()
-            .parent()
-            .ok_or("Failed to get parent directory")?;
         ret.load_images(&gltf, parent_dir);
         ret.load_textures(&gltf);
         ret.load_materials(&gltf)?;
@@ -244,7 +251,21 @@ impl GltfModel {
         Ok(ret)
     }
 
-    pub fn load_images(&mut self, gltf: &Gltf, parent_dir: &Path) {
+    pub fn load_path<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+        let gltf = Gltf::open(path.as_ref())?;
+        let parent_dir = path
+            .as_ref()
+            .parent()
+            .ok_or("Failed to get parent directory")?;
+        Self::load(gltf, Some(parent_dir))
+    }
+
+    pub fn load_data(data: &[u8]) -> Result<Self, Box<dyn Error>> {
+        let gltf = Gltf::from_slice(data)?;
+        Self::load(gltf, None)
+    }
+
+    pub fn load_images(&mut self, gltf: &Gltf, parent_dir: Option<&Path>) {
         let mut timer = Timer::new();
 
         #[cfg(feature = "parallel")]
@@ -257,11 +278,25 @@ impl GltfModel {
                 match image.source() {
                     gltf::image::Source::View { .. } => todo!("Implement image source view"),
                     gltf::image::Source::Uri { uri, .. } => {
-                        // Join gltf parent dir to URI
-                        let path = parent_dir.join(uri);
-                        let mut i = Image::load_png(&path);
-                        i.id = id;
-                        i
+                        const DATA_URI: &str = "data:image/png;base64,";
+
+                        let mut image = if uri.starts_with(DATA_URI) {
+                            let (_, data_base64) = uri.split_at(DATA_URI.len());
+                            let data = base64::engine::general_purpose::STANDARD
+                                .decode(data_base64)
+                                .expect("Failed to decode base64 image data");
+
+                            Image::load_png_data(&data)
+                        } else if let Some(parent_dir) = &parent_dir {
+                            // Join gltf parent dir to URI
+                            let path = parent_dir.join(uri);
+                            Image::load_png_file(&path)
+                        } else {
+                            unimplemented!()
+                        };
+
+                        image.id = id;
+                        image
                     }
                 }
             })
@@ -340,7 +375,12 @@ impl GltfModel {
                 gltf::mesh::Semantic::Colors(_) => {
                     uri_buffers.load_colors(&mut vertices, &accessor)?
                 }
-                _ => rlog!("Semantic not implemented {:?}", semantic),
+                _ => rlog!(
+                    "{:>12} {} {:?}",
+                    "Skipping".yellow().bold(),
+                    "semantic:",
+                    semantic
+                ),
             }
         }
 
@@ -505,10 +545,10 @@ mod test {
 
     #[test]
     fn load_gltf() {
-        assert!(GltfModel::load("test").is_err());
+        assert!(GltfModel::load_path("test").is_err());
 
         let path = "tests/model/box/box.gltf";
-        if let Err(err) = GltfModel::load(path) {
+        if let Err(err) = GltfModel::load_path(path) {
             panic!(
                 "{}: Failed to load \"{}\": {}",
                 "ERROR".if_supports_color(Stdout, |text| text.red()),
@@ -520,7 +560,7 @@ mod test {
 
     #[test]
     fn load() {
-        let model = GltfModel::load("tests/model/suzanne/suzanne.gltf").unwrap();
+        let model = GltfModel::load_path("tests/model/suzanne/suzanne.gltf").unwrap();
         assert!(model.images.len() == 2);
     }
 }

@@ -42,7 +42,7 @@ fn triangle() {
 fn gltf_box() {
     let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
-    scene.gltf_model = GltfModel::load("tests/model/box/box.gltf").unwrap();
+    scene.gltf_model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
     scene.draw(&mut image);
     image.dump_png("target/gltf-box.png");
 }
@@ -51,7 +51,7 @@ fn gltf_box() {
 fn gltf_triangle() {
     let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
-    scene.gltf_model = GltfModel::load("tests/model/triangle/triangle.gltf").unwrap();
+    scene.gltf_model = GltfModel::load_path("tests/model/triangle/triangle.gltf").unwrap();
     scene.draw(&mut image);
     image.dump_png("target/gltf-triangle.png");
 }
@@ -62,7 +62,7 @@ fn gltf_suzanne() {
     let mut scene = Scene::new();
 
     let mut timer = Timer::new();
-    scene.gltf_model = GltfModel::load("tests/model/suzanne/suzanne.gltf").unwrap();
+    scene.gltf_model = GltfModel::load_path("tests/model/suzanne/suzanne.gltf").unwrap();
     rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
     scene.draw(&mut image);
@@ -72,10 +72,32 @@ fn gltf_suzanne() {
 }
 
 #[test]
+fn gtlf_duck() {
+    let mut image = Image::new(128, 128, ColorType::RGBA8);
+    let mut scene = Scene::new();
+
+    let mut timer = Timer::new();
+    scene.gltf_model = GltfModel::load_path("tests/model/duck/duck.gltf").unwrap();
+    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
+
+    // Custom camera
+    let mut camera_node = Node::builder()
+        .id(scene.gltf_model.nodes.len())
+        .translation(Vec3::new(0.1, 0.8, 2.2))
+        .build();
+    camera_node.camera = Some(scene.gltf_model.cameras.push(Camera::default()));
+    let camera_node_handle = scene.gltf_model.nodes.push(camera_node);
+    scene.gltf_model.root.children.push(camera_node_handle);
+
+    scene.draw(&mut image);
+    image.dump_png("target/gltf-duck.png");
+}
+
+#[test]
 fn gltf_cameras() {
     let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();
-    scene.gltf_model = GltfModel::load("tests/model/cameras/cameras.gltf").unwrap();
+    scene.gltf_model = GltfModel::load_path("tests/model/cameras/cameras.gltf").unwrap();
     scene.draw(&mut image);
     image.dump_png("target/gltf-cameras.png");
 }
@@ -84,7 +106,8 @@ fn gltf_cameras() {
 fn gltf_orientation() {
     let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();
-    scene.gltf_model = GltfModel::load("tests/model/orientation/orientation.gltf").unwrap();
+    scene.gltf_model =
+        GltfModel::load_path("tests/model/orientation/orientation.gltf").unwrap();
 
     // Custom camera
     let mut camera_node = Node::builder()
@@ -104,7 +127,7 @@ fn gltf_flight() {
     let mut image = Image::new(32, 32, ColorType::RGBA8);
     let mut scene = Scene::new();
 
-    scene.gltf_model = GltfModel::load("tests/model/flight-helmet/flight-helmet.gltf").unwrap();
+    scene.gltf_model = GltfModel::load_path("tests/model/flight-helmet/flight-helmet.gltf").unwrap();
 
     // Custom camera
     let mut camera_node = Node::builder()
