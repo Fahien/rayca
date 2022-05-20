@@ -8,6 +8,8 @@ license = "MIT"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[dev-dependencies]
+wasm-bindgen-test = "0.3.30"
 
 [dependencies.web-sys]
 version = "0.3.57"
@@ -18,7 +20,12 @@ features = [
     "Performance",
     "HtmlCanvasElement",
     "CanvasRenderingContext2d",
-    "ImageData"
+    "ImageData",
+    'Headers',
+    'Request',
+    'RequestInit',
+    'RequestMode',
+    'Response',
 ]
 
 [dependencies]
@@ -28,8 +35,10 @@ owo-colors = { version = "3.4.0", features = ["supports-colors"] }
 png = "0.17.5"
 rayon = { version = "1.5.3", optional = true }
 wasm-bindgen = "0.2.80"
+wasm-bindgen-futures = "0.4.30"
 console_error_panic_hook = "0.1.7"
 instant = { version = "0.1.12", features = [ "wasm-bindgen", "inaccurate" ] }
+js-sys = "0.3.57"
 base64 = "0.13.0"
 
 [features]
