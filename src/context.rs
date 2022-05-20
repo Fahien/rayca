@@ -75,10 +75,22 @@ impl Context {
         let width = 256;
         let mut image = Image::new(width, width, ColorType::RGBA8);
         let mut scene = Scene::new();
-        let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 1.0);
-        scene.spheres.push(sphere);
-        let sphere_ex = SphereEx::new(RGBA8::from(0xFF0000FFu32));
-        scene.spheres_ex.push(sphere_ex);
+
+        let mut prim = Primitive::unit_triangle();
+        prim.vertices[0].color = Color::from(0xFF0000FF);
+        prim.vertices[1].color = Color::from(0x00FF00FF);
+        prim.vertices[2].color = Color::from(0x0000FFFF);
+        let prim_handle = scene.primitives.push(prim);
+        let mesh = Mesh::new(vec![prim_handle]);
+        let mesh_handle = scene.meshes.push(mesh);
+        let node = Node::builder()
+            .mesh(mesh_handle)
+            .translation(Vec3::new(0.0, -1.0, 0.0))
+            .scale(Vec3::new(1.0, 2.0, 1.0))
+            .build();
+        let node_handle = scene.nodes.push(node);
+        scene.root.children.push(node_handle);
+
         scene.draw(&mut image);
 
         let data = Clamped(image.bytes());

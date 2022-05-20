@@ -73,6 +73,16 @@ impl GltfPrimitive {
         GltfPrimitiveBuilder::new()
     }
 
+    pub fn unit_triangle() -> Self {
+        let mut a = GltfVertex::default();
+        a.pos.x -= 1.0;
+        let mut b = GltfVertex::default();
+        b.pos.x += 1.0;
+        let mut c = GltfVertex::default();
+        c.pos.y += 1.0;
+        Self::new(vec![a, b, c], vec![0, 1, 2])
+    }
+
     pub fn new(vertices: Vec<GltfVertex>, indices: Vec<u8>) -> Self {
         Self {
             vertices,
