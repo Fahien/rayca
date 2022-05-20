@@ -8,6 +8,13 @@ use crate::Quat;
 
 use crate::{Dot, Point3};
 
+#[derive(Clone, Copy)]
+pub enum Axis3 {
+    X,
+    Y,
+    Z,
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct Vec3 {
@@ -76,6 +83,22 @@ impl Vec3 {
 
         // Do the math
         *self = 2.0 * u.dot(&v) * u + (s * s - u.dot(&u)) * v + 2.0 * s * u.cross(&v);
+    }
+
+    pub fn min(&self, other: &Self) -> Self {
+        Self::new(
+            self.x.min(other.x),
+            self.y.min(other.y),
+            self.z.min(other.z),
+        )
+    }
+
+    pub fn max(&self, other: &Self) -> Self {
+        Self::new(
+            self.x.max(other.x),
+            self.y.max(other.y),
+            self.z.max(other.z),
+        )
     }
 }
 
@@ -255,6 +278,18 @@ impl Index<usize> for Vec3 {
             1 => &self.y,
             2 => &self.z,
             _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+impl Index<Axis3> for Vec3 {
+    type Output = f32;
+
+    fn index(&self, index: Axis3) -> &Self::Output {
+        match index {
+            Axis3::X => &self.x,
+            Axis3::Y => &self.y,
+            Axis3::Z => &self.z,
         }
     }
 }

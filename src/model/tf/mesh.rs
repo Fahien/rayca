@@ -53,8 +53,7 @@ impl GltfPrimitiveBuilder {
     }
 
     pub fn build(self) -> GltfPrimitive {
-        let mut prim = GltfPrimitive::new(self.vertices);
-        prim.indices = self.indices;
+        let mut prim = GltfPrimitive::new(self.vertices, self.indices);
         prim.index_size = self.index_size;
         prim.material = self.material;
         prim
@@ -74,10 +73,10 @@ impl GltfPrimitive {
         GltfPrimitiveBuilder::new()
     }
 
-    pub fn new(vertices: Vec<GltfVertex>) -> Self {
+    pub fn new(vertices: Vec<GltfVertex>, indices: Vec<u8>) -> Self {
         Self {
             vertices,
-            indices: vec![],
+            indices,
             index_size: 1,
             material: Handle::none(),
         }

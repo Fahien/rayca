@@ -9,12 +9,15 @@ use crate::{
 
 pub struct Triangle {
     vertices: [Point3; 3],
+    pub centroid: Vec3,
 }
 
 impl Triangle {
     pub fn new(a: Point3, b: Point3, c: Point3) -> Self {
+        let centroid = (Vec3::from(a) + Vec3::from(b) + Vec3::from(c)) * 0.3333;
         Self {
             vertices: [a, b, c],
+            centroid,
         }
     }
 
@@ -45,18 +48,18 @@ impl Intersect for Triangle {
         let v0v2 = v2 - v0;
         // No need to normalize
         let n = v0v1.cross(&v0v2);
+
+        // Back-face test
+        if ray.dir.dot(n) > 0.0 {
+            return None;
+        }
+
         let denom = n.dot(&n);
 
         // Step 1: finding P
 
         // Check if ray and plane are parallel
         let n_dot_ray_dir = n.dot(ray.dir);
-
-        if n_dot_ray_dir > 0.0 {
-            // Back-facing triangle
-            return None;
-        }
-
         if n_dot_ray_dir.abs() < f32::EPSILON {
             // Parallel do not intersect
             return None;

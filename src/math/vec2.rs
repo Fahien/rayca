@@ -15,6 +15,10 @@ impl Vec2 {
     pub fn new(x: f32, y: f32) -> Vec2 {
         Vec2 { x, y }
     }
+
+    pub fn min(&self, other: &Self) -> Self {
+        Self::new(self.x.min(other.x), self.y.min(other.y))
+    }
 }
 
 impl Add for Vec2 {
