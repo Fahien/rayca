@@ -45,8 +45,7 @@ impl PrimitiveBuilder {
     }
 
     pub fn build(self) -> Primitive {
-        let mut prim = Primitive::new(self.vertices);
-        prim.indices = self.indices;
+        let mut prim = Primitive::new(self.vertices, self.indices);
         prim.index_size = self.index_size;
         prim.material = self.material;
         prim
@@ -66,11 +65,11 @@ impl Primitive {
         PrimitiveBuilder::new()
     }
 
-    pub fn new(vertices: Vec<Vertex>) -> Self {
+    pub fn new(vertices: Vec<Vertex>, indices: Vec<u8>) -> Self {
         Self {
             vertices,
-            indices: vec![],
-            index_size: 1,
+            indices,
+            index_size: 1, // byte
             material: Handle::none(),
         }
     }

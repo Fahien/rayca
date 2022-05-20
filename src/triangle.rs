@@ -8,6 +8,7 @@ use super::*;
 
 pub struct Triangle<'m> {
     pub vertices: [Cow<'m, Vertex>; 3],
+    pub centroid: Vec3,
     pub material: Handle<Material>,
     pub model: &'m Model,
 }
@@ -20,11 +21,23 @@ impl<'m> Triangle<'m> {
         material: Handle<Material>,
         model: &'m Model,
     ) -> Self {
+        let centroid = (a.pos + (b.pos + Vec3::from(c.pos))) * 0.3333;
         Self {
             vertices: [Cow::Owned(a), Cow::Owned(b), Cow::Owned(c)],
+            centroid,
             material,
             model,
         }
+    }
+
+    pub fn unit(material: Handle<Material>, model: &'m Model) -> Self {
+        Self::new(
+            Vertex::new(-1.0, 0.0, 0.0),
+            Vertex::new(1.0, 0.0, 0.0),
+            Vertex::new(0.0, 1.0, 0.0),
+            material,
+            model,
+        )
     }
 
     pub fn borrow(
@@ -34,8 +47,10 @@ impl<'m> Triangle<'m> {
         material: Handle<Material>,
         model: &'m Model,
     ) -> Self {
+        let centroid = (a.pos + (b.pos + Vec3::from(c.pos))) * 0.3333;
         Self {
             vertices: [Cow::Borrowed(a), Cow::Borrowed(b), Cow::Borrowed(c)],
+            centroid,
             material,
             model,
         }
@@ -43,18 +58,6 @@ impl<'m> Triangle<'m> {
 
     pub fn get_vertex_mut(&mut self, index: usize) -> &mut Vertex {
         self.vertices[index].to_mut()
-    }
-}
-
-impl<'m> Triangle<'m> {
-    pub fn unit(material: Handle<Material>, model: &'m Model) -> Self {
-        Self::new(
-            Vertex::new(-1.0, 0.0, 0.0),
-            Vertex::new(1.0, 0.0, 0.0),
-            Vertex::new(0.0, 1.0, 0.0),
-            material,
-            model,
-        )
     }
 }
 
@@ -70,18 +73,18 @@ impl<'m> Intersect for Triangle<'m> {
         let v0v2 = v2 - v0;
         // No need to normalize
         let n = v0v1.cross(&v0v2);
-        let denom = n.dot(n);
+
+        // Back-face test
+        if ray.dir.dot(n) > 0.0 {
+            return None;
+        }
+
+        let denom = n.dot(&n);
 
         // Step 1: finding P
 
         // Check if ray and plane are parallel
         let n_dot_ray_dir = n.dot(ray.dir);
-
-        if n_dot_ray_dir > 0.0 {
-            // Back-facing triangle
-            return None;
-        }
-
         if n_dot_ray_dir.abs() < f32::EPSILON {
             // Parallel do not intersect
             return None;
@@ -183,10 +186,13 @@ mod test {
     fn intersect() {
         let mut model = Model::new();
         let material = model.materials.push(Material::new());
-        let triangle = Triangle::unit(material, &model);
+        let triangle_prim = Primitive::unit_triangle();
+        let triangles = triangle_prim.triangles(&Trs::default(), material, &model);
+        let triangle_ref = &triangles[0];
+
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
-        assert!(triangle.intersects(&ray).is_some());
+        assert!(triangle_ref.intersects(&ray).is_some());
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 1.0));
-        assert!(triangle.intersects(&ray).is_none());
+        assert!(triangle_ref.intersects(&ray).is_none());
     }
 }
