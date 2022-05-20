@@ -371,6 +371,13 @@ macro_rules! print_success {
 }
 
 #[macro_export]
+macro_rules! print_warning {
+    ( $s:expr, $( $t:tt )* ) => {
+        println!("{:>12} {}", owo_colors::OwoColorize::bold(&owo_colors::OwoColorize::yellow(&$s)), format!($( $t )*))
+    }
+}
+
+#[macro_export]
 macro_rules! fail {
     ( $( $t:tt )* ) => {
         format!("{:>12} {}", owo_colors::OwoColorize::bold(&owo_colors::OwoColorize::red(&"Failed")), format!($( $t )*))

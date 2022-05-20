@@ -26,7 +26,7 @@ impl Scene {
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Box<dyn Error>> {
         // Open glTF model
-        let model = Model::builder(path)?.build()?;
+        let model = Model::builder().path(path)?.build()?;
         self.model.append(model);
         Ok(())
     }
