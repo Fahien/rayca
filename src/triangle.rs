@@ -156,7 +156,9 @@ impl<'m> Intersect for Triangle<'m> {
         let n1 = &self.vertices[1].normal;
         let n2 = &self.vertices[2].normal;
 
-        n2 * (1.0 - hit.uv.x - hit.uv.y) + n0 * hit.uv.x + n1 * hit.uv.y
+        let mut n = n2 * (1.0 - hit.uv.x - hit.uv.y) + n0 * hit.uv.x + n1 * hit.uv.y;
+        n.normalize();
+        n
     }
 }
 
