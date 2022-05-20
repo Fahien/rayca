@@ -35,7 +35,7 @@ impl Scene {
         Ok(())
     }
 
-    fn draw_pixel(&self, ray: Ray, triangles: &[Triangle<Vertex>], pixel: &mut RGBA8) {
+    fn draw_pixel(&self, ray: Ray, triangles: &[Triangle], pixel: &mut RGBA8) {
         let mut depth = f32::INFINITY;
 
         for triangle in triangles {

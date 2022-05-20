@@ -44,8 +44,7 @@ impl PrimitiveBuilder {
     }
 
     pub fn build(self) -> Primitive {
-        let mut prim = Primitive::new(self.vertices);
-        prim.indices = self.indices;
+        let mut prim = Primitive::new(self.vertices, self.indices);
         prim.index_size = self.index_size;
         prim.material = self.material;
         prim
@@ -65,11 +64,11 @@ impl Primitive {
         PrimitiveBuilder::new()
     }
 
-    pub fn new(vertices: Vec<Vertex>) -> Self {
+    pub fn new(vertices: Vec<Vertex>, indices: Vec<u8>) -> Self {
         Self {
             vertices,
-            indices: vec![],
-            index_size: 1,
+            indices,
+            index_size: 1, // byte
             material: Handle::none(),
         }
     }
@@ -91,7 +90,7 @@ impl Primitive {
         material: Handle<Material>,
         model: &'m Model,
         indices: &[Index],
-    ) -> Vec<Triangle<'m, Vertex>> {
+    ) -> Vec<Triangle<'m>> {
         let mut ret = vec![];
         let matrix = transform.into();
 
@@ -124,7 +123,7 @@ impl Primitive {
         transform: &Trs,
         material: Handle<Material>,
         model: &'m Model,
-    ) -> Vec<Triangle<'m, Vertex>> {
+    ) -> Vec<Triangle<'m>> {
         let indices_len = self.indices.len() / self.index_size;
 
         match self.index_size {
