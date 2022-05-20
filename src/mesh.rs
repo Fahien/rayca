@@ -54,7 +54,7 @@ impl PrimitiveBuilder {
 
 #[derive(Default)]
 pub struct Primitive {
-    vertices: Vec<Vertex>,
+    pub vertices: Vec<Vertex>,
     indices: Vec<u8>,
     index_size: usize,
     pub material: Handle<Material>,
