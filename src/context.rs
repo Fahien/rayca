@@ -2,8 +2,11 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use js_sys::{ArrayBuffer, Uint8Array};
 use wasm_bindgen::{prelude::*, Clamped, JsCast};
+use wasm_bindgen_futures::JsFuture;
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
+use web_sys::{Request, RequestInit, RequestMode, Response};
 
 use super::*;
 
@@ -62,6 +65,42 @@ fn get_canvas(id: &str) -> Result<CanvasRenderingContext2d, JsValue> {
     Ok(canvas)
 }
 
+async fn get_model() -> Result<Model, JsValue> {
+    let mut opts = RequestInit::new();
+    opts.method("GET");
+    opts.mode(RequestMode::Cors);
+
+    let url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Embedded/Duck.gltf";
+
+    let request = Request::new_with_str_and_init(&url, &opts).expect("Failed to request");
+
+    let window = web_sys::window().unwrap();
+    let resp_value = JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .unwrap();
+
+    assert!(resp_value.is_instance_of::<Response>());
+    let resp: Response = resp_value.dyn_into().unwrap();
+
+    let buffer = JsFuture::from(resp.array_buffer().expect("Failed to get array buffer"))
+        .await
+        .expect("Failed to wait for array buffer");
+
+    assert!(buffer.is_instance_of::<ArrayBuffer>());
+    let buffer: ArrayBuffer = buffer.dyn_into().unwrap();
+
+    let array = Uint8Array::new(&buffer);
+    let bytes = array.to_vec();
+
+    let model = Model::builder()
+        .data(&bytes)
+        .expect("Failed to load data")
+        .build()
+        .expect("Failed to build model");
+
+    Ok(model)
+}
+
 #[wasm_bindgen]
 impl Context {
     pub fn new() -> Self {
@@ -69,29 +108,24 @@ impl Context {
         Self {}
     }
 
-    pub fn draw() -> Result<(), JsValue> {
+    pub async fn draw() -> Result<(), JsValue> {
         let canvas = get_canvas("area")?;
 
-        let width = 256;
+        let width = 512;
         let mut image = Image::new(width, width, ColorType::RGBA8);
-        let mut scene = Scene::new();
 
-        let mut model = Model::new();
-        let mut prim = Primitive::unit_triangle();
-        prim.vertices[0].color = Color::from(0xFF0000FF);
-        prim.vertices[1].color = Color::from(0x00FF00FF);
-        prim.vertices[2].color = Color::from(0x0000FFFF);
-        let prim_handle = model.primitives.push(prim);
-        let mesh = Mesh::new(vec![prim_handle]);
-        let mesh_handle = model.meshes.push(mesh);
-        let node = Node::builder()
-            .mesh(mesh_handle)
-            .translation(Vec3::new(0.0, -1.0, 0.0))
-            .scale(Vec3::new(1.0, 2.0, 1.0))
+        let mut model = get_model().await.unwrap();
+
+        // Custom camera
+        let mut camera_node = Node::builder()
+            .id(model.nodes.len())
+            .translation(Vec3::new(0.1, 0.8, 2.2))
             .build();
-        let node_handle = model.nodes.push(node);
-        model.root.children.push(node_handle);
+        camera_node.camera = Some(model.cameras.push(Camera::default()));
+        let camera_node_handle = model.nodes.push(camera_node);
+        model.root.children.push(camera_node_handle);
 
+        let mut scene = Scene::new();
         scene.models.push(model);
         scene.draw(&mut image);
 

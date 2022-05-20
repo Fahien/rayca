@@ -8,6 +8,8 @@ license = "MIT"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[dev-dependencies]
+wasm-bindgen-test = "0.3.31"
 
 [dependencies]
 gltf = "1.0.0"
@@ -23,8 +25,10 @@ instant = "0.1.12"
 # Web dependencies
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.83"
+wasm-bindgen-futures = "0.4.31"
 console_error_panic_hook = "0.1.7"
 instant = { version = "0.1.12", features = [ "wasm-bindgen", "inaccurate" ] }
+js-sys = "0.3.58"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
 version = "0.3.60"
@@ -35,7 +39,12 @@ features = [
     "Performance",
     "HtmlCanvasElement",
     "CanvasRenderingContext2d",
-    "ImageData"
+    "ImageData",
+    'Headers',
+    'Request',
+    'RequestInit',
+    'RequestMode',
+    'Response',
 ]
 
 [features]
