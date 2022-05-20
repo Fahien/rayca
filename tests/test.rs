@@ -18,7 +18,7 @@ fn circle() {
 
 #[test]
 fn triangle() {
-    let mut image = Image::new(128, 128, ColorType::RGBA8);
+    let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();
     let triangle = Triangle::new(
         Point3::new(-1.0, -1.0, -1.0),
