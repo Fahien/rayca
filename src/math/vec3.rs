@@ -18,6 +18,10 @@ impl Vec2 {
     pub fn new(x: f32, y: f32) -> Vec2 {
         Vec2 { x, y }
     }
+
+    pub fn min(&self, other: &Self) -> Self {
+        Self::new(self.x.min(other.x), self.y.min(other.y))
+    }
 }
 
 impl Add for Vec2 {
@@ -44,6 +48,13 @@ impl Mul<f32> for &Vec2 {
     fn mul(self, rhs: f32) -> Self::Output {
         Self::Output::new(self.x * rhs, self.y * rhs)
     }
+}
+
+#[derive(Clone, Copy)]
+pub enum Axis {
+    X,
+    Y,
+    Z,
 }
 
 #[repr(C)]
@@ -102,6 +113,22 @@ impl Vec3 {
 
         // Do the math
         *self = 2.0 * u.dot(&v) * u + (s * s - u.dot(&u)) * v + 2.0 * s * u.cross(&v);
+    }
+
+    pub fn min(&self, other: &Self) -> Self {
+        Self::new(
+            self.x.min(other.x),
+            self.y.min(other.y),
+            self.z.min(other.z),
+        )
+    }
+
+    pub fn max(&self, other: &Self) -> Self {
+        Self::new(
+            self.x.max(other.x),
+            self.y.max(other.y),
+            self.z.max(other.z),
+        )
     }
 }
 
@@ -246,6 +273,18 @@ impl Index<usize> for Vec3 {
             1 => &self.y,
             2 => &self.z,
             _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+impl Index<Axis> for Vec3 {
+    type Output = f32;
+
+    fn index(&self, index: Axis) -> &Self::Output {
+        match index {
+            Axis::X => &self.x,
+            Axis::Y => &self.y,
+            Axis::Z => &self.z,
         }
     }
 }
