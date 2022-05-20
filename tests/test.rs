@@ -70,6 +70,28 @@ mod gltf {
     }
 
     #[test]
+    fn duck() {
+        let mut image = Image::new(128, 128, ColorType::RGBA8);
+        let mut scene = Scene::new();
+
+        let mut timer = Timer::new();
+        scene.load("tests/model/duck/duck.gltf").unwrap();
+        rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
+
+        // Custom camera
+        let mut camera_node = Node::builder()
+            .id(scene.models[0].nodes.len())
+            .translation(Vec3::new(0.1, 0.8, 2.2))
+            .build();
+        camera_node.camera = Some(scene.models[0].cameras.push(Camera::default()));
+        let camera_node_handle = scene.models[0].nodes.push(camera_node);
+        scene.models[0].root.children.push(camera_node_handle);
+
+        scene.draw(&mut image);
+        image.dump_png("target/duck.png");
+    }
+
+    #[test]
     fn cameras() {
         let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
