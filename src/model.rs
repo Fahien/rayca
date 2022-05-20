@@ -51,43 +51,74 @@ fn get_stride(accessor: &gltf::Accessor) -> usize {
 
 pub struct ModelBuilder {
     uri_buffers: Vec<Vec<u8>>,
-    parent_dir: PathBuf,
-    gltf: Gltf,
+    parent_dir: Option<PathBuf>,
+    gltf: Option<Gltf>,
 }
 
 impl ModelBuilder {
-    /// Creates a model loading a GLTF file
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
-        let ret = Self {
+    pub fn new() -> Self {
+        Self {
             uri_buffers: vec![],
-            parent_dir: path
-                .as_ref()
+            parent_dir: None,
+            gltf: None,
+        }
+    }
+
+    /// Creates a model loading a GLTF file
+    pub fn path<P: AsRef<Path>>(mut self, path: P) -> Result<Self, Box<dyn Error>> {
+        self.parent_dir = Some(
+            path.as_ref()
                 .parent()
                 .ok_or("Failed to get parent directory")?
                 .into(),
-            gltf: Gltf::open(path)?,
-        };
-        Ok(ret)
+        );
+        self.gltf = Some(Gltf::open(path)?);
+
+        Ok(self)
+    }
+
+    pub fn data(mut self, data: &[u8]) -> Result<Self, Box<dyn Error>> {
+        self.gltf = Some(Gltf::from_slice(data)?);
+        Ok(self)
     }
 
     pub fn load_images(&mut self, images: &mut Pack<Image>) {
+        if self.gltf.is_none() {
+            return;
+        }
+
+        let gltf = self.gltf.as_ref().unwrap();
+
         let mut timer = Timer::new();
 
         #[cfg(feature = "parallel")]
-        let images_iter = self.gltf.images().enumerate().par_bridge();
+        let images_iter = gltf.images().enumerate().par_bridge();
         #[cfg(not(feature = "parallel"))]
-        let images_iter = self.gltf.images().enumerate();
+        let images_iter = gltf.images().enumerate();
 
         let mut vec: Vec<Image> = images_iter
             .map(|(id, image)| {
                 match image.source() {
                     gltf::image::Source::View { .. } => todo!("Implement image source view"),
                     gltf::image::Source::Uri { uri, .. } => {
-                        // Join gltf parent dir to URI
-                        let path = self.parent_dir.join(uri);
-                        let mut i = Image::load_png(&path);
-                        i.id = id;
-                        i
+                        const DATA_URI: &str = "data:image/png;base64,";
+
+                        let mut image = if uri.starts_with(DATA_URI) {
+                            let (_, data_base64) = uri.split_at(DATA_URI.len());
+                            let data = base64::decode(data_base64)
+                                .expect("Failed to decode base64 image data");
+
+                            Image::load_png_data(&data)
+                        } else if let Some(parent_dir) = &self.parent_dir {
+                            // Join gltf parent dir to URI
+                            let path = parent_dir.join(uri);
+                            Image::load_png_file(&path)
+                        } else {
+                            unimplemented!()
+                        };
+
+                        image.id = id;
+                        image
                     }
                 }
             })
@@ -105,8 +136,12 @@ impl ModelBuilder {
     }
 
     pub fn load_textures(&mut self, textures: &mut Pack<Texture>) {
-        let vec: Vec<Texture> = self
-            .gltf
+        if self.gltf.is_none() {
+            return;
+        }
+        let gltf = self.gltf.as_ref().unwrap();
+
+        let vec: Vec<Texture> = gltf
             .textures()
             .map(|gtexture| {
                 let image = Handle::new(gtexture.source().index());
@@ -119,11 +154,25 @@ impl ModelBuilder {
     }
 
     fn load_uri_buffers(&mut self) -> Result<(), Box<dyn Error>> {
-        for buffer in self.gltf.buffers() {
+        if self.gltf.is_none() {
+            return Ok(());
+        }
+        let gltf = self.gltf.as_ref().unwrap();
+
+        for buffer in gltf.buffers() {
             match buffer.source() {
                 gltf::buffer::Source::Uri(uri) => {
-                    let uri = self.parent_dir.join(uri);
-                    let data = std::fs::read(uri)?;
+                    const DATA_URI: &str = "data:application/octet-stream;base64,";
+
+                    let data = if uri.starts_with(DATA_URI) {
+                        let (_, data_base64) = uri.split_at(DATA_URI.len());
+                        base64::decode(data_base64)?
+                    } else if let Some(parent_dir) = &self.parent_dir {
+                        let uri = parent_dir.join(uri);
+                        std::fs::read(uri)?
+                    } else {
+                        unimplemented!();
+                    };
                     assert!(buffer.index() == self.uri_buffers.len());
                     self.uri_buffers.push(data);
                 }
@@ -169,7 +218,12 @@ impl ModelBuilder {
     }
 
     pub fn load_cameras(&mut self, cameras: &mut Pack<Camera>) -> Result<(), Box<dyn Error>> {
-        for gcamera in self.gltf.cameras() {
+        if self.gltf.is_none() {
+            return Ok(());
+        }
+        let gltf = self.gltf.as_ref().unwrap();
+
+        for gcamera in gltf.cameras() {
             let camera = match gcamera.projection() {
                 gltf::camera::Projection::Perspective(p) => {
                     let aspect_ratio = p.aspect_ratio().unwrap_or(1.0);
@@ -195,7 +249,12 @@ impl ModelBuilder {
     }
 
     pub fn load_materials(&mut self, materials: &mut Pack<Material>) -> Result<(), Box<dyn Error>> {
-        for gmaterial in self.gltf.materials() {
+        if self.gltf.is_none() {
+            return Ok(());
+        }
+        let gltf = self.gltf.as_ref().unwrap();
+
+        for gmaterial in gltf.materials() {
             let mut material = Material::new();
 
             let pbr = gmaterial.pbr_metallic_roughness();
@@ -234,7 +293,12 @@ impl ModelBuilder {
                 gltf::mesh::Semantic::Positions => self.load_positions(&mut vertices, &accessor)?,
                 gltf::mesh::Semantic::TexCoords(_) => self.load_uvs(&mut vertices, &accessor)?,
                 gltf::mesh::Semantic::Colors(_) => self.load_colors(&mut vertices, &accessor)?,
-                _ => rlog!("Semantic not implemented {:?}", semantic),
+                _ => rlog!(
+                    "{:>12} {} {:?}",
+                    "Skipping".yellow().bold(),
+                    "semantic:",
+                    semantic
+                ),
             }
         }
 
@@ -285,7 +349,12 @@ impl ModelBuilder {
     }
 
     fn load_meshes(&self, model: &mut Model) -> Result<(), Box<dyn Error>> {
-        for gmesh in self.gltf.meshes() {
+        if self.gltf.is_none() {
+            return Ok(());
+        }
+        let gltf = self.gltf.as_ref().unwrap();
+
+        for gmesh in gltf.meshes() {
             let primitive_handles = gmesh
                 .primitives()
                 .into_iter()
@@ -439,12 +508,17 @@ impl ModelBuilder {
     }
 
     fn load_nodes(&self, model: &mut Model) {
+        if self.gltf.is_none() {
+            return;
+        }
+        let gltf = self.gltf.as_ref().unwrap();
+
         // Load scene
-        let scene = self.gltf.scenes().next().unwrap();
+        let scene = gltf.scenes().next().unwrap();
         model.root = Self::create_root(&scene);
 
         // Load nodes
-        for gnode in self.gltf.nodes() {
+        for gnode in gltf.nodes() {
             let node = Self::create_node(&gnode);
             model.nodes.push(node);
         }
@@ -466,8 +540,8 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn builder<P: AsRef<Path>>(path: P) -> Result<ModelBuilder, Box<dyn Error>> {
-        ModelBuilder::new(path)
+    pub fn builder() -> ModelBuilder {
+        ModelBuilder::new()
     }
 
     pub fn new() -> Self {
@@ -506,7 +580,8 @@ mod test {
 
     #[test]
     fn load() {
-        let model = Model::builder("tests/model/suzanne/suzanne.gltf")
+        let model = Model::builder()
+            .path("tests/model/suzanne/suzanne.gltf")
             .unwrap()
             .build()
             .unwrap();

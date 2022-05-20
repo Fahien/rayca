@@ -4,6 +4,8 @@
 
 use std::{fs::File, io::BufWriter, path::Path};
 
+use png::Transformations;
+
 use super::*;
 
 #[derive(Default)]
@@ -110,8 +112,29 @@ impl Image {
         self.data_mut().fill(color);
     }
 
+    pub fn load_png_data(data: &[u8]) -> Image {
+        let mut decoder = png::Decoder::new(data);
+        decoder.set_transformations(Transformations::normalize_to_color8());
+
+        let mut reader = decoder.read_info().unwrap();
+        let info = reader.info();
+
+        let color_type = match info.color_type {
+            png::ColorType::Rgb => ColorType::RGB8,
+            png::ColorType::Rgba => ColorType::RGBA8,
+            png::ColorType::Indexed => ColorType::RGB8,
+            _ => panic!("Color type not supported: {:?}", info.color_type),
+        };
+
+        let mut ret = Self::new(info.width, info.height, color_type);
+        reader
+            .next_frame(ret.bytes_mut())
+            .expect("Failed to read frame from PNG data");
+        ret
+    }
+
     /// Opens a PNG file without loading data yet
-    pub fn load_png<P: AsRef<Path>>(path: P) -> Image {
+    pub fn load_png_file<P: AsRef<Path>>(path: P) -> Image {
         let current_dir = std::env::current_dir().expect("Failed to get current dir");
         let file = File::open(path.as_ref()).expect(&format!(
             "Failed to load PNG file: {}/{}",
@@ -119,7 +142,9 @@ impl Image {
             path.as_ref().display()
         ));
 
-        let decoder = png::Decoder::new(file);
+        let mut decoder = png::Decoder::new(file);
+        decoder.set_transformations(Transformations::normalize_to_color8());
+
         let mut reader = decoder.read_info().unwrap();
         let info = reader.info();
 
@@ -204,10 +229,19 @@ mod test {
         let blue_path = "target/blue.png";
         image.dump_png(blue_path);
 
-        let image = Image::load_png(blue_path);
+        let image = Image::load_png_file(blue_path);
         assert!(image
             .data::<RGBA8>()
             .iter()
             .all(|&value: &RGBA8| value == color));
+    }
+
+    #[test]
+    fn base64() {
+        const DUCK_BASE64: &str = include_str!("../tests/model/duck/duck.base64");
+        let duck_data = base64::decode(DUCK_BASE64).expect("Failed to decode duck base64");
+        let image = Image::load_png_data(&duck_data);
+        image.dump_png("target/duck-texture.png");
+        rlog!("{:?}", image.data::<RGB8>()[0]);
     }
 }
