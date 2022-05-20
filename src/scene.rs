@@ -1,4 +1,4 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -12,16 +12,14 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 use super::*;
 
 #[derive(Default)]
-pub struct Scene<'a> {
-    pub objects: Vec<Box<dyn Intersect + Send + Sync + 'a>>,
+pub struct Scene {
     // Single model collecting elements from all loaded models
     pub model: Model,
 }
 
-impl<'a> Scene<'a> {
+impl Scene {
     pub fn new() -> Self {
         Self {
-            objects: Default::default(),
             model: Default::default(),
         }
     }
@@ -33,18 +31,12 @@ impl<'a> Scene<'a> {
         Ok(())
     }
 
+    pub fn push(&mut self, model: Model) {
+        self.model.append(model);
+    }
+
     fn draw_pixel(&self, ray: Ray, triangles: &[Triangle], pixel: &mut RGBA8) {
         let mut depth = f32::INFINITY;
-
-        for obj in &self.objects {
-            if let Some(hit) = obj.intersects(&ray) {
-                if hit.depth < depth {
-                    depth = hit.depth;
-                    let color = obj.get_color(&hit);
-                    *pixel = color.into();
-                }
-            }
-        }
 
         for triangle in triangles {
             if let Some(hit) = triangle.intersects(&ray) {
@@ -66,7 +58,7 @@ impl<'a> Scene<'a> {
     }
 }
 
-impl<'a> Draw for Scene<'a> {
+impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
         let mut triangles = vec![];
         let mut cameras = vec![];

@@ -75,6 +75,17 @@ impl Primitive {
         }
     }
 
+    pub fn unit_triangle() -> Self {
+        Self::builder()
+            .vertices(vec![
+                Vertex::new(-1.0, 0.0, 0.0),
+                Vertex::new(1.0, 0.0, 0.0),
+                Vertex::new(0.0, 1.0, 0.0),
+            ])
+            .indices(vec![0, 1, 2])
+            .build()
+    }
+
     fn triangles_impl<'m, Index: NumCast>(
         &self,
         trs: &Trs,
