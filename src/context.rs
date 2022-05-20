@@ -91,13 +91,20 @@ impl Context {
         let width = 256;
         let mut image = Image::new(width, width, ColorType::RGBA8);
         let mut scene = Scene::new();
-        
+
         let mut model = Model::new();
-        let prim = Primitive::unit_triangle();
+        let mut prim = Primitive::unit_triangle();
+        prim.vertices[0].color = RGBA8::from(0xFF0000FF);
+        prim.vertices[1].color = RGBA8::from(0x00FF00FF);
+        prim.vertices[2].color = RGBA8::from(0x0000FFFF);
         let prim_handle = model.primitives.push(prim);
         let mesh = Mesh::new(vec![prim_handle]);
         let mesh_handle = model.meshes.push(mesh);
-        let node = Node::builder().mesh(mesh_handle).build();
+        let node = Node::builder()
+            .mesh(mesh_handle)
+            .translation(Vec3::new(0.0, -1.0, 0.0))
+            .scale(Vec3::new(1.0, 2.0, 1.0))
+            .build();
         let node_handle = model.nodes.push(node);
         model.root.children.push(node_handle);
 
