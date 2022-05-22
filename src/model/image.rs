@@ -2,8 +2,13 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::{fs::File, io::BufWriter, path::Path};
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter},
+    path::Path,
+};
 
+use jpeg_decoder as jpeg;
 use png::Transformations;
 
 use crate::{fail, ColorType, ColorTyped};
@@ -195,6 +200,37 @@ impl Image {
         let mut writer = encoder.write_header().unwrap();
 
         writer.write_image_data(self.bytes()).unwrap(); // Save
+    }
+
+    pub fn load_jpg_file<P: AsRef<Path>>(path: P) -> Image {
+        let file = File::open(path).expect("Failed to open JPG file");
+        let mut decoder = jpeg::Decoder::new(BufReader::new(file));
+        let pixels = decoder.decode().expect("Failed to decode JPG image");
+        let metadata = decoder.info().unwrap();
+
+        let mut image = Image::new(
+            metadata.width as u32,
+            metadata.height as u32,
+            ColorType::RGB8,
+        );
+        image.buffer = pixels;
+        image
+    }
+
+    pub fn load_file<P: AsRef<Path>>(path: P) -> Image {
+        let ext = path.as_ref().extension().unwrap();
+
+        if ext.eq_ignore_ascii_case("png") {
+            Self::load_png_file(path)
+        } else if ext.eq_ignore_ascii_case("jpg") {
+            Self::load_jpg_file(path)
+        } else {
+            panic!(
+                "Unsupported image extension: {} ({})",
+                ext.to_string_lossy(),
+                path.as_ref().display()
+            )
+        }
     }
 }
 
