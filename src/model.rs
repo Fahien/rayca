@@ -112,7 +112,7 @@ impl ModelBuilder {
                         } else if let Some(parent_dir) = &self.parent_dir {
                             // Join gltf parent dir to URI
                             let path = parent_dir.join(uri);
-                            Image::load_png_file(&path)
+                            Image::load_file(path)
                         } else {
                             unimplemented!()
                         };
