@@ -222,7 +222,7 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "color_quant",
- "jpeg-decoder",
+ "jpeg-decoder 0.1.22",
  "num-iter",
  "num-rational",
  "num-traits",
@@ -264,6 +264,15 @@ name = "jpeg-decoder"
 version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "229d53d58899083193af11e15917b5640cd40b29ff475a1fe4ef725deb02d0f2"
+
+[[package]]
+name = "jpeg-decoder"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc0000e42512c92e31c2252315bda326620a4e034105e900c98ec492fa077b3e"
+dependencies = [
+ "rayon",
+]
 
 [[package]]
 name = "js-sys"
@@ -438,6 +447,7 @@ dependencies = [
  "console_error_panic_hook",
  "gltf",
  "instant",
+ "jpeg-decoder 0.3.0",
  "js-sys",
  "num-traits",
  "owo-colors",
@@ -572,9 +582,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-futures"
-version = "0.4.31"
+version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de9a9cec1733468a8c657e57fa2413d2ae2c0129b95e87c5b72b8ace4d13f31f"
+checksum = "23639446165ca5a5de86ae1d8896b737ae80319560fbaa4c2887b7da6e7ebd7d"
 dependencies = [
  "cfg-if",
  "js-sys",
@@ -613,9 +623,9 @@ checksum = "1c38c045535d93ec4f0b4defec448e4291638ee608530863b1e2ba115d4fff7f"
 
 [[package]]
 name = "wasm-bindgen-test"
-version = "0.3.31"
+version = "0.3.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68b30cf2cba841a812f035c40c50f53eb9c56181192a9dd2c71b65e6a87a05ba"
+checksum = "09d2fff962180c3fadf677438054b1db62bee4aa32af26a45388af07d1287e1d"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -627,9 +637,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-test-macro"
-version = "0.3.31"
+version = "0.3.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88ad594bf33e73cafcac2ae9062fc119d4f75f9c77e25022f91c9a64bd5b6463"
+checksum = "4683da3dfc016f704c9f82cf401520c4f1cb3ee440f7f52b3d6ac29506a49ca7"
 dependencies = [
  "proc-macro2",
  "quote",

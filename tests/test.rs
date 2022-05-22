@@ -142,4 +142,26 @@ mod gltf {
         scene.draw(&mut image);
         image.dump_png("target/flight.png");
     }
+
+    #[test]
+    fn sponza() {
+        let mut image = Image::new(128, 128, ColorType::RGBA8);
+        let mut scene = Scene::new();
+
+        scene.load("tests/model/sponza/sponza.gltf").unwrap();
+
+        // Custom camera
+        let rotation = Quat::new(0.0, -0.707, 0.0, 0.707);
+        let mut camera_node = Node::builder()
+            .id(scene.models[0].nodes.len())
+            .translation(Vec3::new(0.0, 1.5, 0.0))
+            .rotation(rotation)
+            .build();
+        camera_node.camera = Some(scene.models[0].cameras.push(Camera::default()));
+        let camera_node_handle = scene.models[0].nodes.push(camera_node);
+        scene.models[0].root.children.push(camera_node_handle);
+
+        scene.draw(&mut image);
+        image.dump_png("target/sponza.png");
+    }
 }
