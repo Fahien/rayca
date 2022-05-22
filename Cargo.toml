@@ -33,6 +33,7 @@ gltf = "1.0.0"
 num-traits = "0.2.15"
 owo-colors = { version = "3.4.0", features = ["supports-colors"] }
 png = "0.17.5"
+jpeg-decoder = "0.2.6"
 rayon = { version = "1.5.3", optional = true }
 wasm-bindgen = "0.2.80"
 wasm-bindgen-futures = "0.4.30"
