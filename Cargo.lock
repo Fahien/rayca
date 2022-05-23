@@ -436,7 +436,7 @@ dependencies = [
 
 [[package]]
 name = "rayca"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "base64 0.13.0",
  "console_error_panic_hook",
