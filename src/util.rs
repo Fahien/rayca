@@ -54,6 +54,12 @@ impl<T> Default for Handle<T> {
     }
 }
 
+impl<T> Into<Handle<T>> for u32 {
+    fn into(self) -> Handle<T> {
+        Handle::new(self as usize)
+    }
+}
+
 impl<T> Handle<T> {
     pub fn new(id: usize) -> Self {
         Self {

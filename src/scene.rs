@@ -13,12 +13,42 @@ use super::*;
 
 pub struct Scene {
     pub models: Vec<Model>,
+
+    /// This can be used when there is no light in any model in the scene
+    pub default_light_model: Model,
 }
 
 impl Scene {
+    fn create_default_light_model() -> Model {
+        let mut model = Model::new();
+
+        // Add 2 point lights
+        let mut light = Light::point();
+        light.set_intensity(32.0);
+        let light_handle = model.lights.push(light);
+
+        let mut light_node = Node::builder()
+            .translation(Vec3::new(-1.0, 2.0, 1.0))
+            .light(light_handle)
+            .build();
+        light_node.light = Some(light_handle);
+        model.nodes.push(light_node);
+
+        let point_light_node = Node::builder()
+            .light(light_handle)
+            .translation(Vec3::new(1.0, 2.0, 1.0))
+            .build();
+        model.nodes.push(point_light_node);
+
+        model
+    }
+
     pub fn new() -> Self {
+        let default_light_model = Self::create_default_light_model();
+
         Self {
             models: Default::default(),
+            default_light_model,
         }
     }
 
@@ -35,20 +65,50 @@ impl Scene {
         Ok(())
     }
 
-    fn draw_pixel(&self, ray: Ray, bvh: &Bvh, pixel: &mut RGBA8) -> usize {
+    fn draw_pixel(
+        &self,
+        ray: Ray,
+        bvh: &Bvh,
+        light_nodes: &[Node],
+        lights: &Pack<Light>,
+        pixel: &mut RGBA8,
+    ) -> usize {
         let mut triangle_count = 0;
         if let Some((hit, triangle)) = bvh.intersects_stats(&ray, &mut triangle_count) {
-            let mut color = triangle.get_color(&hit);
-
-            // Facing ratio
             let n = triangle.get_normal(&hit);
-            let n_dot_dir = n.dot(&-ray.dir);
-            color.r = color.r * n_dot_dir;
-            color.g = color.g * n_dot_dir;
-            color.b = color.b * n_dot_dir;
+            let mut pixel_color = Color::black();
+            let color = triangle.get_color(&hit);
+
+            const SHADOW_BIAS: f32 = 1e-4;
+            // Before getting color, we should check whether it is visible from the sun
+            let shadow_origin = hit.point + n * SHADOW_BIAS;
+
+            for light_node in light_nodes {
+                let light = lights.get(light_node.light.unwrap()).unwrap();
+                let light_dir = light.get_direction(light_node, &hit.point);
+
+                let shadow_ray = Ray::new(shadow_origin, light_dir);
+                let shadow_result = bvh.intersects(&shadow_ray);
+
+                let is_light = match shadow_result {
+                    None => true,
+                    Some((hit, _)) => {
+                        let light_distance = light.get_distance(light_node, &hit.point);
+                        hit.depth > light_distance
+                    }
+                };
+
+                if is_light {
+                    let n_dot_l = n.dot(&light_dir);
+
+                    pixel_color += color / std::f32::consts::PI
+                        * light.get_intensity(light_node, &hit.point)
+                        * n_dot_l.max(0.0);
+                }
+            }
 
             // No over operation here as transparency should be handled by the lighting model
-            *pixel = color.into();
+            *pixel = pixel_color.into();
         }
         triangle_count
     }
@@ -106,6 +166,10 @@ impl Draw for Scene {
         let aspectratio = width / height;
         let angle = (fov * 0.5).tan();
 
+        // TODO collect lights from models
+        let light_nodes = self.default_light_model.nodes.as_slice();
+        let lights = &self.default_light_model.lights;
+
         #[cfg(feature = "parallel")]
         let pixel_iter = image.pixels_mut().into_par_iter();
         #[cfg(not(feature = "parallel"))]
@@ -121,7 +185,7 @@ impl Draw for Scene {
                 let origin = Vec3::new(0.0, 0.0, 0.0);
                 let ray = &camera_trs * Ray::new(origin, dir);
 
-                self.draw_pixel(ray, &bvh, row[x]);
+                self.draw_pixel(ray, &bvh, light_nodes, lights, row[x]);
             }
         });
 
