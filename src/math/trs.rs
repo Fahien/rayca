@@ -8,6 +8,41 @@ use crate::Ray;
 
 use super::*;
 
+pub struct TrsBuilder {
+    translation: Vec3,
+    rotation: Quat,
+    scale: Vec3,
+}
+
+impl TrsBuilder {
+    fn new() -> Self {
+        Self {
+            translation: Vec3::default(),
+            rotation: Quat::default(),
+            scale: Vec3::new(1.0, 1.0, 1.0),
+        }
+    }
+
+    pub fn translation(mut self, translation: Vec3) -> Self {
+        self.translation = translation;
+        self
+    }
+
+    pub fn rotation(mut self, rotation: Quat) -> Self {
+        self.rotation = rotation;
+        self
+    }
+
+    pub fn scale(mut self, scale: Vec3) -> Self {
+        self.scale = scale;
+        self
+    }
+
+    pub fn build(self) -> Trs {
+        Trs::new(self.translation, self.rotation, self.scale)
+    }
+}
+
 /// TRanSform, or Translation-Rotation-Scale
 /// Order of transformations: scale-rotate-translate
 #[derive(Clone)]
@@ -18,6 +53,10 @@ pub struct Trs {
 }
 
 impl Trs {
+    pub fn builder() -> TrsBuilder {
+        TrsBuilder::new()
+    }
+
     pub fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
         Self {
             translation,

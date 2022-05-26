@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use crate::Scene;
+
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -36,7 +38,7 @@ pub struct Hit {
     pub primitive: u32,
 
     pub depth: f32,
-    pub point: Vec3,
+    pub point: Point3,
 
     /// Barycentric coordinates expressing the hit point in terms of the primitive.
     /// Useful to interpolate vertex data of such a primitive
@@ -44,7 +46,7 @@ pub struct Hit {
 }
 
 impl Hit {
-    pub fn new(primitive: u32, depth: f32, point: Vec3, uv: Vec2) -> Self {
+    pub fn new(primitive: u32, depth: f32, point: Point3, uv: Vec2) -> Self {
         Self {
             primitive,
             depth,
@@ -56,6 +58,11 @@ impl Hit {
 
 pub trait Intersect {
     fn intersects(&self, ray: &Ray) -> Option<Hit>;
+}
+
+pub trait Shade {
+    fn get_color(&self, scene: &Scene, hit: &Hit) -> Color;
+    fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3;
 }
 
 #[cfg(test)]

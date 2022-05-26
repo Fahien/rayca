@@ -254,6 +254,19 @@ impl Bvh {
         }
     }
 
+    pub fn get_shade(&self, primitive: u32) -> &dyn Shade {
+        let index = primitive as usize;
+        if index < self.triangles_ex.len() {
+            &self.triangles_ex[index]
+        } else {
+            &self.spheres_ex[index - self.triangles_ex.len()]
+        }
+    }
+
+    pub fn get_sphere(&self, primitive: u32) -> &Sphere {
+        &self.spheres[primitive as usize - self.triangles.len()]
+    }
+
     pub fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let mut triangle_count = 0;
         self.root

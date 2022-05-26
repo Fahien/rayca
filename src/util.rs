@@ -60,6 +60,12 @@ impl<T> Default for Handle<T> {
     }
 }
 
+impl<T> From<u32> for Handle<T> {
+    fn from(id: u32) -> Self {
+        Self::new(id as usize)
+    }
+}
+
 impl<T> Handle<T> {
     pub const NONE: Self = Self {
         id: usize::MAX,

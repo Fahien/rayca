@@ -6,7 +6,7 @@ use std::ops::{Index, IndexMut, Mul};
 
 use super::*;
 
-#[derive(Default, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub struct Mat4 {
     /// Row-major
     values: [[f32; 4]; 4],

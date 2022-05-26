@@ -17,8 +17,8 @@ use owo_colors::OwoColorize;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
-    rlog, Camera, Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Sampler, Texture, Timer,
-    Trs, Vec3,
+    rlog, Camera, Color, GgxMaterial, Handle, Image, Light, Node, Pack, Quat, Sampler, Texture,
+    Timer, Trs, Vec3,
 };
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
@@ -233,6 +233,7 @@ pub struct GltfModel {
     pub primitives: Pack<GltfPrimitive>,
     pub meshes: Pack<GltfMesh>,
     pub cameras: Pack<Camera>,
+    pub lights: Pack<Light>,
     pub nodes: Pack<Node>,
     pub root: Node,
 }
@@ -531,7 +532,7 @@ impl GltfModel {
     pub fn collect_transforms(&self) -> HashMap<&Node, Trs> {
         let mut ret = HashMap::new();
         for node in self.root.children.iter() {
-            self.traverse(&mut ret, Trs::default(), *node);
+            self.traverse(&mut ret, self.root.trs.clone(), *node);
         }
         ret
     }

@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, AddAssign, Index, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, Index, Mul, Neg, Sub};
 
 use crate::Quat;
 
@@ -58,8 +58,12 @@ impl Vec3 {
         )
     }
 
+    pub fn norm(&self) -> f32 {
+        self.dot(self)
+    }
+
     pub fn len(&self) -> f32 {
-        self.dot(self).sqrt()
+        self.norm().sqrt()
     }
 
     pub fn normalize(&mut self) {
@@ -231,6 +235,28 @@ impl Mul<f32> for &Vec3 {
 impl From<Point3> for Vec3 {
     fn from(p: Point3) -> Self {
         Self::new(p.x, p.y, p.z)
+    }
+}
+
+impl From<&Point3> for Vec3 {
+    fn from(p: &Point3) -> Self {
+        Self::new(p.x, p.y, p.z)
+    }
+}
+
+impl Div<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Self::Output::new(self.x / rhs, self.y / rhs, self.z / rhs)
+    }
+}
+
+impl Div<f32> for &Vec3 {
+    type Output = Vec3;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Self::Output::new(self.x / rhs, self.y / rhs, self.z / rhs)
     }
 }
 

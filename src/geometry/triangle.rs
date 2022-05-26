@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    Color, Dot, GgxMaterial, Handle, Hit, Intersect, Point3, Ray, Sampler, Scene, Vec2, Vec3,
-    Vertex,
+    Color, Dot, GgxMaterial, Handle, Hit, Intersect, Point3, Ray, Sampler, Scene, Shade, Vec2,
+    Vec3, Vertex,
 };
 
 pub struct Triangle {
@@ -157,8 +157,10 @@ impl TriangleEx {
             material,
         }
     }
+}
 
-    pub fn get_color(&self, hit: &Hit, scene: &Scene) -> Color {
+impl Shade for TriangleEx {
+    fn get_color(&self, scene: &Scene, hit: &Hit) -> Color {
         // Interpolate vertex colors
         let c0 = &self.vertices[0].color;
         let c1 = &self.vertices[1].color;
@@ -188,7 +190,7 @@ impl TriangleEx {
         color * vertex_color
     }
 
-    pub fn get_normal(&self, hit: &Hit) -> Vec3 {
+    fn get_normal(&self, _scene: &Scene, hit: &Hit) -> Vec3 {
         // Interpolate normals
         let n0 = &self.vertices[0].normal;
         let n1 = &self.vertices[1].normal;

@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{ray::Intersect, Color, Dot, Hit, Point3, Ray, Vec2, Vec3, RGBA8};
+use crate::{ray::Intersect, Color, Dot, Hit, Point3, Ray, Scene, Shade, Vec2, Vec3, RGBA8};
 
 pub struct Sphere {
     center: Point3,
@@ -109,13 +109,16 @@ impl SphereEx {
     pub fn new(color: RGBA8) -> Self {
         Self { color }
     }
+}
 
-    pub fn get_color(&self, sphere: &Sphere, hit: &Hit) -> Color {
-        let normal = self.get_normal(sphere, hit);
+impl Shade for SphereEx {
+    fn get_color(&self, scene: &Scene, hit: &Hit) -> Color {
+        let normal = self.get_normal(scene, hit);
         Color::new(normal.x, normal.y, normal.z, 1.0)
     }
 
-    pub fn get_normal(&self, sphere: &Sphere, hit: &Hit) -> Vec3 {
+    fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3 {
+        let sphere = scene.get_bvh().get_sphere(hit.primitive);
         let mut normal = hit.point - sphere.center;
         normal.normalize();
         normal

@@ -27,12 +27,60 @@ impl Default for DefaultCamera {
     }
 }
 
-#[derive(Default)]
+pub struct DefaultLights {
+    pub lights: Pack<Light>,
+    pub nodes: Pack<Node>,
+}
+
+impl Default for DefaultLights {
+    fn default() -> Self {
+        let mut lights = Pack::new();
+        let mut nodes = Pack::new();
+
+        // Add 2 point lights
+        let mut light = Light::point();
+        light.scale_intensity(32.0);
+        let light_handle = lights.push(light);
+
+        let mut light_node = Node::builder()
+            .translation(Vec3::new(-1.0, 2.0, 1.0))
+            .light(light_handle)
+            .build();
+        light_node.light = Some(light_handle);
+        nodes.push(light_node);
+
+        let point_light_node = Node::builder()
+            .light(light_handle)
+            .translation(Vec3::new(1.0, 2.0, 1.0))
+            .build();
+        nodes.push(point_light_node);
+
+        Self { lights, nodes }
+    }
+}
+
 pub struct Scene {
+    pub integrator: Box<dyn Integrator + Sync>,
+
+    pub bvh: Option<Bvh>,
     pub gltf_model: GltfModel,
 
     /// This can be used for default values which are not defined in any other model in the scene
     pub default_camera: DefaultCamera,
+    pub default_lights: DefaultLights,
+}
+
+#[allow(clippy::derivable_impls)]
+impl Default for Scene {
+    fn default() -> Self {
+        Self {
+            integrator: Box::<Scratcher>::default(),
+            bvh: Default::default(),
+            gltf_model: Default::default(),
+            default_camera: Default::default(),
+            default_lights: Default::default(),
+        }
+    }
 }
 
 impl Scene {
@@ -40,53 +88,26 @@ impl Scene {
         Self::default()
     }
 
-    fn draw_pixel_triangle(&self, ray: Ray, bvh: &Bvh, hit: &Hit, pixel: &mut RGBA8) {
-        let triangle_ex = &bvh.triangles_ex[hit.primitive as usize];
-        let mut color = triangle_ex.get_color(hit, self);
+    pub fn get_bvh(&self) -> &Bvh {
+        self.bvh.as_ref().unwrap()
+    }
 
-        // Facing ratio
-        let n = triangle_ex.get_normal(hit);
-        let n_dot_dir = n.dot(&-ray.dir);
-        color.r *= n_dot_dir;
-        color.g *= n_dot_dir;
-        color.b *= n_dot_dir;
-
+    fn draw_pixel_primitive(&self, hit: Hit, pixel: &mut RGBA8) {
+        let color = self.integrator.get_color(self, hit);
         // No over operation here as transparency should be handled by the lighting model
         *pixel = color.into();
     }
 
-    fn draw_pixel_sphere(&self, ray: Ray, bvh: &Bvh, hit: &Hit, pixel: &mut RGBA8) {
-        assert!(hit.primitive as usize >= bvh.triangles.len());
-        let sphere_index = hit.primitive as usize - bvh.triangles.len();
-        let sphere = &bvh.spheres[sphere_index];
-        let sphere_ex = &bvh.spheres_ex[sphere_index];
-        let mut color = sphere_ex.get_color(sphere, hit);
-
-        // Facing ratio
-        let n = sphere_ex.get_normal(sphere, hit);
-        let n_dot_dir = n.dot(&-ray.dir);
-        color.r *= n_dot_dir;
-        color.g *= n_dot_dir;
-        color.b *= n_dot_dir;
-
-        // No over operation here as transparency should be handled by the lighting model
-        *pixel = color.into();
-    }
-
-    fn draw_pixel_bvh(&self, ray: Ray, bvh: &Bvh, pixel: &mut RGBA8) -> usize {
+    fn draw_pixel_bvh(&self, ray: Ray, pixel: &mut RGBA8) -> usize {
         let mut triangle_count = 0;
+        let bvh = self.bvh.as_ref().unwrap();
         if let Some(hit) = bvh.intersects_stats(&ray, &mut triangle_count) {
-            let primitive_index = hit.primitive as usize;
-            if primitive_index < bvh.triangles.len() {
-                self.draw_pixel_triangle(ray, bvh, &hit, pixel);
-            } else if primitive_index - bvh.triangles.len() < bvh.spheres.len() {
-                self.draw_pixel_sphere(ray, bvh, &hit, pixel);
-            }
+            self.draw_pixel_primitive(hit, pixel);
         }
         triangle_count
     }
 
-    fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>, Vec<(&Camera, Trs)>) {
+    fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>, Vec<(Camera, Trs)>) {
         let mut triangles = vec![];
         let mut triangles_ex = vec![];
         let mut cameras = vec![];
@@ -109,7 +130,7 @@ impl Scene {
             // Collect cameras
             if let Some(camera_handle) = node.camera {
                 let camera = self.gltf_model.cameras.get(camera_handle).unwrap();
-                cameras.push((camera, trs));
+                cameras.push((camera.clone(), trs));
             }
         }
 
@@ -121,27 +142,27 @@ impl Scene {
         );
         (triangles, triangles_ex, cameras)
     }
+
+    pub fn update(&mut self) {
+        let (triangles, triangles_ex, cameras) = self.collect_triangles();
+        self.bvh.replace(Bvh::new(triangles, triangles_ex));
+        if !cameras.is_empty() {
+            self.default_camera.camera = cameras[0].0.clone();
+            self.default_camera.trs = cameras[0].1.clone();
+        }
+    }
 }
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
-        let (triangles, triangles_ex, cameras) = self.collect_triangles();
-        let bvh = Bvh::new(triangles, triangles_ex);
-
         let width = image.width() as f32;
         let height = image.height() as f32;
 
         let inv_width = 1.0 / width;
         let inv_height = 1.0 / height;
 
-        let (camera, camera_trs) = if cameras.is_empty() {
-            (&self.default_camera.camera, self.default_camera.trs.clone())
-        } else {
-            cameras[0].clone()
-        };
-
         let aspectratio = width / height;
-        let angle = camera.get_angle();
+        let angle = self.default_camera.camera.get_angle();
 
         #[cfg(feature = "parallel")]
         let row_iter = image.pixels_mut().into_par_iter();
@@ -163,9 +184,9 @@ impl Draw for Scene {
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
                 let origin = Point3::new(0.0, 0.0, 0.0);
-                let ray = &camera_trs * Ray::new(origin, dir);
+                let ray = &self.default_camera.trs * Ray::new(origin, dir);
 
-                self.draw_pixel_bvh(ray, &bvh, pixel);
+                self.draw_pixel_bvh(ray, pixel);
             });
         });
 

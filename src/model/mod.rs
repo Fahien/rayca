@@ -4,6 +4,7 @@
 
 pub mod camera;
 pub mod image;
+pub mod light;
 pub mod node;
 pub mod sampler;
 pub mod texture;
@@ -11,6 +12,7 @@ pub mod tf;
 
 pub use camera::*;
 pub use image::*;
+pub use light::*;
 pub use node::*;
 pub use sampler::*;
 pub use texture::*;

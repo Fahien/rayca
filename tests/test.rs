@@ -4,21 +4,25 @@
 
 use rayca::*;
 
-#[test]
-fn circle() {
-    let mut image = Image::new(128, 128, ColorType::RGBA8);
+fn run(mut scene: Scene, out_path: &str, width: u32, height: u32) {
+    let mut image = Image::new(width, height, ColorType::RGBA8);
+
+    scene.update();
+    scene.draw(&mut image);
+
+    image.dump_png(out_path);
+}
+
+fn _circle() {
     let scene = Scene::new();
     //let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 1.0);
     //let sphere_ex = SphereEx::new(RGBA8::from(0xFF0000FFu32));
     //scene.spheres.push(sphere);
     //scene.spheres_ex.push(sphere_ex);
-    scene.draw(&mut image);
-    image.dump_png("target/sphere.png");
+    run(scene, "target/sphere.png", 128, 128);
 }
 
-#[test]
-fn triangle() {
-    let mut image = Image::new(256, 256, ColorType::RGBA8);
+fn _triangle() {
     let scene = Scene::new();
     //let triangle = Triangle::new(
     //    Point3::new(-1.0, -1.0, -1.0),
@@ -34,46 +38,61 @@ fn triangle() {
     //triangle_ex.vertices[2].normal = Vec3::new(0.0, 1.0, 0.0);
     //scene.triangles.push(triangle);
     //scene.triangles_ex.push(triangle_ex);
-    scene.draw(&mut image);
-    image.dump_png("target/triangle.png");
+    run(scene, "target/triangle.png", 256, 256);
+}
+
+#[test]
+fn boxes_over_plane() {
+    let mut scene = Scene::new();
+
+    let mut timer = Timer::new();
+    scene.gltf_model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
+    //scene
+    //    .load_gltf_from_path("tests/model/box/box.gltf")
+    //    .unwrap();
+    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
+
+    scene.gltf_model.root.trs.scale = Vec3::new(16.0, 16.0, 0.125);
+    scene.gltf_model.root.trs.translation.y -= 1.0;
+    scene
+        .gltf_model
+        .nodes
+        .get_mut(1.into())
+        .unwrap()
+        .trs
+        .rotation = Quat::default();
+    scene.gltf_model.materials.get_mut(0.into()).unwrap().color = Color::new(0.1, 0.2, 0.7, 1.0);
+
+    run(scene, "target/boxes-over-plane.png", 1024, 1024);
 }
 
 #[test]
 fn gltf_box() {
-    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
-    scene.draw(&mut image);
-    image.dump_png("target/gltf-box.png");
+    run(scene, "target/gltf-box.png", 128, 128);
 }
 
 #[test]
 fn gltf_triangle() {
-    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load_path("tests/model/triangle/triangle.gltf").unwrap();
-    scene.draw(&mut image);
-    image.dump_png("target/gltf-triangle.png");
+    run(scene, "target/gltf-triangle.png", 128, 128);
 }
 
 #[test]
 fn gltf_suzanne() {
-    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
 
     let mut timer = Timer::new();
     scene.gltf_model = GltfModel::load_path("tests/model/suzanne/suzanne.gltf").unwrap();
     rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
-    scene.draw(&mut image);
-    rlog!("Scene rendered in {}ms", timer.get_delta().as_millis());
-
-    image.dump_png("target/gltf-suzanne.png");
+    run(scene, "target/gltf-suzanne.png", 128, 128);
 }
 
 #[test]
 fn gtlf_duck() {
-    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
 
     let mut timer = Timer::new();
@@ -89,22 +108,18 @@ fn gtlf_duck() {
     let camera_node_handle = scene.gltf_model.nodes.push(camera_node);
     scene.gltf_model.root.children.push(camera_node_handle);
 
-    scene.draw(&mut image);
-    image.dump_png("target/gltf-duck.png");
+    run(scene, "target/gltf-duck.png", 128, 128);
 }
 
 #[test]
 fn gltf_cameras() {
-    let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load_path("tests/model/cameras/cameras.gltf").unwrap();
-    scene.draw(&mut image);
-    image.dump_png("target/gltf-cameras.png");
+    run(scene, "target/gltf-cameras.png", 256, 256);
 }
 
 #[test]
 fn gltf_orientation() {
-    let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();
     scene.gltf_model =
         GltfModel::load_path("tests/model/orientation/orientation.gltf").unwrap();
@@ -112,19 +127,17 @@ fn gltf_orientation() {
     // Custom camera
     let mut camera_node = Node::builder()
         .id(scene.gltf_model.nodes.len())
-        .translation(Vec3::new(0.0, 0.32, 24.0))
+        .translation(Vec3::new(0.0, 0.1, 24.0))
         .build();
     camera_node.camera = Some(scene.gltf_model.cameras.push(Camera::default()));
     let camera_node_handle = scene.gltf_model.nodes.push(camera_node);
     scene.gltf_model.root.children.push(camera_node_handle);
 
-    scene.draw(&mut image);
-    image.dump_png("target/gltf-orientation.png");
+    run(scene, "target/gltf-orientation.png", 256, 256);
 }
 
 #[test]
 fn gltf_flight() {
-    let mut image = Image::new(32, 32, ColorType::RGBA8);
     let mut scene = Scene::new();
 
     scene.gltf_model = GltfModel::load_path("tests/model/flight-helmet/flight-helmet.gltf").unwrap();
@@ -138,28 +151,31 @@ fn gltf_flight() {
     let camera_node_handle = scene.gltf_model.nodes.push(camera_node);
     scene.gltf_model.root.children.push(camera_node_handle);
 
-    scene.draw(&mut image);
-    image.dump_png("target/gltf-flight.png");
+    run(scene, "target/gltf-flight.png", 32, 32);
 }
 
 #[test]
 fn gltf_sponza() {
-    let mut image = Image::new(32, 32, ColorType::RGBA8);
     let mut scene = Scene::new();
 
     scene.gltf_model = GltfModel::load_path("tests/model/sponza/sponza.gltf").unwrap();
 
     // Custom camera
     let rotation = Quat::new(0.0, -0.707, 0.0, 0.707);
+    scene
+        .gltf_model
+        .nodes
+        .get_mut(0.into())
+        .unwrap()
+        .trs
+        .rotation = rotation;
     let mut camera_node = Node::builder()
         .id(scene.gltf_model.nodes.len())
-        .translation(Vec3::new(0.0, 1.5, 0.0))
-        .rotation(rotation)
+        .translation(Vec3::new(0.2, 1.0, 0.0))
         .build();
     camera_node.camera = Some(scene.gltf_model.cameras.push(Camera::default()));
     let camera_node_handle = scene.gltf_model.nodes.push(camera_node);
     scene.gltf_model.root.children.push(camera_node_handle);
 
-    scene.draw(&mut image);
-    image.dump_png("target/gltf-sponza.png");
+    run(scene, "target/gltf-sponza.png", 32, 32);
 }
