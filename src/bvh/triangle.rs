@@ -19,8 +19,7 @@ impl<'m> BvhTriangle<'m> {
         material: Option<Handle<Material>>,
         model: &'m Model,
     ) -> Self {
-        let centroid =
-            Point3::from(Vec3::from(a.pos) + Vec3::from(b.pos) + Vec3::from(c.pos)) * 0.3333;
+        let centroid = (a.pos + Vec3::from(b.pos) + Vec3::from(c.pos)) * 0.3333;
         Self {
             vertices: [a, b, c],
             centroid,
