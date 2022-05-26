@@ -6,7 +6,7 @@ use crate::*;
 
 pub struct BvhTriangle<'m> {
     pub vertices: [Vertex; 3],
-    pub centroid: Vec3,
+    pub centroid: Point3,
     pub material: Handle<Material>,
     pub model: &'m Model,
 }
@@ -19,7 +19,7 @@ impl<'m> BvhTriangle<'m> {
         material: Handle<Material>,
         model: &'m Model,
     ) -> Self {
-        let centroid = (a.pos + b.pos + c.pos) * 0.3333;
+        let centroid = (a.pos + Vec3::from(b.pos) + Vec3::from(c.pos)) * 0.3333;
         Self {
             vertices: [a, b, c],
             centroid,
@@ -38,15 +38,15 @@ impl<'m> BvhTriangle<'m> {
         )
     }
 
-    pub fn min(&self) -> Vec3 {
-        Vec3::new(f32::MAX, f32::MAX, f32::MAX)
+    pub fn min(&self) -> Point3 {
+        Point3::new(f32::MAX, f32::MAX, f32::MAX)
             .min(&self.vertices[0].pos)
             .min(&self.vertices[1].pos)
             .min(&self.vertices[2].pos)
     }
 
-    pub fn max(&self) -> Vec3 {
-        Vec3::new(f32::MIN, f32::MIN, f32::MIN)
+    pub fn max(&self) -> Point3 {
+        Point3::new(f32::MIN, f32::MIN, f32::MIN)
             .max(&self.vertices[0].pos)
             .max(&self.vertices[1].pos)
             .max(&self.vertices[2].pos)
