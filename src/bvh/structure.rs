@@ -6,12 +6,12 @@ use crate::*;
 
 #[derive(Default)]
 pub struct AABB {
-    pub a: Vec3,
-    pub b: Vec3,
+    pub a: Point3,
+    pub b: Point3,
 }
 
 impl AABB {
-    pub fn new(a: Vec3, b: Vec3) -> Self {
+    pub fn new(a: Point3, b: Point3) -> Self {
         Self { a, b }
     }
 
@@ -82,8 +82,8 @@ impl<'m> BvhNode<'m> {
         assert!(!triangles.is_empty());
         self.triangles = triangles;
 
-        self.bounds.a = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
-        self.bounds.b = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
+        self.bounds.a = Point3::new(f32::MAX, f32::MAX, f32::MAX);
+        self.bounds.b = Point3::new(f32::MIN, f32::MIN, f32::MIN);
 
         // Visit each vertex of the triangles to find the lowest and highest x, y, and z
         for tri in self.triangles.iter() {
@@ -195,8 +195,8 @@ impl<'m> Bvh<'m> {
 
         let mut root = BvhNode::new();
         root.bounds = AABB::new(
-            Vec3::new(f32::MAX, f32::MAX, f32::MAX),
-            Vec3::new(f32::MIN, f32::MIN, f32::MIN),
+            Point3::new(f32::MAX, f32::MAX, f32::MAX),
+            Point3::new(f32::MIN, f32::MIN, f32::MIN),
         );
         root.set_triangles(triangles, &mut nodes);
 
