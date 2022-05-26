@@ -30,6 +30,27 @@ fn triangle() {
     image.dump_png("target/triangle.png");
 }
 
+#[test]
+fn cube_over_plane() {
+    let mut image = Image::new(1024, 1024, ColorType::RGBA8);
+    let mut scene = Scene::new();
+
+    let mut timer = Timer::new();
+    scene.load("tests/model/box/box.gltf").unwrap();
+    scene.load("tests/model/box/box.gltf").unwrap();
+    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
+
+    let root0 = scene.model.nodes.get_mut(1.into()).unwrap();
+    root0.trs.scale = Vec3::new(16.0, 16.0, 0.125);
+    root0.trs.translation.y -= 1.0;
+    let root0_child = scene.model.nodes.get_mut(2.into()).unwrap();
+    root0_child.trs.rotation = Quat::default();
+    scene.model.materials.get_mut(0.into()).unwrap().color = Color::new(0.1, 0.2, 0.7, 1.0);
+
+    scene.draw(&mut image);
+    image.dump_png("target/cube-over-plane.png");
+}
+
 mod gltf {
     use super::*;
 
@@ -80,12 +101,12 @@ mod gltf {
 
         // Custom camera
         let mut camera_node = Node::builder()
-            .id(scene.models[0].nodes.len())
+            .id(scene.model.nodes.len())
             .translation(Vec3::new(0.1, 0.8, 2.2))
             .build();
-        camera_node.camera = Some(scene.models[0].cameras.push(Camera::default()));
-        let camera_node_handle = scene.models[0].nodes.push(camera_node);
-        scene.models[0].root.children.push(camera_node_handle);
+        camera_node.camera = scene.model.cameras.push(Camera::default());
+        let camera_node_handle = scene.model.nodes.push(camera_node);
+        scene.model.root.children.push(camera_node_handle);
 
         scene.draw(&mut image);
         image.dump_png("target/duck.png");
@@ -102,7 +123,7 @@ mod gltf {
 
     #[test]
     fn orientation() {
-        let mut image = Image::new(1024, 1024, ColorType::RGBA8);
+        let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
         scene
             .load("tests/model/orientation/OrientationTest.gltf")
@@ -111,11 +132,12 @@ mod gltf {
         // Custom camera
         let mut camera_node = Node::builder()
             .id(scene.model.nodes.len())
-            .translation(Vec3::new(0.0, 0.32, 24.0))
+            .translation(Vec3::new(0.0, 0.0, 1.0))
             .build();
         camera_node.camera = scene.model.cameras.push(Camera::default());
         let camera_node_handle = scene.model.nodes.push(camera_node);
         scene.model.root.children.push(camera_node_handle);
+        scene.model.root.trs.scale = Vec3::new(1.0 / 32.0, 1.0 / 32.0, 1.0 / 32.0);
 
         scene.draw(&mut image);
         image.dump_png("target/orientation.png");
@@ -145,21 +167,22 @@ mod gltf {
 
     #[test]
     fn sponza() {
-        let mut image = Image::new(128, 128, ColorType::RGBA8);
+        let mut image = Image::new(64, 64, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene.load("tests/model/sponza/sponza.gltf").unwrap();
 
         // Custom camera
         let rotation = Quat::new(0.0, -0.707, 0.0, 0.707);
+        scene.model.nodes.get_mut(0.into()).unwrap().trs.rotation = rotation;
+
         let mut camera_node = Node::builder()
-            .id(scene.models[0].nodes.len())
-            .translation(Vec3::new(0.0, 1.5, 0.0))
-            .rotation(rotation)
+            .id(scene.model.nodes.len())
+            .translation(Vec3::new(0.2, 1.0, 0.0))
             .build();
-        camera_node.camera = Some(scene.models[0].cameras.push(Camera::default()));
-        let camera_node_handle = scene.models[0].nodes.push(camera_node);
-        scene.models[0].root.children.push(camera_node_handle);
+        camera_node.camera = scene.model.cameras.push(Camera::default());
+        let camera_node_handle = scene.model.nodes.push(camera_node);
+        scene.model.root.children.push(camera_node_handle);
 
         scene.draw(&mut image);
         image.dump_png("target/sponza.png");

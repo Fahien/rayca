@@ -38,7 +38,7 @@ impl Default for Ray {
 
 pub struct Hit {
     pub depth: f32,
-    pub point: Vec3,
+    pub point: Point3,
 
     /// Barycentric coordinates expressing the hit point in terms of the primitive.
     /// Useful to interpolate vertex data of such a primitive
@@ -46,7 +46,7 @@ pub struct Hit {
 }
 
 impl Hit {
-    pub fn new(depth: f32, point: Vec3, uv: Vec2) -> Self {
+    pub fn new(depth: f32, point: Point3, uv: Vec2) -> Self {
         Self { depth, point, uv }
     }
 }

@@ -214,6 +214,8 @@ impl ModelBuilder {
         self.load_cameras(&mut model.cameras)?;
         self.load_nodes(&mut model);
 
+        // TODO collect lights from glTF file
+
         Ok(model)
     }
 
@@ -530,6 +532,7 @@ pub struct Model {
     pub primitives: Pack<Primitive>,
     pub meshes: Pack<Mesh>,
     pub cameras: Pack<Camera>,
+    pub lights: Pack<Light>,
     pub nodes: Pack<Node>,
     pub root: Node,
 }
@@ -611,7 +614,7 @@ impl Model {
     pub fn collect_transforms(&self) -> HashMap<Handle<Node>, Trs> {
         let mut ret = HashMap::new();
         for node in self.root.children.iter() {
-            self.traverse(&mut ret, Trs::default(), *node);
+            self.traverse(&mut ret, self.root.trs.clone(), *node);
         }
         ret
     }

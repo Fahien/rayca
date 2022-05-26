@@ -15,6 +15,7 @@ pub struct NodeBuilder {
     pub children: Vec<Handle<Node>>,
     pub mesh: Handle<Mesh>,
     pub camera: Handle<Camera>,
+    pub light: Handle<Light>,
 }
 
 impl NodeBuilder {
@@ -28,6 +29,7 @@ impl NodeBuilder {
             children: vec![],
             mesh: Handle::NONE,
             camera: Handle::NONE,
+            light: Handle::NONE,
         }
     }
 
@@ -78,6 +80,11 @@ impl NodeBuilder {
         self
     }
 
+    pub fn light(mut self, light: Handle<Light>) -> Self {
+        self.light = light;
+        self
+    }
+
     pub fn build(self) -> Node {
         let mut node = Node::new();
         node.id = self.id;
@@ -90,6 +97,7 @@ impl NodeBuilder {
         node.children = self.children;
         node.mesh = self.mesh;
         node.camera = self.camera;
+        node.light = self.light;
 
         node
     }
@@ -106,6 +114,7 @@ pub struct Node {
     pub id: usize,
     pub name: String,
     pub camera: Handle<Camera>,
+    pub light: Handle<Light>,
     pub mesh: Handle<Mesh>,
     pub trs: Trs,
     pub children: Vec<Handle<Node>>,

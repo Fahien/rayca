@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, AddAssign, Index, Sub};
+use std::ops::{Add, AddAssign, Index, Mul, Sub};
 
 use crate::*;
 
@@ -80,7 +80,7 @@ impl Dot<Vec3> for Point3 {
 }
 
 impl Add<Vec3> for Point3 {
-    type Output = Vec3;
+    type Output = Point3;
 
     fn add(self, rhs: Vec3) -> Self::Output {
         Self::Output::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
@@ -117,6 +117,30 @@ impl Sub<&Point3> for &Point3 {
     }
 }
 
+impl Sub<&Vec3> for &Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Vec3) -> Self::Output {
+        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+    }
+}
+
+impl Sub<&Vec3> for Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Vec3) -> Self::Output {
+        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+    }
+}
+
+impl Sub<Vec3> for Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: Vec3) -> Self::Output {
+        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+    }
+}
+
 impl Index<usize> for Point3 {
     type Output = f32;
 
@@ -127,6 +151,22 @@ impl Index<usize> for Point3 {
             2 => &self.z,
             _ => panic!("Index out of bounds"),
         }
+    }
+}
+
+impl Mul<f32> for Point3 {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::Output::new(self.x * rhs, self.y * rhs, self.z * rhs)
+    }
+}
+
+impl Mul<f32> for &Point3 {
+    type Output = Point3;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::Output::new(self.x * rhs, self.y * rhs, self.z * rhs)
     }
 }
 

@@ -33,6 +33,26 @@ impl Scene {
         let camera_node_handle = model.nodes.push(camera_node);
         model.root.children.push(camera_node_handle);
 
+        // Add 2 point lights
+        let mut light = Light::point();
+        light.set_intensity(32.0);
+        let light_handle = model.lights.push(light);
+
+        let mut light_node = Node::builder()
+            .translation(Vec3::new(-1.0, 2.0, 1.0))
+            .light(light_handle)
+            .build();
+        light_node.light = light_handle;
+        let light_node_handle = model.nodes.push(light_node);
+        model.root.children.push(light_node_handle);
+
+        let point_light_node = Node::builder()
+            .light(light_handle)
+            .translation(Vec3::new(1.0, 2.0, 1.0))
+            .build();
+        let light_node_handle = model.nodes.push(point_light_node);
+        model.root.children.push(light_node_handle);
+
         model
     }
 
@@ -56,20 +76,51 @@ impl Scene {
         self.model.append(model);
     }
 
-    fn draw_pixel(&self, ray: Ray, bvh: &Bvh, pixel: &mut RGBA8) -> usize {
+    fn draw_pixel(
+        &self,
+        ray: Ray,
+        bvh: &Bvh,
+        light_nodes: &[Node],
+        lights: &Pack<Light>,
+        pixel: &mut RGBA8,
+    ) -> usize {
         let mut triangle_count = 0;
         if let Some((hit, triangle)) = bvh.intersects_stats(&ray, &mut triangle_count) {
-            let mut color = triangle.get_color(&hit);
-
-            // Facing ratio
             let n = triangle.get_normal(&hit);
-            let n_dot_dir = n.dot(&-ray.dir);
-            color.r *= n_dot_dir;
-            color.g *= n_dot_dir;
-            color.b *= n_dot_dir;
+            let mut pixel_color = Color::black();
+            let color = triangle.get_color(&hit);
+
+            const SHADOW_BIAS: f32 = 1e-4;
+            // Before getting color, we should check whether it is visible from the sun
+            let shadow_origin = hit.point + n * SHADOW_BIAS;
+
+            for light_node in light_nodes {
+                let light = lights.get(light_node.light).unwrap();
+                let light_dir = light.get_direction(light_node, &hit.point);
+
+                let shadow_ray = Ray::new(shadow_origin, light_dir);
+                let shadow_result = bvh.intersects(&shadow_ray);
+
+                let is_light = match shadow_result {
+                    None => true,
+                    Some((shadow_hit, _)) => {
+                        // Distance between current surface and the light source
+                        let light_distance = light.get_distance(light_node, &hit.point);
+                        // If the obstacle is beyong the light source then the current surface is light
+                        shadow_hit.depth > light_distance
+                    }
+                };
+
+                if is_light {
+                    let n_dot_l = n.dot(&light_dir).clamp(0.0, 1.0);
+                    let fallof = light.get_fallof(&light_node.trs, &hit.point);
+                    pixel_color +=
+                        (color / std::f32::consts::PI * light.get_intensity() * n_dot_l) / fallof;
+                }
+            }
 
             // No over operation here as transparency should be handled by the lighting model
-            *pixel = color.into();
+            *pixel = pixel_color.into();
         }
         triangle_count
     }
@@ -103,6 +154,7 @@ impl Draw for Scene {
         let default_transforms = self.default_model.collect_transforms();
         for (node, trs) in default_transforms {
             // Collect cameras
+            let node = self.default_model.nodes.get(node).unwrap();
             if let Some(camera) = self.default_model.cameras.get(node.camera) {
                 cameras.push((camera, trs));
             }
@@ -121,6 +173,10 @@ impl Draw for Scene {
 
         let aspectratio = width / height;
         let angle = camera.get_angle();
+
+        // TODO collect lights from models
+        let light_nodes = &self.default_model.nodes[1..];
+        let lights = &self.default_model.lights;
 
         #[cfg(feature = "parallel")]
         let row_iter = image.pixels_mut().into_par_iter();
@@ -142,7 +198,7 @@ impl Draw for Scene {
                 let origin = Point3::new(0.0, 0.0, 0.0);
                 let ray = camera_trs * Ray::new(origin, dir);
 
-                self.draw_pixel(ray, &bvh, pixel);
+                self.draw_pixel(ray, &bvh, light_nodes, lights, pixel);
             });
         });
 
