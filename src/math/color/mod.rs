@@ -10,7 +10,7 @@ pub use rgba8::*;
 
 use crate::Vec3;
 
-use std::ops::{Add, Mul};
+use std::ops::{Add, AddAssign, Div, Mul};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ColorType {
@@ -48,6 +48,10 @@ pub struct Color {
 impl Color {
     pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self { r, g, b, a }
+    }
+
+    pub fn black() -> Self {
+        Self::new(0.0, 0.0, 0.0, 1.0)
     }
 
     pub fn white() -> Self {
@@ -141,6 +145,14 @@ impl Add<&Color> for Color {
     }
 }
 
+impl AddAssign<Color> for Color {
+    fn add_assign(&mut self, rhs: Color) {
+        self.r += rhs.r * rhs.a;
+        self.g += rhs.g * rhs.a;
+        self.b += rhs.b * rhs.a;
+    }
+}
+
 impl Mul<f32> for Color {
     type Output = Color;
 
@@ -157,6 +169,28 @@ impl Mul<f32> for &Color {
     }
 }
 
+impl Mul<Color> for f32 {
+    type Output = Color;
+
+    fn mul(self, mut rhs: Color) -> Self::Output {
+        rhs.r *= self;
+        rhs.g *= self;
+        rhs.b *= self;
+        rhs
+    }
+}
+
+impl Mul<Color> for &f32 {
+    type Output = Color;
+
+    fn mul(self, mut rhs: Color) -> Self::Output {
+        rhs.r *= self;
+        rhs.g *= self;
+        rhs.b *= self;
+        rhs
+    }
+}
+
 impl Mul<&Color> for f32 {
     type Output = Color;
 
@@ -170,6 +204,30 @@ impl Mul<&Color> for &f32 {
 
     fn mul(self, rhs: &Color) -> Self::Output {
         Self::Output::new(self * rhs.r, self * rhs.g, self * rhs.b, rhs.a)
+    }
+}
+
+impl Mul<&Vec3> for &Color {
+    type Output = Color;
+
+    fn mul(self, rhs: &Vec3) -> Self::Output {
+        Self::Output::new(self.r * rhs.x, self.g * rhs.y, self.b * rhs.z, self.a)
+    }
+}
+
+impl Mul<&Vec3> for Color {
+    type Output = Color;
+
+    fn mul(self, rhs: &Vec3) -> Self::Output {
+        Self::Output::new(self.r * rhs.x, self.g * rhs.y, self.b * rhs.z, self.a)
+    }
+}
+
+impl Mul<Vec3> for Color {
+    type Output = Color;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        Self::Output::new(self.r * rhs.x, self.g * rhs.y, self.b * rhs.z, self.a)
     }
 }
 
@@ -209,5 +267,21 @@ impl Mul<Color> for Color {
             self.b * rhs.b,
             self.a * rhs.a,
         )
+    }
+}
+
+impl Div<f32> for Color {
+    type Output = Color;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Self::Output::new(self.r / rhs, self.g / rhs, self.b / rhs, self.a)
+    }
+}
+
+impl Div<f32> for &Color {
+    type Output = Color;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Self::Output::new(self.r / rhs, self.g / rhs, self.b / rhs, self.a)
     }
 }
