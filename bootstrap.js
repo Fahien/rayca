@@ -55,11 +55,11 @@
 /******/ 		"../pkg/rayca_bg.wasm": function() {
 /******/ 			return {
 /******/ 				"./rayca_bg.js": {
-/******/ 					"__wbg_log_99d50594cb6666cd": function(p0i32,p1i32) {
-/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_log_99d50594cb6666cd"](p0i32,p1i32);
-/******/ 					},
 /******/ 					"__wbindgen_object_drop_ref": function(p0i32) {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_object_drop_ref"](p0i32);
+/******/ 					},
+/******/ 					"__wbg_log_46f9baacd341658a": function(p0i32,p1i32) {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_log_46f9baacd341658a"](p0i32,p1i32);
 /******/ 					},
 /******/ 					"__wbindgen_cb_drop": function(p0i32) {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_cb_drop"](p0i32);
@@ -187,8 +187,8 @@
 /******/ 					"__wbindgen_memory": function() {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_memory"]();
 /******/ 					},
-/******/ 					"__wbindgen_closure_wrapper1515": function(p0i32,p1i32,p2i32) {
-/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_closure_wrapper1515"](p0i32,p1i32,p2i32);
+/******/ 					"__wbindgen_closure_wrapper1519": function(p0i32,p1i32,p2i32) {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_closure_wrapper1519"](p0i32,p1i32,p2i32);
 /******/ 					}
 /******/ 				}
 /******/ 			};
@@ -291,7 +291,7 @@
 /******/ 				promises.push(installedWasmModuleData);
 /******/ 			else {
 /******/ 				var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/rayca_bg.wasm":"b8d6749f41a04468da2e"}[wasmModuleId] + ".module.wasm");
+/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/rayca_bg.wasm":"4cb5e9282391d1bd7545"}[wasmModuleId] + ".module.wasm");
 /******/ 				var promise;
 /******/ 				if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 					promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
