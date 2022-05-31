@@ -96,11 +96,9 @@ impl Scene {
     }
 
     fn draw_pixel(&self, ray: Ray, pixel: &mut RGBA8) {
-        if let Some(hit) = self.tlas.intersects(&ray) {
-            let color = self.integrator.get_color(self, hit);
-            // No over operation here as transparency should be handled by the lighting model
-            *pixel = color.into();
-        }
+        let color = self.integrator.trace(self, ray, 0);
+        // No over operation here as transparency should be handled by the lighting model
+        *pixel = color.into();
     }
 
     pub fn update(&mut self) {

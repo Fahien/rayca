@@ -2,18 +2,27 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Color, Dot, Hit, Integrator, Ray, Scene};
+use crate::{Color, Dot, Integrator, Ray, Scene};
 
 #[derive(Default)]
 pub struct Scratcher {}
 
 impl Integrator for Scratcher {
-    fn get_color(&self, scene: &Scene, hit: Hit) -> Color {
+    fn trace(&self, scene: &Scene, ray: Ray, depth: u8) -> Color {
+        let mut pixel_color = Color::BLACK;
+
+        if depth > 1 {
+            return pixel_color;
+        }
+
+        let Some(hit) = scene.tlas.intersects(&ray) else {
+            return pixel_color;
+        };
+
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let bvh = scene.tlas.bvhs.get(blas_node.bvh).unwrap();
         let primitive = bvh.get_shade(hit.primitive);
         let n = primitive.get_normal(scene, &hit);
-        let mut pixel_color = Color::black();
         let color = primitive.get_color(scene, &hit);
 
         const SHADOW_BIAS: f32 = 1e-4;
@@ -31,7 +40,7 @@ impl Integrator for Scratcher {
             let shadow_ray = Ray::new(shadow_origin, light_dir);
             let shadow_result = scene.tlas.intersects(&shadow_ray);
 
-            let is_light = match shadow_result {
+            let is_lit = match shadow_result {
                 None => true,
                 Some(shadow_hit) => {
                     // Distance between current surface and the light source
@@ -41,12 +50,18 @@ impl Integrator for Scratcher {
                 }
             };
 
-            if is_light {
+            if is_lit {
                 let n_dot_l = n.dot(&light_dir).clamp(0.0, 1.0);
                 let fallof = light.get_fallof(&light_node.trs, &hit.point);
                 pixel_color += (color / std::f32::consts::PI * light.color * n_dot_l) / fallof;
             }
-        }
+        } // end light
+
+        // Get reflection?
+        let reflection_dir = ray.dir.reflect(&n);
+        let reflection_ray = Ray::new(hit.point, reflection_dir);
+        let reflection_color = self.trace(scene, reflection_ray, depth + 1);
+        pixel_color += reflection_color / 2.0;
 
         pixel_color
     }

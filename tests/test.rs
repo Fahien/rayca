@@ -47,20 +47,31 @@ fn boxes_over_plane() {
 
     let mut timer = Timer::new();
     let mut model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
-    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
-
     model.root.trs.scale = Vec3::new(4.0, 0.125, 8.0);
     model.root.trs.translation.y -= 1.0;
     model.root.trs.translation.z -= 2.0;
-
     model.nodes.get_mut(1.into()).unwrap().trs.rotation = Quat::default();
     model.materials.get_mut(0.into()).unwrap().color = Color::new(0.1, 0.2, 0.7, 1.0);
-
     scene.gltf_models.push(model);
 
-    let model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
+    let mut model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
+    model.root.trs.translation.x += 1.0;
+    model.root.trs.translation.y += 1.0;
+    model.root.trs.translation.z += -2.0;
     scene.gltf_models.push(model);
 
+    let mut model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
+    model.root.trs.translation.x += 0.0;
+    model.root.trs.translation.y += 0.0;
+    model.root.trs.translation.z += -1.0;
+    scene.gltf_models.push(model);
+
+    let mut model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
+    model.root.trs.translation.x += -1.5;
+    model.root.trs.translation.z += -4.0;
+    scene.gltf_models.push(model);
+
+    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
     run(scene, "target/boxes-over-plane.png", 1024, 1024);
 }
 

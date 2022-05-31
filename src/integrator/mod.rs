@@ -5,8 +5,8 @@
 pub mod scratcher;
 pub use scratcher::*;
 
-use crate::{Color, Hit, Scene};
+use crate::{Color, Ray, Scene};
 
 pub trait Integrator {
-    fn get_color(&self, scene: &Scene, hit: Hit) -> Color;
+    fn trace(&self, scene: &Scene, ray: Ray, depth: u8) -> Color;
 }

@@ -104,6 +104,11 @@ impl Vec3 {
             self.z.max(other.z),
         )
     }
+
+    /// Returns the reflection of this vector around a surface normal
+    pub fn reflect(&self, normal: &Vec3) -> Self {
+        self - 2.0 * self.dot(normal) * normal
+    }
 }
 
 impl Dot<Vec3> for Vec3 {
@@ -241,6 +246,14 @@ impl From<Point3> for Vec3 {
 impl From<&Point3> for Vec3 {
     fn from(p: &Point3) -> Self {
         Self::new(p.x, p.y, p.z)
+    }
+}
+
+impl Mul<&Vec3> for f32 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: &Vec3) -> Self::Output {
+        Self::Output::new(self * rhs.x, self * rhs.y, self * rhs.z)
     }
 }
 
