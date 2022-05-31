@@ -76,16 +76,20 @@ impl Scene {
         self.model.append(model);
     }
 
-    fn draw_pixel(
+    fn trace(
         &self,
         ray: Ray,
         bvh: &Bvh,
+
         light_nodes: &[Node],
         lights: &Pack<Light>,
-        pixel: &mut RGBA8,
-    ) -> usize {
-        let mut triangle_count = 0;
-        if let Some((hit, triangle)) = bvh.intersects_stats(&ray, &mut triangle_count) {
+        depth: u32,
+    ) -> Option<Color> {
+        if depth > 1 {
+            return None;
+        }
+
+        if let Some((hit, triangle)) = bvh.intersects(&ray) {
             let n = triangle.get_normal(&hit);
             let mut pixel_color = Color::black();
             let color = triangle.get_color(&hit);
@@ -119,6 +123,31 @@ impl Scene {
                 }
             }
 
+            // Get reflection?
+            let reflection_dir = ray.dir.reflect(&n);
+            let reflection_ray = Ray::new(hit.point, reflection_dir);
+            if let Some(reflection_color) =
+                self.trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
+            {
+                pixel_color += reflection_color / 2.0;
+            }
+
+            return Some(pixel_color);
+        }
+
+        None
+    }
+
+    fn draw_pixel(
+        &self,
+        ray: Ray,
+        bvh: &Bvh,
+        light_nodes: &[Node],
+        lights: &Pack<Light>,
+        pixel: &mut RGBA8,
+    ) -> usize {
+        let triangle_count = 0;
+        if let Some(pixel_color) = self.trace(ray, bvh, light_nodes, lights, 0) {
             // No over operation here as transparency should be handled by the lighting model
             *pixel = pixel_color.into();
         }

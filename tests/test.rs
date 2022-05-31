@@ -38,6 +38,8 @@ fn cube_over_plane() {
     let mut timer = Timer::new();
     scene.load("tests/model/box/box.gltf").unwrap();
     scene.load("tests/model/box/box.gltf").unwrap();
+    scene.load("tests/model/box/box.gltf").unwrap();
+    scene.load("tests/model/box/box.gltf").unwrap();
     rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
     let root0 = scene.model.nodes.get_mut(1.into()).unwrap();
@@ -46,6 +48,17 @@ fn cube_over_plane() {
     let root0_child = scene.model.nodes.get_mut(2.into()).unwrap();
     root0_child.trs.rotation = Quat::default();
     scene.model.materials.get_mut(0.into()).unwrap().color = Color::new(0.1, 0.2, 0.7, 1.0);
+
+    scene.models[1].root.trs.translation.x += 1.0;
+    scene.models[1].root.trs.translation.y += 1.0;
+    scene.models[1].root.trs.translation.z += -2.0;
+
+    scene.models[2].root.trs.translation.x += 0.0;
+    scene.models[2].root.trs.translation.y += 0.0;
+    scene.models[2].root.trs.translation.z += -1.0;
+
+    scene.models[3].root.trs.translation.x += -1.5;
+    scene.models[3].root.trs.translation.z += -4.0;
 
     scene.draw(&mut image);
     image.dump_png("target/cube-over-plane.png");
@@ -167,7 +180,7 @@ mod gltf {
 
     #[test]
     fn sponza() {
-        let mut image = Image::new(64, 64, ColorType::RGBA8);
+        let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene.load("tests/model/sponza/sponza.gltf").unwrap();
