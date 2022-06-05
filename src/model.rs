@@ -128,7 +128,7 @@ impl ModelBuilder {
 
         rlog!(
             "{:>12} images from file in {:.2}s",
-            "Loaded".green().bold(),
+            "Loaded".cyan().bold(),
             timer.get_delta().as_secs_f32()
         );
 
