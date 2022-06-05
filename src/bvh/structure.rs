@@ -15,24 +15,38 @@ impl AABB {
         Self { a, b }
     }
 
+    fn area(&self) -> f32 {
+        let e = self.b - self.a; // box extent
+        e.x * e.y + e.y * e.z + e.z * e.x
+    }
+
+    fn grow(&mut self, p: &Point3) {
+        self.a = self.a.min(p);
+        self.b = self.b.max(p);
+    }
+
     /// Slab test. We do not care where we hit the box; only info we need is a yes/no answer.
-    fn intersects(&self, ray: &Ray) -> bool {
-        let tx1 = (self.a.x - ray.origin.x) / ray.dir.x;
-        let tx2 = (self.b.x - ray.origin.x) / ray.dir.x;
+    fn intersects(&self, ray: &Ray) -> f32 {
+        let tx1 = (self.a.x - ray.origin.x) * ray.rdir.x;
+        let tx2 = (self.b.x - ray.origin.x) * ray.rdir.x;
         let tmin = tx1.min(tx2);
         let tmax = tx1.max(tx2);
 
-        let ty1 = (self.a.y - ray.origin.y) / ray.dir.y;
-        let ty2 = (self.b.y - ray.origin.y) / ray.dir.y;
+        let ty1 = (self.a.y - ray.origin.y) * ray.rdir.y;
+        let ty2 = (self.b.y - ray.origin.y) * ray.rdir.y;
         let tmin = tmin.max(ty1.min(ty2));
         let tmax = tmax.min(ty1.max(ty2));
 
-        let tz1 = (self.a.z - ray.origin.z) / ray.dir.z;
-        let tz2 = (self.b.z - ray.origin.z) / ray.dir.z;
+        let tz1 = (self.a.z - ray.origin.z) * ray.rdir.z;
+        let tz2 = (self.b.z - ray.origin.z) * ray.rdir.z;
         let tmin = tmin.max(tz1.min(tz2));
         let tmax = tmax.min(tz1.max(tz2));
 
-        tmax >= tmin && tmax > 0.0
+        if tmax >= tmin && tmax > 0.0 {
+            tmin
+        } else {
+            f32::MAX
+        }
     }
 }
 
@@ -70,6 +84,76 @@ impl<'m> BvhNode<'m> {
         print_success!("BVH", "built in {:.2}ms", timer.get_delta().as_millis());
     }
 
+    /// Surface Area Heuristics:
+    /// The cost of a split is proportional to the summed cost of intersecting the two
+    /// resulting boxes, including the triangles they store.
+    fn evaluate_sah(&self, axis: Axis3, pos: f32) -> f32 {
+        // determine triangle counts and bounds for this split candidate
+        let mut left_box = AABB::default();
+        let mut right_box = AABB::default();
+        let mut left_count = 0;
+        let mut right_count = 0;
+
+        for tri in &self.triangles {
+            if tri.centroid[axis] < pos {
+                left_count += 1;
+                left_box.grow(&tri.vertices[0].pos);
+                left_box.grow(&tri.vertices[1].pos);
+                left_box.grow(&tri.vertices[2].pos);
+            } else {
+                right_count += 1;
+                right_box.grow(&tri.vertices[0].pos);
+                right_box.grow(&tri.vertices[1].pos);
+                right_box.grow(&tri.vertices[2].pos);
+            }
+        }
+
+        let cost = left_count as f32 * left_box.area() + right_count as f32 * right_box.area();
+        if cost > 0.0 {
+            cost
+        } else {
+            f32::MAX
+        }
+    }
+
+    /// Finds the optimal split plane position and axis
+    /// - Returns (split axis, split pos, split cost)
+    fn find_best_split_plane(&self) -> (Axis3, f32, f32) {
+        const ALL_AXIS: [Axis3; 3] = [Axis3::X, Axis3::Y, Axis3::Z];
+
+        let mut best_cost = f32::MAX;
+        let mut best_axis = Axis3::X;
+        let mut split_pos = 0.0;
+
+        for axis in ALL_AXIS {
+            let bounds_min = self.bounds.a[axis];
+            let bounds_max = self.bounds.b[axis];
+            if bounds_min == bounds_max {
+                continue;
+            }
+
+            // TODO tweak this
+            const AREA_COUNT: i32 = 32;
+            let scale = (bounds_max - bounds_min) / AREA_COUNT as f32;
+
+            for i in 1..AREA_COUNT {
+                let candidate_pos = bounds_min + i as f32 * scale;
+                let cost = self.evaluate_sah(axis, candidate_pos);
+                if cost < best_cost {
+                    best_cost = cost;
+                    best_axis = axis;
+                    split_pos = candidate_pos;
+                }
+            }
+        }
+
+        (best_axis, split_pos, best_cost)
+    }
+
+    fn calculate_cost(&self) -> f32 {
+        self.triangles.len() as f32 * self.bounds.area()
+    }
+
     fn set_triangles_recursive(
         &mut self,
         triangles: Vec<BvhTriangle<'m>>,
@@ -87,22 +171,19 @@ impl<'m> BvhNode<'m> {
             self.bounds.b = self.bounds.b.max(&tri.max());
         }
 
-        // Split AABB along its longest axis
-        let extent = self.bounds.b - self.bounds.a;
-        let mut axis = Axis3::X;
-        if extent.y > extent.x {
-            axis = Axis3::Y;
+        // Surface Area Heuristics
+        let (split_axis, split_pos, split_cost) = self.find_best_split_plane();
+
+        let no_split_cost = self.calculate_cost();
+        if split_cost > no_split_cost {
+            return;
         }
-        if extent.z > extent[axis] {
-            axis = Axis3::Z
-        }
-        let split_pos = self.bounds.a[axis] + extent[axis] * 0.5;
 
         // Partition-in-place to obtain two groups of triangles on both sides of the split plane
         let mut i = 0;
         let mut j = self.triangles.len();
         while i < j {
-            if self.triangles[i].centroid[axis] < split_pos {
+            if self.triangles[i].centroid[split_axis] < split_pos {
                 i += 1;
             } else {
                 self.triangles.swap(i, j - 1);
@@ -135,7 +216,8 @@ impl<'m> BvhNode<'m> {
         nodes: &'m Pack<BvhNode>,
         triangle_count: &mut usize,
     ) -> Option<(Hit, &'m BvhTriangle)> {
-        if !self.bounds.intersects(ray) {
+        let d = self.bounds.intersects(ray);
+        if d == f32::MAX {
             return None;
         }
 
@@ -199,6 +281,58 @@ impl<'m> Bvh<'m> {
             nodes,
             triangle_count: 0,
         }
+    }
+
+    pub fn intersects_iter(&self, ray: &Ray) -> Option<(Hit, &BvhTriangle)> {
+        let mut node = &self.root;
+        let mut stack = vec![];
+
+        let mut ret_hit = None;
+        let mut max_depth = f32::MAX;
+
+        loop {
+            if node.is_leaf() {
+                for tri in &node.triangles {
+                    if let Some(hit) = tri.intersects(ray) {
+                        if hit.depth < max_depth {
+                            max_depth = hit.depth;
+                            ret_hit = Some((hit, tri));
+                        }
+                    }
+                }
+                if stack.is_empty() {
+                    break;
+                } else {
+                    node = stack.pop().unwrap();
+                }
+
+                continue;
+            }
+
+            let mut child1 = self.nodes.get(node.left).unwrap();
+            let mut child2 = self.nodes.get(node.right).unwrap();
+            let mut dist1 = child1.bounds.intersects(ray);
+            let mut dist2 = child2.bounds.intersects(ray);
+
+            if dist1 > dist2 {
+                std::mem::swap(&mut dist1, &mut dist2);
+                std::mem::swap(&mut child1, &mut child2);
+            }
+            if dist1 == f32::MAX {
+                if stack.is_empty() {
+                    break;
+                } else {
+                    node = stack.pop().unwrap();
+                }
+            } else {
+                node = child1;
+                if dist2 != f32::MAX {
+                    stack.push(child2);
+                }
+            }
+        }
+
+        ret_hit
     }
 
     pub fn intersects(&self, ray: &Ray) -> Option<(Hit, &BvhTriangle)> {

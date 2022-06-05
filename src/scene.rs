@@ -66,9 +66,20 @@ impl Scene {
     }
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Box<dyn Error>> {
+        let mut timer = Timer::new();
+        let path_str = path.as_ref().to_string_lossy().to_string();
+
         // Open glTF model
         let model = Model::builder().path(path)?.build()?;
         self.model.append(model);
+
+        print_info!(
+            "Loaded",
+            "{} in {:.2}ms",
+            path_str,
+            timer.get_delta().as_millis()
+        );
+
         Ok(())
     }
 
@@ -77,7 +88,6 @@ impl Scene {
     }
 
     fn trace(
-        &self,
         ray: Ray,
         bvh: &Bvh,
 
@@ -89,7 +99,7 @@ impl Scene {
             return None;
         }
 
-        if let Some((hit, triangle)) = bvh.intersects(&ray) {
+        if let Some((hit, triangle)) = bvh.intersects_iter(&ray) {
             let n = triangle.get_normal(&hit);
             let mut pixel_color = Color::black();
             let color = triangle.get_color(&hit);
@@ -103,7 +113,7 @@ impl Scene {
                 let light_dir = light.get_direction(light_node, &hit.point);
 
                 let shadow_ray = Ray::new(shadow_origin, light_dir);
-                let shadow_result = bvh.intersects(&shadow_ray);
+                let shadow_result = bvh.intersects_iter(&shadow_ray);
 
                 let is_light = match shadow_result {
                     None => true,
@@ -127,7 +137,7 @@ impl Scene {
             let reflection_dir = ray.dir.reflect(&n);
             let reflection_ray = Ray::new(hit.point, reflection_dir);
             if let Some(reflection_color) =
-                self.trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
+                Self::trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
             {
                 pixel_color += reflection_color / 2.0;
             }
@@ -147,7 +157,7 @@ impl Scene {
         pixel: &mut RGBA8,
     ) -> usize {
         let triangle_count = 0;
-        if let Some(pixel_color) = self.trace(ray, bvh, light_nodes, lights, 0) {
+        if let Some(pixel_color) = Self::trace(ray, bvh, light_nodes, lights, 0) {
             // No over operation here as transparency should be handled by the lighting model
             *pixel = pixel_color.into();
         }
@@ -159,8 +169,6 @@ impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
         let mut triangles = vec![];
         let mut cameras = vec![];
-
-        let mut timer = Timer::new();
 
         let transforms = self.model.collect_transforms();
         for (node, trs) in transforms {
@@ -190,6 +198,8 @@ impl Draw for Scene {
         }
 
         let bvh = Bvh::new(triangles);
+
+        let mut timer = Timer::new();
 
         let width = image.width() as f32;
         let height = image.height() as f32;

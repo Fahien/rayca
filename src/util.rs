@@ -398,6 +398,15 @@ macro_rules! warn {
 }
 
 #[macro_export]
+macro_rules! print_warn {
+    ( $s:expr, $( $t:tt )* ) => {
+        $crate::rlog!("{:>12} {}",
+            owo_colors::OwoColorize::bold(
+                &owo_colors::OwoColorize::yellow(&$s)), format!($( $t )*))
+    }
+}
+
+#[macro_export]
 macro_rules! panic_fail {
     ( $( $t:tt )* ) => {
         panic!("{:>12} {}", owo_colors::OwoColorize::bold(&owo_colors::OwoColorize::red(&"Failed")), format!($( $t )*))

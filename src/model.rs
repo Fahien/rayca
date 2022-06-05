@@ -126,7 +126,7 @@ impl ModelBuilder {
 
         vec.sort_by_key(|image| image.id);
 
-        print_success!(
+        print_info!(
             "Loaded",
             "images from file in {:.2}s",
             timer.get_delta().as_secs_f32()

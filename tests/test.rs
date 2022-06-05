@@ -35,12 +35,10 @@ fn cube_over_plane() {
     let mut image = Image::new(1024, 1024, ColorType::RGBA8);
     let mut scene = Scene::new();
 
-    let mut timer = Timer::new();
     scene.load("tests/model/box/box.gltf").unwrap();
     scene.load("tests/model/box/box.gltf").unwrap();
     scene.load("tests/model/box/box.gltf").unwrap();
     scene.load("tests/model/box/box.gltf").unwrap();
-    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
     let root0 = scene.model.nodes.get_mut(1.into()).unwrap();
     root0.trs.scale = Vec3::new(16.0, 16.0, 0.125);
@@ -49,16 +47,31 @@ fn cube_over_plane() {
     root0_child.trs.rotation = Quat::default();
     scene.model.materials.get_mut(0.into()).unwrap().color = Color::new(0.1, 0.2, 0.7, 1.0);
 
-    scene.models[1].root.trs.translation.x += 1.0;
-    scene.models[1].root.trs.translation.y += 1.0;
-    scene.models[1].root.trs.translation.z += -2.0;
+    let root1 = scene
+        .model
+        .nodes
+        .get_mut(scene.model.root.children[1])
+        .unwrap();
+    root1.trs.translation.x += 1.0;
+    root1.trs.translation.y += 1.0;
+    root1.trs.translation.z += -2.0;
 
-    scene.models[2].root.trs.translation.x += 0.0;
-    scene.models[2].root.trs.translation.y += 0.0;
-    scene.models[2].root.trs.translation.z += -1.0;
+    let root2 = scene
+        .model
+        .nodes
+        .get_mut(scene.model.root.children[2])
+        .unwrap();
+    root2.trs.translation.x += 0.0;
+    root2.trs.translation.y += 0.0;
+    root2.trs.translation.z += -1.0;
 
-    scene.models[3].root.trs.translation.x += -1.5;
-    scene.models[3].root.trs.translation.z += -4.0;
+    let root3 = scene
+        .model
+        .nodes
+        .get_mut(scene.model.root.children[3])
+        .unwrap();
+    root3.trs.translation.x += -1.5;
+    root3.trs.translation.z += -4.0;
 
     scene.draw(&mut image);
     image.dump_png("target/cube-over-plane.png");
@@ -72,9 +85,7 @@ mod gltf {
         let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
 
-        let mut timer = Timer::new();
         scene.load("tests/model/box/box.gltf").unwrap();
-        rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
         image.dump_png("target/gltf-cube.png");
@@ -95,9 +106,7 @@ mod gltf {
         let mut image = Image::new(128, 128, ColorType::RGBA8);
         let mut scene = Scene::new();
 
-        let mut timer = Timer::new();
         scene.load("tests/model/suzanne/suzanne.gltf").unwrap();
-        rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         scene.draw(&mut image);
         image.dump_png("target/suzanne.png");
@@ -105,21 +114,14 @@ mod gltf {
 
     #[test]
     fn duck() {
-        let mut image = Image::new(128, 128, ColorType::RGBA8);
+        let mut image = Image::new(512, 512, ColorType::RGBA8);
         let mut scene = Scene::new();
 
-        let mut timer = Timer::new();
         scene.load("tests/model/duck/duck.gltf").unwrap();
-        rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
 
         // Custom camera
-        let mut camera_node = Node::builder()
-            .id(scene.model.nodes.len())
-            .translation(Vec3::new(0.1, 0.8, 2.2))
-            .build();
-        camera_node.camera = scene.model.cameras.push(Camera::default());
-        let camera_node_handle = scene.model.nodes.push(camera_node);
-        scene.model.root.children.push(camera_node_handle);
+        add_camera(&mut scene.model, Vec3::new(0.1, 0.8, 2.2));
+        scene.model.root.trs.scale *= 0.125;
 
         scene.draw(&mut image);
         image.dump_png("target/duck.png");
@@ -134,23 +136,26 @@ mod gltf {
         image.dump_png("target/cameras.png");
     }
 
+    /// Add a custom camera
+    fn add_camera(model: &mut Model, camera_position: Vec3) {
+        let mut camera_node = Node::builder()
+            .id(model.nodes.len())
+            .translation(camera_position)
+            .build();
+        camera_node.camera = model.cameras.push(Camera::default());
+        let camera_node_handle = model.nodes.push(camera_node);
+        model.root.children.push(camera_node_handle);
+    }
+
     #[test]
     fn orientation() {
-        let mut image = Image::new(256, 256, ColorType::RGBA8);
+        let mut image = Image::new(512, 512, ColorType::RGBA8);
         let mut scene = Scene::new();
         scene
             .load("tests/model/orientation/OrientationTest.gltf")
             .unwrap();
 
-        // Custom camera
-        let mut camera_node = Node::builder()
-            .id(scene.model.nodes.len())
-            .translation(Vec3::new(0.0, 0.0, 1.0))
-            .build();
-        camera_node.camera = scene.model.cameras.push(Camera::default());
-        let camera_node_handle = scene.model.nodes.push(camera_node);
-        scene.model.root.children.push(camera_node_handle);
-        scene.model.root.trs.scale = Vec3::new(1.0 / 32.0, 1.0 / 32.0, 1.0 / 32.0);
+        scene.model.root.trs.scale = Vec3::new(1.0 / 8.0, 1.0 / 8.0, 1.0 / 8.0);
 
         scene.draw(&mut image);
         image.dump_png("target/orientation.png");
@@ -165,14 +170,7 @@ mod gltf {
             .load("tests/model/flight-helmet/FlightHelmet.gltf")
             .unwrap();
 
-        // Custom camera
-        let mut camera_node = Node::builder()
-            .id(scene.model.nodes.len())
-            .translation(Vec3::new(0.0, 0.32, 1.0))
-            .build();
-        camera_node.camera = scene.model.cameras.push(Camera::default());
-        let camera_node_handle = scene.model.nodes.push(camera_node);
-        scene.model.root.children.push(camera_node_handle);
+        add_camera(&mut scene.model, Vec3::new(0.0, 0.32, 1.0));
 
         scene.draw(&mut image);
         image.dump_png("target/flight.png");
@@ -180,7 +178,7 @@ mod gltf {
 
     #[test]
     fn sponza() {
-        let mut image = Image::new(256, 256, ColorType::RGBA8);
+        let mut image = Image::new(64, 64, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene.load("tests/model/sponza/sponza.gltf").unwrap();
