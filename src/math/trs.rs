@@ -105,10 +105,11 @@ impl Mul<Mat4> for &Trs {
 impl Mul<&Trs> for &Trs {
     type Output = Trs;
 
+    /// See https://gamedev.stackexchange.com/questions/167287/combine-two-translation-rotation-scale-triplets-without-matrices
     fn mul(self, rhs: &Trs) -> Self::Output {
-        let translation = self.translation + rhs.translation;
+        let translation = self.translation + self.rotation * (self.scale * rhs.translation);
         let rotation = self.rotation * rhs.rotation;
-        let scale = self.scale * rhs.scale;
+        let scale = rhs.rotation.get_inverse() * (self.scale * (rhs.rotation * rhs.scale));
         Trs::new(translation, rotation, scale)
     }
 }
