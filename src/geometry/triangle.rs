@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub struct Triangle {
-    vertices: [Point3; 3],
+    pub vertices: [Point3; 3],
     pub centroid: Vec3,
 }
 

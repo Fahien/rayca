@@ -95,32 +95,27 @@ fn gltf_triangle() {
 #[test]
 fn gltf_suzanne() {
     let mut scene = Scene::new();
-
-    let mut timer = Timer::new();
     let model = GltfModel::load_path("tests/model/suzanne/suzanne.gltf").unwrap();
-    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
-
     scene.gltf_models.push(model);
     run(scene, "target/gltf-suzanne.png", 128, 128);
 }
 
-#[test]
-fn gtlf_duck() {
-    let mut scene = Scene::new();
-
-    let mut timer = Timer::new();
-    let mut model = GltfModel::load_path("tests/model/duck/duck.gltf").unwrap();
-    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
-
-    // Custom camera
+/// Add a custom camera
+fn add_camera(model: &mut GltfModel, camera_position: Vec3) {
     let mut camera_node = Node::builder()
         .id(model.nodes.len())
-        .translation(Vec3::new(0.1, 0.8, 2.2))
+        .translation(camera_position)
         .build();
     camera_node.camera = Some(model.cameras.push(Camera::default()));
     let camera_node_handle = model.nodes.push(camera_node);
     model.root.children.push(camera_node_handle);
+}
 
+#[test]
+fn gltf_duck() {
+    let mut scene = Scene::new();
+    let mut model = GltfModel::load_path("tests/model/duck/duck.gltf").unwrap();
+    add_camera(&mut model, Vec3::new(0.1, 0.8, 2.2));
     scene.gltf_models.push(model);
     run(scene, "target/gltf-duck.png", 128, 128);
 }
@@ -154,18 +149,8 @@ fn gltf_orientation() {
 #[test]
 fn gltf_flight() {
     let mut scene = Scene::new();
-
     let mut model = GltfModel::load_path("tests/model/flight-helmet/flight-helmet.gltf").unwrap();
-
-    // Custom camera
-    let mut camera_node = Node::builder()
-        .id(model.nodes.len())
-        .translation(Vec3::new(0.0, 0.32, 1.0))
-        .build();
-    camera_node.camera = Some(model.cameras.push(Camera::default()));
-    let camera_node_handle = model.nodes.push(camera_node);
-    model.root.children.push(camera_node_handle);
-
+    add_camera(&mut model, Vec3::new(0.0, 0.32, 1.0));
     scene.gltf_models.push(model);
     run(scene, "target/gltf-flight.png", 32, 32);
 }
@@ -188,5 +173,5 @@ fn gltf_sponza() {
     model.root.children.push(camera_node_handle);
     scene.gltf_models.push(model);
 
-    run(scene, "target/gltf-sponza.png", 32, 32);
+    run(scene, "target/gltf-sponza.png", 8, 8);
 }

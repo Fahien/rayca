@@ -8,11 +8,18 @@ use crate::{Color, Point3, Quat, Scene, Vec2, Vec3};
 pub struct Ray {
     pub origin: Point3,
     pub dir: Vec3,
+
+    // Reciprocal of direction
+    pub rdir: Vec3,
 }
 
 impl Ray {
     pub fn new(origin: Point3, dir: Vec3) -> Self {
-        Self { origin, dir }
+        Self {
+            origin,
+            dir,
+            rdir: Vec3::new(1.0 / dir.x, 1.0 / dir.y, 1.0 / dir.z),
+        }
     }
 
     pub fn translate(&mut self, translation: &Vec3) {

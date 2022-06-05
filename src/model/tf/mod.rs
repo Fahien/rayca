@@ -251,7 +251,21 @@ pub struct GltfModel {
 }
 
 impl GltfModel {
-    fn load(gltf: Gltf, parent_dir: Option<&Path>) -> Result<Self, Box<dyn Error>> {
+    fn load(gltf: Gltf, path: Option<&Path>) -> Result<Self, Box<dyn Error>> {
+        let mut timer = Timer::new();
+
+        let path_str = if let Some(path) = path {
+            path.to_string_lossy().to_string()
+        } else {
+            String::new()
+        };
+
+        let parent_dir = if let Some(path) = path {
+            Some(path.parent().ok_or("Failed to get parent directory")?)
+        } else {
+            None
+        };
+
         let mut ret = Self::default();
         ret.load_images(&gltf, parent_dir);
         ret.load_textures(&gltf);
@@ -261,16 +275,18 @@ impl GltfModel {
         ret.load_cameras(&gltf);
         ret.load_nodes(&gltf);
 
+        rlog!(
+            "{:>12} {} in {:.2}ms",
+            "Loaded".cyan().bold(),
+            path_str,
+            timer.get_delta().as_millis()
+        );
         Ok(ret)
     }
 
     pub fn load_path<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
         let gltf = Gltf::open(path.as_ref())?;
-        let parent_dir = path
-            .as_ref()
-            .parent()
-            .ok_or("Failed to get parent directory")?;
-        Self::load(gltf, Some(parent_dir))
+        Self::load(gltf, Some(path.as_ref()))
     }
 
     pub fn load_data(data: &[u8]) -> Result<Self, Box<dyn Error>> {
@@ -319,7 +335,7 @@ impl GltfModel {
 
         rlog!(
             "{:>12} images from file in {:.2}s",
-            "Loaded".green().bold(),
+            "Loaded".cyan().bold(),
             timer.get_delta().as_secs_f32()
         );
 

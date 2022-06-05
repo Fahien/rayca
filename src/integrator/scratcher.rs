@@ -55,7 +55,7 @@ impl Integrator for Scratcher {
                 let fallof = light.get_fallof(&light_node.trs, &hit.point);
                 pixel_color += (color / std::f32::consts::PI * light.color * n_dot_l) / fallof;
             }
-        } // end light
+        }
 
         // Get reflection?
         let reflection_dir = ray.dir.reflect(&n);

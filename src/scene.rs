@@ -106,7 +106,7 @@ impl Scene {
 
         let solved_cameras = &self.tlas.bvhs[0].cameras;
         if !solved_cameras.is_empty() {
-            self.default_camera = solved_cameras[0].clone();
+            self.default_camera = solved_cameras.last().unwrap().clone();
         }
     }
 }
