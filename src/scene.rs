@@ -53,6 +53,9 @@ impl Scene {
     }
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Box<dyn Error>> {
+        let mut timer = Timer::new();
+        let path_str = path.as_ref().to_string_lossy().to_string();
+
         // Open glTF model
         let mut model = Model::builder().path(path)?.build()?;
 
@@ -61,6 +64,13 @@ impl Scene {
 
         // Put model into models
         self.models.push(model);
+
+        rlog!(
+            "{:>12} {} in {:.2}ms",
+            "Loaded".cyan().bold(),
+            path_str,
+            timer.get_delta().as_millis()
+        );
 
         Ok(())
     }
@@ -78,7 +88,7 @@ impl Scene {
             return None;
         }
 
-        if let Some((hit, triangle)) = bvh.intersects(&ray) {
+        if let Some((hit, triangle)) = bvh.intersects_iter(&ray) {
             let n = triangle.get_normal(&hit);
             let mut pixel_color = Color::black();
             let color = triangle.get_color(&hit);
@@ -92,7 +102,7 @@ impl Scene {
                 let light_dir = light.get_direction(light_node, &hit.point);
 
                 let shadow_ray = Ray::new(shadow_origin, light_dir);
-                let shadow_result = bvh.intersects(&shadow_ray);
+                let shadow_result = bvh.intersects_iter(&shadow_ray);
 
                 let is_light = match shadow_result {
                     None => true,
@@ -148,8 +158,6 @@ impl Draw for Scene {
         let mut triangles = vec![];
         let mut cameras = vec![];
 
-        let mut timer = Timer::new();
-
         for model in self.models.iter() {
             let transforms = model.collect_transforms();
             for (node, trs) in transforms {
@@ -171,6 +179,8 @@ impl Draw for Scene {
         }
 
         let bvh = Bvh::new(triangles);
+
+        let mut timer = Timer::new();
 
         let width = image.width() as f32;
         let height = image.height() as f32;

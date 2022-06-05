@@ -8,11 +8,18 @@ use super::*;
 pub struct Ray {
     pub origin: Vec3,
     pub dir: Vec3,
+
+    // Reciprocal of direction
+    pub rdir: Vec3,
 }
 
 impl Ray {
     pub fn new(origin: Vec3, dir: Vec3) -> Self {
-        Self { origin, dir }
+        Self {
+            origin,
+            dir,
+            rdir: Vec3::new(1.0 / dir.x, 1.0 / dir.y, 1.0 / dir.z),
+        }
     }
 
     pub fn translate(&mut self, translation: &Vec3) {
@@ -38,11 +45,7 @@ pub struct Hit {
 
 impl Hit {
     pub fn new(depth: f32, point: Vec3, uv: Vec2) -> Self {
-        Self {
-            depth,
-            point,
-            uv,
-        }
+        Self { depth, point, uv }
     }
 }
 
