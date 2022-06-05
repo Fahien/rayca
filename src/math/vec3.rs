@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, AddAssign, Div, Index, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, Index, Mul, MulAssign, Neg, Sub};
 
 use crate::Quat;
 
@@ -93,7 +93,6 @@ impl Vec3 {
     pub fn reflect(&self, normal: &Vec3) -> Self {
         self - 2.0 * self.dot(normal) * normal
     }
-
 }
 
 impl Dot<Vec3> for Vec3 {
@@ -239,6 +238,14 @@ impl Mul<&Vec3> for f32 {
 
     fn mul(self, rhs: &Vec3) -> Self::Output {
         Self::Output::new(self * rhs.x, self * rhs.y, self * rhs.z)
+    }
+}
+
+impl MulAssign<f32> for Vec3 {
+    fn mul_assign(&mut self, rhs: f32) {
+        self.x *= rhs;
+        self.y *= rhs;
+        self.z *= rhs;
     }
 }
 
