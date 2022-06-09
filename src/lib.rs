@@ -4,7 +4,7 @@
 
 pub mod bvh;
 pub mod camera;
-pub mod context;
+pub mod www;
 pub mod draw;
 pub mod image;
 pub mod light;
@@ -23,7 +23,7 @@ pub mod vertex;
 
 pub use bvh::*;
 pub use camera::*;
-pub use context::*;
+pub use www::*;
 pub use draw::*;
 pub use image::*;
 pub use light::*;
