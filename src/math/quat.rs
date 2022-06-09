@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::Mul;
+use std::ops::{Mul, MulAssign};
 
 use super::*;
 
@@ -112,6 +112,12 @@ impl Mul<Quat> for Quat {
             self.x * rhs.y - self.y * rhs.x + self.z * rhs.w + self.w * rhs.z,
             -self.x * rhs.x - self.y * rhs.y - self.z * rhs.z + self.w * rhs.w,
         )
+    }
+}
+
+impl MulAssign<Quat> for Quat {
+    fn mul_assign(&mut self, rhs: Quat) {
+        *self = *self * rhs;
     }
 }
 
