@@ -5,8 +5,6 @@
 pub mod bvh;
 pub mod camera;
 
-#[cfg(target_arch = "wasm32")]
-pub mod context;
 pub mod draw;
 pub mod image;
 pub mod light;
@@ -22,11 +20,11 @@ pub mod sphere;
 pub mod texture;
 pub mod util;
 pub mod vertex;
+#[cfg(target_arch = "wasm32")]
+pub mod www;
 
 pub use bvh::*;
 pub use camera::*;
-#[cfg(target_arch = "wasm32")]
-pub use context::*;
 pub use draw::*;
 pub use image::*;
 pub use light::*;
@@ -41,3 +39,5 @@ pub use sphere::*;
 pub use texture::*;
 pub use util::*;
 pub use vertex::*;
+#[cfg(target_arch = "wasm32")]
+pub use www::*;

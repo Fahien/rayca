@@ -52,7 +52,7 @@ impl PrimitiveBuilder {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Primitive {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u8>,

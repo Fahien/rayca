@@ -2,13 +2,15 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::f32::consts::FRAC_PI_8;
+
 use js_sys::{ArrayBuffer, Uint8Array};
 use wasm_bindgen::{prelude::*, Clamped, JsCast};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
-use super::*;
+use crate::*;
 
 pub fn set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the
@@ -70,7 +72,7 @@ async fn get_model() -> Result<Model, JsValue> {
     opts.method("GET");
     opts.mode(RequestMode::Cors);
 
-    let url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Embedded/Duck.gltf";
+    let url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF-Embedded/Box.gltf";
 
     let request = Request::new_with_str_and_init(&url, &opts).expect("Failed to request");
 
@@ -101,39 +103,91 @@ async fn get_model() -> Result<Model, JsValue> {
     Ok(model)
 }
 
-#[wasm_bindgen]
-impl Context {
-    pub fn new() -> Self {
-        set_panic_hook();
-        Self {}
+fn tweak_box_scene(model: &mut Model) {
+    let mut blue_material = Material::new();
+    blue_material.color = Color::new(0.1, 0.2, 0.7, 1.0);
+    let blue_material_handle = model.materials.push(blue_material);
+
+    let mut blue_primitive_handles = vec![];
+    let primitive_clones: Vec<_> = model.primitives.iter().cloned().collect();
+    for mut blue_primitive in primitive_clones {
+        blue_primitive.material = blue_material_handle;
+        let blue_primitive_handle = model.primitives.push(blue_primitive);
+        blue_primitive_handles.push(blue_primitive_handle);
     }
 
-    pub async fn draw() -> Result<(), JsValue> {
+    let blue_mesh = Mesh::new(blue_primitive_handles);
+    let blue_mesh_handle = model.meshes.push(blue_mesh);
+
+    let mut box_node = model.nodes.get(1.into()).unwrap().clone();
+    box_node.trs.scale = Vec3::new(16.0, 0.125, 16.0);
+    box_node.trs.translation.y -= 0.75;
+    box_node.mesh = blue_mesh_handle;
+    box_node.id = model.nodes.len();
+
+    model.nodes.get_mut(0.into()).unwrap().trs.rotation =
+        Quat::new(0.0, FRAC_PI_8.sin(), 0.0, FRAC_PI_8.cos());
+
+    model.root.children.push(model.nodes.push(box_node.clone()));
+}
+
+#[wasm_bindgen]
+pub struct Context {
+    canvas: CanvasRenderingContext2d,
+    image: Image,
+    scene: Scene,
+    image_data: ImageData,
+    timer: Timer,
+}
+
+#[wasm_bindgen]
+impl Context {
+    pub async fn new() -> Result<Context, JsValue> {
+        set_panic_hook();
+
         let canvas = get_canvas("area")?;
 
-        let width = 512;
-        let mut image = Image::new(width, width, ColorType::RGBA8);
+        const WIDTH: u32 = 128;
+        let mut image = Image::new(WIDTH, WIDTH, ColorType::RGBA8);
+        image.clear(RGBA8::black());
 
         let mut model = get_model().await.unwrap();
-
-        // Custom camera
-        let mut camera_node = Node::builder()
-            .id(model.nodes.len())
-            .translation(Vec3::new(0.1, 0.8, 2.2))
-            .build();
-        camera_node.camera = Some(model.cameras.push(Camera::default()));
-        let camera_node_handle = model.nodes.push(camera_node);
-        model.root.children.push(camera_node_handle);
+        tweak_box_scene(&mut model);
 
         let mut scene = Scene::new();
         scene.models.push(model);
-        scene.draw(&mut image);
 
         let data = Clamped(image.bytes());
 
-        let image_data = ImageData::new_with_u8_clamped_array(data, width)?;
+        let image_data = ImageData::new_with_u8_clamped_array(data, WIDTH)?;
         canvas.put_image_data(&image_data, 0.0, 0.0)?;
 
+        Ok(Self {
+            canvas,
+            image,
+            scene,
+            image_data,
+            timer: Timer::new(),
+        })
+    }
+
+    pub fn rotate_box(&mut self) {
+        let delta = self.timer.get_delta().as_secs_f32();
+        let angle = FRAC_PI_8 * delta;
+        self.scene.models[0]
+            .nodes
+            .get_mut(1.into())
+            .unwrap()
+            .trs
+            .rotation *= Quat::new(0.0, angle.sin(), 0.0, angle.cos());
+    }
+
+    pub fn draw(&mut self) -> Result<(), JsValue> {
+        self.rotate_box();
+        self.image.clear(RGBA8::black());
+        self.scene.draw(&mut self.image);
+
+        self.canvas.put_image_data(&self.image_data, 0.0, 0.0)?;
         Ok(())
     }
 }
