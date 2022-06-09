@@ -60,7 +60,7 @@ impl GltfPrimitiveBuilder {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct GltfPrimitive {
     pub vertices: Vec<GltfVertex>,
     pub indices: Vec<u8>,

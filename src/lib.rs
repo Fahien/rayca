@@ -3,8 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 pub mod bvh;
-#[cfg(target_arch = "wasm32")]
-pub mod context;
 pub mod draw;
 pub mod geometry;
 pub mod integrator;
@@ -14,10 +12,10 @@ pub mod math;
 pub mod model;
 pub mod scene;
 pub mod util;
+#[cfg(target_arch = "wasm32")]
+pub mod www;
 
 pub use bvh::*;
-#[cfg(target_arch = "wasm32")]
-pub use context::*;
 pub use draw::*;
 pub use geometry::*;
 pub use integrator::*;
@@ -27,3 +25,5 @@ pub use math::*;
 pub use model::*;
 pub use scene::*;
 pub use util::*;
+#[cfg(target_arch = "wasm32")]
+pub use www::*;

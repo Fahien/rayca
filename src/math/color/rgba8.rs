@@ -35,6 +35,10 @@ impl RGBA8 {
         Self::new(255, 255, 255, 255)
     }
 
+    pub fn black() -> Self {
+        Self::new(0, 0, 0, 255)
+    }
+
     /// Over blend this color with another on top of itself
     pub fn over(&mut self, top: Color) {
         let mut self_color: Color = (*self).into();
