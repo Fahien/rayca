@@ -6,14 +6,21 @@ use super::*;
 
 pub struct Material {
     pub color: Color,
-    pub albedo: Option<Handle<Texture>>,
+    pub albedo_texture: Option<Handle<Texture>>,
+
+    pub metallic_factor: f32,
+    pub roughness_factor: f32,
+    pub metallic_roughness_texture: Option<Handle<Texture>>,
 }
 
 impl Material {
     pub fn new() -> Self {
         Self {
             color: Color::white(),
-            albedo: None,
+            albedo_texture: None,
+            metallic_factor: 1.0,
+            roughness_factor: 1.0,
+            metallic_roughness_texture: None,
         }
     }
 }
