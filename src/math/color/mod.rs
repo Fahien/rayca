@@ -10,7 +10,7 @@ pub use rgba8::*;
 
 use crate::Vec3;
 
-use std::ops::{Add, AddAssign, Div, Mul};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ColorType {
@@ -169,6 +169,17 @@ impl Mul<f32> for &Color {
     }
 }
 
+impl Mul<Color> for f32 {
+    type Output = Color;
+
+    fn mul(self, mut rhs: Color) -> Self::Output {
+        rhs.r *= self;
+        rhs.g *= self;
+        rhs.b *= self;
+        rhs
+    }
+}
+
 impl Mul<&Color> for f32 {
     type Output = Color;
 
@@ -245,6 +256,15 @@ impl Mul<Color> for Color {
             self.b * rhs.b,
             self.a * rhs.a,
         )
+    }
+}
+
+impl MulAssign<Color> for Color {
+    fn mul_assign(&mut self, rhs: Color) {
+        self.r *= rhs.r;
+        self.g *= rhs.g;
+        self.b *= rhs.b;
+        self.a *= rhs.a;
     }
 }
 
