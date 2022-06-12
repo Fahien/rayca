@@ -57,11 +57,13 @@ impl Integrator for Scratcher {
             }
         }
 
-        // Get reflection?
-        let reflection_dir = ray.dir.reflect(&n);
-        let reflection_ray = Ray::new(hit.point, reflection_dir);
-        let reflection_color = self.trace(scene, reflection_ray, depth + 1);
-        pixel_color += reflection_color / 2.0;
+        let metalness = primitive.get_metalness(scene, &hit);
+        if metalness > 0.0 {
+            let reflection_dir = ray.dir.reflect(&n);
+            let reflection_ray = Ray::new(hit.point, reflection_dir);
+            let reflection_color = self.trace(scene, reflection_ray, depth + 1);
+            pixel_color += reflection_color * metalness;
+        }
 
         pixel_color
     }

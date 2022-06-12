@@ -367,7 +367,14 @@ impl GltfModel {
 
             // Load albedo
             if let Some(gtexture) = pbr.base_color_texture() {
-                material.albedo = Handle::new(gtexture.texture().index());
+                material.albedo_texture = Handle::new(gtexture.texture().index());
+            }
+
+            // Load metallic roughness factors and texture
+            material.metallic_factor = pbr.metallic_factor();
+            material.roughness_factor = pbr.roughness_factor();
+            if let Some(gtexture) = pbr.metallic_roughness_texture() {
+                material.metallic_roughness_texture = Handle::new(gtexture.texture().index());
             }
 
             self.materials.push(material);

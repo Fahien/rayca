@@ -125,4 +125,8 @@ impl Shade for SphereEx {
         normal.normalize();
         normal
     }
+
+    fn get_metalness(&self, _scene: &Scene, _hit: &Hit) -> f32 {
+        1.0
+    }
 }

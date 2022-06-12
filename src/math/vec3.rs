@@ -73,6 +73,11 @@ impl Vec3 {
         self.z /= len;
     }
 
+    pub fn get_normalized(mut self) -> Self {
+        self.normalize();
+        self
+    }
+
     pub fn get_reciprocal(&self) -> Self {
         Self::new(1.0 / self.x, 1.0 / self.y, 1.0 / self.z)
     }

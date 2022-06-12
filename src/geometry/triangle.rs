@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    Color, Dot, GgxMaterial, Handle, Hit, Intersect, Point3, Ray, Sampler, Scene, Shade, Vec2,
-    Vec3, Vertex,
+    Color, Dot, GgxMaterial, GltfModel, Handle, Hit, Intersect, Point3, Ray, Sampler, Scene, Shade,
+    Vec2, Vec3, Vertex,
 };
 
 pub struct Triangle {
@@ -157,51 +157,70 @@ impl TriangleEx {
             material,
         }
     }
+
+    /// Returns the interpolation of the vertices colors
+    pub fn interpolate_colors(&self, hit: &Hit) -> Color {
+        self.vertices[2].color * (1.0 - hit.uv.x - hit.uv.y)
+            + self.vertices[0].color * hit.uv.x
+            + self.vertices[1].color * hit.uv.y
+    }
+
+    /// Returns the interpolation of the vertices uvs
+    pub fn interpolate_uvs(&self, hit: &Hit) -> Vec2 {
+        self.vertices[2].uv * (1.0 - hit.uv.x - hit.uv.y)
+            + self.vertices[0].uv * hit.uv.x
+            + self.vertices[1].uv * hit.uv.y
+    }
+
+    /// Returns the interpolation of the vertices normals
+    pub fn interpolate_normals(&self, hit_uv: &Vec2) -> Vec3 {
+        let n = self.vertices[2].normal * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].normal * hit_uv.x
+            + self.vertices[1].normal * hit_uv.y;
+        n.get_normalized()
+    }
+
+    pub fn get_material<'a>(&self, model: &'a GltfModel) -> &'a GgxMaterial {
+        model
+            .materials
+            .get(self.material)
+            .unwrap_or(&GgxMaterial::WHITE)
+    }
 }
 
 impl Shade for TriangleEx {
     fn get_color(&self, scene: &Scene, hit: &Hit) -> Color {
-        // Interpolate vertex colors
-        let c0 = &self.vertices[0].color;
-        let c1 = &self.vertices[1].color;
-        let c2 = &self.vertices[2].color;
-        let vertex_color = (1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1;
-
         // TODO: Make onliner?
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let model = scene.gltf_models.get(blas_node.model).unwrap();
+        let material = self.get_material(model);
+        let mut color = self.interpolate_colors(hit) * material.color;
 
-        let material = if self.material.valid() {
-            model.materials.get(self.material).unwrap()
-        } else {
-            &GgxMaterial::WHITE
-        };
-        let mut color = material.color;
-
-        if let Some(texture) = model.textures.get(material.albedo) {
+        if let Some(texture) = model.textures.get(material.albedo_texture) {
             let sampler = Sampler::default();
             let image = model.images.get(texture.image).unwrap();
-
-            let uvs = [
-                &self.vertices[0].uv,
-                &self.vertices[1].uv,
-                &self.vertices[2].uv,
-            ];
-            let uv = uvs[2] * (1.0 - hit.uv.x - hit.uv.y) + uvs[0] * hit.uv.x + uvs[1] * hit.uv.y;
-            color = color * sampler.sample(image, &uv);
+            color *= sampler.sample(image, &self.interpolate_uvs(hit));
         }
-
-        color * vertex_color
+        color
     }
 
     fn get_normal(&self, _scene: &Scene, hit: &Hit) -> Vec3 {
-        // Interpolate normals
-        let n0 = &self.vertices[0].normal;
-        let n1 = &self.vertices[1].normal;
-        let n2 = &self.vertices[2].normal;
+        self.interpolate_normals(&hit.uv)
+    }
 
-        let mut n = n2 * (1.0 - hit.uv.x - hit.uv.y) + n0 * hit.uv.x + n1 * hit.uv.y;
-        n.normalize();
-        n
+    fn get_metalness(&self, scene: &Scene, hit: &Hit) -> f32 {
+        // TODO: Make onliner?
+        let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
+        let model = scene.gltf_models.get(blas_node.model).unwrap();
+        let material = self.get_material(model);
+        if let Some(texture) = model.textures.get(material.metallic_roughness_texture) {
+            let sampler = Sampler::default();
+            let image = model.images.get(texture.image).unwrap();
+            let color = sampler.sample(image, &self.interpolate_uvs(hit));
+            // Blue channel contains metalness value
+            color.b
+        } else {
+            material.metallic_factor
+        }
     }
 }
