@@ -159,6 +159,7 @@ impl Draw for Scene {
         let mut cameras = vec![];
 
         for model in self.models.iter() {
+            // TODO refactor this using model.collect_triangles() ?
             let transforms = model.collect_transforms();
             for (node, trs) in transforms {
                 // Collect triangles

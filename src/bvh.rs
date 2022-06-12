@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::fmt::Display;
+
 use super::*;
 
 #[derive(Default)]
@@ -269,6 +271,7 @@ pub struct Bvh<'m> {
 impl<'m> Bvh<'m> {
     // TODO: A slice instead of a vec?
     pub fn new(triangles: Vec<Triangle<'m>>) -> Self {
+        let triangle_count = triangles.len();
         let mut nodes = Pack::new();
 
         let mut root = BvhNode::new();
@@ -281,7 +284,7 @@ impl<'m> Bvh<'m> {
         Self {
             root,
             nodes,
-            triangle_count: 0,
+            triangle_count,
         }
     }
 
@@ -352,8 +355,66 @@ impl<'m> Bvh<'m> {
     }
 }
 
+impl<'m> Display for Bvh<'m> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const START_INDENT: usize = 1;
+        let mut current_indent = START_INDENT;
+        let mut stack = vec![(&self.root, current_indent)];
+        f.write_fmt(format_args!(
+            "{{\n  \"triangle_total\": {},\n  \"root\":\n",
+            self.triangle_count
+        ))?;
+
+        while !stack.is_empty() {
+            let (node, indent_count) = stack.pop().unwrap();
+
+            current_indent = current_indent.max(indent_count);
+            while current_indent > indent_count {
+                current_indent -= 1;
+                f.write_fmt(format_args!("{:<1$}] }},\n", "", current_indent * 2))?;
+            }
+
+            if node.is_leaf() {
+                f.write_fmt(format_args!("{:<1$}{{\n", "", indent_count * 2))?;
+                f.write_fmt(format_args!("{:<1$}", "", (indent_count + 1) * 2))?;
+                f.write_fmt(format_args!(
+                    "\"triangle_count\": {},\n",
+                    node.triangles.len()
+                ))?;
+                f.write_fmt(format_args!("{:<1$}}},\n", "", indent_count * 2))?;
+            } else {
+                f.write_fmt(format_args!(
+                    "{:<1$}{{ \"children\": [\n",
+                    "",
+                    indent_count * 2
+                ))?;
+
+                if let Some(right_handle) = node.right {
+                    let right_node = self.nodes.get(right_handle).unwrap();
+                    stack.push((right_node, indent_count + 1));
+                }
+                if let Some(left_handle) = node.left {
+                    let left_node = self.nodes.get(left_handle).unwrap();
+                    stack.push((left_node, indent_count + 1));
+                }
+            }
+        }
+
+        while current_indent > START_INDENT {
+            current_indent -= 1;
+            f.write_fmt(format_args!("{:<1$}] }},\n", "", current_indent * 2))?;
+        }
+
+        f.write_str("}\n")?;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test {
+    use std::error::Error;
+
     use crate::*;
 
     #[test]
@@ -395,5 +456,16 @@ mod test {
         assert!(bvh.root.left.is_some());
         assert!(bvh.root.right.is_some());
         assert!(bvh.root.triangles.is_empty());
+    }
+
+    #[test]
+    fn complex_bvh() -> Result<(), Box<dyn Error>> {
+        let model = Model::builder()
+            .path("tests/model/duck/duck.gltf")?
+            .build()?;
+        let triangles = model.collect();
+        let bvh = Bvh::new(triangles);
+        println!("{}", bvh);
+        Ok(())
     }
 }

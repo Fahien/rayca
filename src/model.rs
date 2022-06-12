@@ -575,6 +575,23 @@ impl Model {
         }
         ret
     }
+
+    pub fn collect(&self) -> Vec<Triangle> {
+        let mut triangles = vec![];
+
+        let transforms = self.collect_transforms();
+        for (node, trs) in transforms {
+            if let Some(mesh) = self.meshes.get(node.mesh) {
+                for prim_handle in mesh.primitives.iter() {
+                    let prim = self.primitives.get(*prim_handle).unwrap();
+                    let mut prim_triangles = prim.triangles(&trs, prim.material, self);
+                    triangles.append(&mut prim_triangles);
+                }
+            }
+        }
+
+        triangles
+    }
 }
 
 #[cfg(test)]
