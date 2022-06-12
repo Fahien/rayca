@@ -82,6 +82,10 @@ impl<'m> Intersect<'m> for Sphere {
         normal.normalize();
         normal
     }
+
+    fn get_metalness(&self, _hit: &Hit) -> f32 {
+        1.0
+    }
 }
 
 #[cfg(test)]
