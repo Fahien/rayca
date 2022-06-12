@@ -268,7 +268,14 @@ impl ModelBuilder {
 
             // Load albedo
             if let Some(gtexture) = pbr.base_color_texture() {
-                material.albedo = Handle::new(gtexture.texture().index());
+                material.albedo_texture = Handle::new(gtexture.texture().index());
+            }
+
+            // Load metallic roughness factors and texture
+            material.metallic_factor = pbr.metallic_factor();
+            material.roughness_factor = pbr.roughness_factor();
+            if let Some(gtexture) = pbr.metallic_roughness_texture() {
+                material.metallic_roughness_texture = Handle::new(gtexture.texture().index());
             }
 
             materials.push(material);
@@ -565,7 +572,8 @@ impl Model {
         let texture_offset = self.textures.append(&mut model.textures);
         // Update texture handles
         for material in model.materials.iter_mut() {
-            material.albedo.offset(texture_offset);
+            material.albedo_texture.offset(texture_offset);
+            material.metallic_roughness_texture.offset(texture_offset);
         }
 
         let mat_offset = self.materials.append(&mut model.materials);
@@ -582,11 +590,13 @@ impl Model {
             }
         }
 
+        let light_offset = self.lights.append(&mut model.lights);
         let camera_offset = self.cameras.append(&mut model.cameras);
         let mesh_offset = self.meshes.append(&mut model.meshes);
         let node_offset = self.nodes.len();
         // Update mesh and node handles
         for node in model.nodes.iter_mut() {
+            node.light.offset(light_offset);
             node.camera.offset(camera_offset);
             node.mesh.offset(mesh_offset);
             for children in &mut node.children {

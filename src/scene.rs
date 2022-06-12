@@ -133,13 +133,15 @@ impl Scene {
                 }
             }
 
-            // Get reflection?
-            let reflection_dir = ray.dir.reflect(&n);
-            let reflection_ray = Ray::new(hit.point, reflection_dir);
-            if let Some(reflection_color) =
-                Self::trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
-            {
-                pixel_color += reflection_color / 2.0;
+            let metalness = triangle.get_metalness(&hit);
+            if metalness > 0.0 {
+                let reflection_dir = ray.dir.reflect(&n);
+                let reflection_ray = Ray::new(hit.point, reflection_dir);
+                if let Some(reflection_color) =
+                    Self::trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
+                {
+                    pixel_color += reflection_color * metalness;
+                }
             }
 
             return Some(pixel_color);

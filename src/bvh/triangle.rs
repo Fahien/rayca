@@ -51,6 +51,37 @@ impl<'m> BvhTriangle<'m> {
             .max(&self.vertices[1].pos)
             .max(&self.vertices[2].pos)
     }
+
+    /// Returns the interpolation of the vertices colors
+    pub fn interpolate_colors(&self, hit: &Hit) -> Color {
+        self.vertices[2].color * (1.0 - hit.uv.x - hit.uv.y)
+            + self.vertices[0].color * hit.uv.x
+            + self.vertices[1].color * hit.uv.y
+    }
+
+    /// Returns the interpolation of the vertices uvs
+    pub fn interpolate_uvs(&self, hit: &Hit) -> Vec2 {
+        self.vertices[2].uv * (1.0 - hit.uv.x - hit.uv.y)
+            + self.vertices[0].uv * hit.uv.x
+            + self.vertices[1].uv * hit.uv.y
+    }
+
+    /// Returns the interpolation of the vertices normals
+    pub fn interpolate_normals(&self, hit_uv: &Vec2) -> Vec3 {
+        let n = self.vertices[2].normal * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].normal * hit_uv.x
+            + self.vertices[1].normal * hit_uv.y;
+        n.get_normalized()
+    }
+
+    pub fn get_material(&self) -> &Material {
+        let material = self
+            .model
+            .materials
+            .get(self.material)
+            .unwrap_or(&Material::WHITE);
+        material
+    }
 }
 
 impl<'m> Intersect for BvhTriangle<'m> {
@@ -130,45 +161,31 @@ impl<'m> Intersect for BvhTriangle<'m> {
     }
 
     fn get_color(&self, hit: &Hit) -> Color {
-        // Interpolate vertex colors
-        let c0 = &self.vertices[0].color;
-        let c1 = &self.vertices[1].color;
-        let c2 = &self.vertices[2].color;
-
-        let white_material = Material::default();
-        let material = self
-            .model
-            .materials
-            .get(self.material)
-            .unwrap_or(&white_material);
-
-        let mut color = material.color;
-
-        if let Some(albedo_texture) = self.model.textures.get(material.albedo) {
+        let material = self.get_material();
+        let mut color = self.interpolate_colors(hit) * material.color;
+        if let Some(albedo_texture) = self.model.textures.get(material.albedo_texture) {
             let sampler = Sampler::default();
             let image = self.model.images.get(albedo_texture.image).unwrap();
-
-            let uvs = [
-                &self.vertices[0].uv,
-                &self.vertices[1].uv,
-                &self.vertices[2].uv,
-            ];
-            let uv = uvs[2] * (1.0 - hit.uv.x - hit.uv.y) + uvs[0] * hit.uv.x + uvs[1] * hit.uv.y;
-            color = color * sampler.sample(image, &uv);
+            color *= sampler.sample(image, &self.interpolate_uvs(hit));
         }
-
-        color * ((1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1)
+        color
     }
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
-        // Interpolate normals
-        let n0 = &self.vertices[0].normal;
-        let n1 = &self.vertices[1].normal;
-        let n2 = &self.vertices[2].normal;
+        self.interpolate_normals(&hit.uv)
+    }
 
-        let mut n = n2 * (1.0 - hit.uv.x - hit.uv.y) + n0 * hit.uv.x + n1 * hit.uv.y;
-        n.normalize();
-        n
+    fn get_metalness(&self, hit: &Hit) -> f32 {
+        let material = self.get_material();
+        if let Some(mr_texture) = self.model.textures.get(material.metallic_roughness_texture) {
+            let sampler = Sampler::default();
+            let image = self.model.images.get(mr_texture.image).unwrap();
+            let color = sampler.sample(image, &self.interpolate_uvs(hit));
+            // Blue channel contains metalness value
+            color.b
+        } else {
+            material.metallic_factor
+        }
     }
 }
 
