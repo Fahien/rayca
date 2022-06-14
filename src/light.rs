@@ -115,8 +115,8 @@ impl PointLight {
     }
 
     pub fn get_distance(&self, light_node: &Node, frag_pos: &Point3) -> f32 {
-        let dist = Vec3::from(frag_pos) - light_node.trs.translation;
-        dist.len()
+        let dist = frag_pos - light_node.trs.translation;
+        Vec3::from(dist).len()
     }
 
     pub fn get_intensity(&self) -> Color {

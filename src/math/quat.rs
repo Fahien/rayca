@@ -4,7 +4,7 @@
 
 use std::ops::{Mul, MulAssign};
 
-use super::*;
+use crate::*;
 
 /// Quaternion structure
 #[derive(Copy, Clone)]

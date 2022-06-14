@@ -74,7 +74,7 @@ impl Intersect for Sphere {
 
     fn get_color(&self, hit: &Hit) -> Color {
         let normal = self.get_normal(hit);
-        Color::new(normal.x, normal.y, normal.z, 1.0)
+        Color::from(normal)
     }
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
