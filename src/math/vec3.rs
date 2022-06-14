@@ -4,7 +4,7 @@
 
 use std::ops::{Add, AddAssign, Div, Index, Mul, MulAssign, Neg, Sub};
 
-use crate::Quat;
+use crate::{Color, Quat};
 
 use crate::{Dot, Point3};
 
@@ -41,6 +41,10 @@ impl Vec3 {
         y: 0.0,
         z: 1.0,
     };
+
+    pub fn splat(d: f32) -> Self {
+        Self::new(d, d, d)
+    }
 
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
@@ -164,8 +168,44 @@ impl Add<Vec3> for &Vec3 {
 impl Add<&Vec3> for Vec3 {
     type Output = Vec3;
 
-    fn add(self, rhs: &Vec3) -> Self::Output {
-        Self::Output::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    fn add(mut self, rhs: &Vec3) -> Self::Output {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+        self
+    }
+}
+
+impl Add<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn add(mut self, rhs: f32) -> Self::Output {
+        self.x += rhs;
+        self.y += rhs;
+        self.z += rhs;
+        self
+    }
+}
+
+impl Add<Vec3> for f32 {
+    type Output = Vec3;
+
+    fn add(self, mut rhs: Vec3) -> Self::Output {
+        rhs.x += self;
+        rhs.y += self;
+        rhs.z += self;
+        rhs
+    }
+}
+
+impl Add<Color> for Vec3 {
+    type Output = Vec3;
+
+    fn add(mut self, rhs: Color) -> Self::Output {
+        self.x += rhs.r;
+        self.y += rhs.g;
+        self.z += rhs.b;
+        self
     }
 }
 

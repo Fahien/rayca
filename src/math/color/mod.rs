@@ -133,33 +133,19 @@ impl Add for &Color {
     }
 }
 
-impl Add<Color> for &Color {
-    type Output = Color;
-
-    fn add(self, rhs: Color) -> Self::Output {
-        Self::Output::new(
-            self.r + rhs.r,
-            self.g + rhs.g,
-            self.b + rhs.b,
-            self.a + rhs.a,
-        )
-    }
-}
-
 impl Add<&Color> for Color {
     type Output = Color;
 
-    fn add(self, rhs: &Color) -> Self::Output {
-        Self::Output::new(
-            self.r + rhs.r,
-            self.g + rhs.g,
-            self.b + rhs.b,
-            self.a + rhs.a,
-        )
+    fn add(mut self, rhs: &Color) -> Self::Output {
+        self.r += rhs.r;
+        self.g += rhs.g;
+        self.b += rhs.b;
+        self.a += rhs.a;
+        self
     }
 }
 
-impl AddAssign<Color> for Color {
+impl AddAssign for Color {
     fn add_assign(&mut self, rhs: Color) {
         self.r += rhs.r;
         self.g += rhs.g;
@@ -181,6 +167,14 @@ impl Mul<f32> for &Color {
 
     fn mul(self, rhs: f32) -> Self::Output {
         Self::Output::new(self.r * rhs, self.g * rhs, self.b * rhs, self.a * rhs)
+    }
+}
+
+impl MulAssign<f32> for Color {
+    fn mul_assign(&mut self, rhs: f32) {
+        self.r *= rhs;
+        self.g *= rhs;
+        self.b *= rhs;
     }
 }
 

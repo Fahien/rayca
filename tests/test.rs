@@ -51,7 +51,11 @@ fn boxes_over_plane() {
     model.root.trs.translation.y -= 1.0;
     model.root.trs.translation.z -= 2.0;
     model.nodes.get_mut(1.into()).unwrap().trs.rotation = Quat::default();
-    model.materials.get_mut(0.into()).unwrap().color = Color::new(0.1, 0.2, 0.7, 1.0);
+    {
+        let blue_mat = model.materials.get_mut(0.into()).unwrap();
+        blue_mat.color = Color::new(0.1, 0.2, 0.7, 1.0);
+        blue_mat.metallic_factor = 1.0;
+    }
     scene.gltf_models.push(model);
 
     let mut model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();

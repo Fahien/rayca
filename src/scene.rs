@@ -46,7 +46,7 @@ impl Default for DefaultLights {
 
         // Add 2 point lights
         let mut light = Light::point();
-        light.scale_intensity(32.0);
+        light.scale_intensity(64.0);
         let light_handle = lights.push(light);
 
         let mut light_node = Node::builder()

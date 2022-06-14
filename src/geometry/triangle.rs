@@ -208,7 +208,7 @@ impl Shade for TriangleEx {
         self.interpolate_normals(&hit.uv)
     }
 
-    fn get_metalness(&self, scene: &Scene, hit: &Hit) -> f32 {
+    fn get_metallic_roughness(&self, scene: &Scene, hit: &Hit) -> (f32, f32) {
         // TODO: Make onliner?
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let model = scene.gltf_models.get(blas_node.model).unwrap();
@@ -218,9 +218,10 @@ impl Shade for TriangleEx {
             let image = model.images.get(texture.image).unwrap();
             let color = sampler.sample(image, &self.interpolate_uvs(hit));
             // Blue channel contains metalness value
-            color.b
+            // Red channel contains roughness value
+            (color.b, color.r)
         } else {
-            material.metallic_factor
+            (material.metallic_factor, material.roughness_factor)
         }
     }
 }
