@@ -37,8 +37,8 @@ impl Light {
     }
 
     pub fn get_distance(&self, light_node: &Node, frag_pos: &Point3) -> f32 {
-        let dist = Vec3::from(frag_pos) - light_node.trs.translation;
-        dist.len()
+        let dist = frag_pos - light_node.trs.translation;
+        Vec3::from(dist).len()
     }
 
     pub fn get_intensity(&self) -> Color {
@@ -49,8 +49,8 @@ impl Light {
         match self._type {
             LightType::Distant => 1.0,
             LightType::Point => {
-                let dist = Vec3::from(frag_pos) - light_trs.translation;
-                let r2 = dist.norm();
+                let dist = frag_pos - light_trs.translation;
+                let r2 = Vec3::from(dist).norm();
                 // Square fallof
                 1.0 * std::f32::consts::PI * r2
             }
@@ -65,9 +65,8 @@ impl Light {
                 -light_dir
             }
             LightType::Point => {
-                let mut dist = Vec3::from(frag_pos) - light_node.trs.translation;
-                dist.normalize();
-                -dist
+                let dist = frag_pos - light_node.trs.translation;
+                -Vec3::from(dist).get_normalized()
             }
         }
     }
