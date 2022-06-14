@@ -94,7 +94,7 @@ impl Integrator for Scratcher {
                 let l_dot_h = light_dir.dot(&h).clamp(0.0, 1.0);
                 let reflectance = 0.5;
                 let f0_value = 0.16 * reflectance * reflectance * (1.0 - metallic);
-                let f0 = Vec3::splat(f0_value) + color * metallic;
+                let f0 = Vec3::splat(f0_value) + Vec3::from(&color) * metallic;
                 let f = fresnel_schlick(l_dot_h, f0);
 
                 let g = geometry_smith_ggx(n_dot_v, n_dot_l, roughness);

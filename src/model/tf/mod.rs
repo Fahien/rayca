@@ -17,8 +17,8 @@ use owo_colors::OwoColorize;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
-    rlog, Camera, Color, GgxMaterial, Handle, Image, Light, Node, Pack, Quat, Sampler, Texture,
-    Timer, Trs, Vec3,
+    rlog, Camera, Color, GgxMaterial, Handle, Image, Light, Node, Pack, Point3, Quat, Sampler,
+    Texture, Timer, Trs, Vec3,
 };
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
@@ -151,9 +151,7 @@ impl UriBuffers {
         let positions = self.get_slices(accessor);
         vertices.resize(positions.len(), GltfVertex::default());
         for (i, position) in positions.into_iter().enumerate() {
-            vertices[i].pos.x = position[0];
-            vertices[i].pos.y = position[1];
-            vertices[i].pos.z = position[2];
+            vertices[i].pos = Point3::new(position[0], position[1], position[2]);
         }
         Ok(())
     }
@@ -180,9 +178,7 @@ impl UriBuffers {
         let normals = self.get_slices(accessor);
         vertices.resize(normals.len(), GltfVertex::default());
         for (i, normal) in normals.into_iter().enumerate() {
-            vertices[i].normal.x = normal[0];
-            vertices[i].normal.y = normal[1];
-            vertices[i].normal.z = normal[2];
+            vertices[i].normal = Vec3::new(normal[0], normal[1], normal[2]);
         }
         Ok(())
     }
@@ -319,7 +315,7 @@ impl GltfModel {
                         } else if let Some(parent_dir) = &parent_dir {
                             // Join gltf parent dir to URI
                             let path = parent_dir.join(uri);
-                            Image::load_file(&path)
+                            Image::load_file(path)
                         } else {
                             unimplemented!()
                         };

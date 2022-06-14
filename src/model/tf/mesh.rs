@@ -75,11 +75,11 @@ impl GltfPrimitive {
 
     pub fn unit_triangle() -> Self {
         let mut a = GltfVertex::default();
-        a.pos.x -= 1.0;
+        a.pos.set_x(-1.0);
         let mut b = GltfVertex::default();
-        b.pos.x += 1.0;
+        b.pos.set_x(1.0);
         let mut c = GltfVertex::default();
-        c.pos.y += 1.0;
+        c.pos.set_y(1.0);
         Self::new(vec![a, b, c], vec![0, 1, 2])
     }
 

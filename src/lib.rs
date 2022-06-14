@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+#![feature(portable_simd)]
+
 pub mod bvh;
 pub mod draw;
 pub mod geometry;

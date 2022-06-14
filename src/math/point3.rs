@@ -2,66 +2,88 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, AddAssign, Index, Mul, Sub};
+use std::{
+    ops::{Add, AddAssign, Index, Mul, MulAssign, Sub},
+    simd::{f32x4, SimdFloat, StdFloat},
+};
 
-use crate::{Axis3, Dot, Vec3};
+use crate::{Axis3, Dot, Quat, Vec3};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct Point3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    pub simd: f32x4,
 }
 
 impl Point3 {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x, y, z }
+        Self {
+            simd: f32x4::from_array([x, y, z, 1.0]),
+        }
+    }
+
+    pub fn simd(simd: f32x4) -> Self {
+        Self { simd }
+    }
+
+    pub fn set_x(&mut self, x: f32) {
+        self.simd[0] = x;
+    }
+
+    pub fn set_y(&mut self, y: f32) {
+        self.simd[1] = y;
+    }
+
+    pub fn set_z(&mut self, z: f32) {
+        self.simd[2] = z;
+    }
+
+    pub fn scale(&mut self, scale: &Vec3) {
+        // Make sure we do not scale w
+        static B: f32x4 = f32x4::from_slice(&[0.0, 0.0, 0.0, 1.0]);
+        self.simd = self.simd.mul_add(scale.simd, B);
+    }
+
+    pub fn rotate(&mut self, rotation: &Quat) {
+        // Extract the vector part of the quaternion
+        let u = Vec3::new(rotation.x, rotation.y, rotation.z);
+        let v = Vec3::from(*self);
+
+        // Extract the scalar part of the quaternion
+        let s = rotation.w;
+
+        // Do the math
+        let rotated = 2.0 * u.dot(v) * u + (s * s - u.dot(u)) * v + 2.0 * s * u.cross(&v);
+        *self = rotated.into();
     }
 
     pub fn min(&self, other: &Self) -> Self {
-        Self::new(
-            self.x.min(other.x),
-            self.y.min(other.y),
-            self.z.min(other.z),
-        )
+        Self::simd(self.simd.simd_min(other.simd))
     }
 
     pub fn max(&self, other: &Self) -> Self {
-        Self::new(
-            self.x.max(other.x),
-            self.y.max(other.y),
-            self.z.max(other.z),
-        )
+        Self::simd(self.simd.simd_max(other.simd))
     }
 }
 
 impl From<Vec3> for Point3 {
     fn from(v: Vec3) -> Self {
-        Self::new(v.x, v.y, v.z)
+        // w should be 1.0
+        Self::simd(v.simd + f32x4::from_array([0.0, 0.0, 0.0, 1.0]))
     }
 }
 
 impl Dot<Point3> for Point3 {
     fn dot(self, rhs: Self) -> f32 {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+        let mul4 = self.simd * rhs.simd;
+        mul4.reduce_sum()
     }
 }
 
 impl Dot<Vec3> for Point3 {
     fn dot(self, rhs: Vec3) -> f32 {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
-    }
-}
-
-impl Add for Point3 {
-    type Output = Point3;
-
-    fn add(mut self, rhs: Self) -> Self::Output {
-        self.x += rhs.x;
-        self.y += rhs.y;
-        self.z += rhs.z;
-        self
+        let mul4 = self.simd * rhs.simd;
+        mul4.reduce_sum()
     }
 }
 
@@ -69,7 +91,8 @@ impl Add<Vec3> for Point3 {
     type Output = Point3;
 
     fn add(self, rhs: Vec3) -> Self::Output {
-        Self::Output::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+        // `point.w + vec.w = 1.0` hence that's fine
+        Self::Output::simd(self.simd + rhs.simd)
     }
 }
 
@@ -77,7 +100,40 @@ impl Sub for Point3 {
     type Output = Vec3;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+        // `point.w - point.w = 0.0` hence a vector
+        Self::Output::simd(self.simd - rhs.simd)
+    }
+}
+
+impl Sub<Vec3> for Point3 {
+    type Output = Point3;
+
+    fn sub(self, rhs: Vec3) -> Self::Output {
+        self.sub(&rhs)
+    }
+}
+
+impl Sub<&Vec3> for Point3 {
+    type Output = Point3;
+
+    fn sub(self, rhs: &Vec3) -> Self::Output {
+        self + (-rhs)
+    }
+}
+
+impl Sub<Vec3> for &Point3 {
+    type Output = Point3;
+
+    fn sub(self, rhs: Vec3) -> Self::Output {
+        self.sub(&rhs)
+    }
+}
+
+impl Sub<&Vec3> for &Point3 {
+    type Output = Point3;
+
+    fn sub(self, rhs: &Vec3) -> Self::Output {
+        *self + (-rhs)
     }
 }
 
@@ -85,31 +141,7 @@ impl Sub<&Point3> for &Point3 {
     type Output = Vec3;
 
     fn sub(self, rhs: &Point3) -> Self::Output {
-        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
-    }
-}
-
-impl Sub<&Vec3> for &Point3 {
-    type Output = Vec3;
-
-    fn sub(self, rhs: &Vec3) -> Self::Output {
-        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
-    }
-}
-
-impl Sub<&Vec3> for Point3 {
-    type Output = Vec3;
-
-    fn sub(self, rhs: &Vec3) -> Self::Output {
-        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
-    }
-}
-
-impl Sub<Vec3> for Point3 {
-    type Output = Vec3;
-
-    fn sub(self, rhs: Vec3) -> Self::Output {
-        Self::Output::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+        Self::Output::simd(self.simd - rhs.simd)
     }
 }
 
@@ -117,36 +149,30 @@ impl Index<usize> for Point3 {
     type Output = f32;
 
     fn index(&self, index: usize) -> &Self::Output {
-        match index {
-            0 => &self.x,
-            1 => &self.y,
-            2 => &self.z,
-            _ => panic!("Index out of bounds"),
-        }
+        &self.simd[index]
     }
 }
 
 impl AddAssign<Vec3> for Point3 {
     fn add_assign(&mut self, rhs: Vec3) {
-        self.x += rhs.x;
-        self.y += rhs.y;
-        self.z += rhs.z;
+        // `point.w + vec.w = 1.0` hence that's fine
+        self.simd += rhs.simd
     }
 }
 
 impl AddAssign<&Vec3> for Point3 {
     fn add_assign(&mut self, rhs: &Vec3) {
-        self.x += rhs.x;
-        self.y += rhs.y;
-        self.z += rhs.z;
+        self.simd += rhs.simd
     }
 }
 
 impl Mul<f32> for Point3 {
     type Output = Self;
 
-    fn mul(self, rhs: f32) -> Self::Output {
-        Self::Output::new(self.x * rhs, self.y * rhs, self.z * rhs)
+    fn mul(mut self, rhs: f32) -> Self::Output {
+        self.simd
+            .mul_assign(f32x4::from_array([rhs, rhs, rhs, 1.0]));
+        self
     }
 }
 
@@ -154,7 +180,16 @@ impl Mul<f32> for &Point3 {
     type Output = Point3;
 
     fn mul(self, rhs: f32) -> Self::Output {
-        Self::Output::new(self.x * rhs, self.y * rhs, self.z * rhs)
+        Self::Output::simd(self.simd.mul(f32x4::from_array([rhs, rhs, rhs, 1.0])))
+    }
+}
+
+impl Mul<Vec3> for Point3 {
+    type Output = Self;
+
+    fn mul(mut self, rhs: Vec3) -> Self::Output {
+        self.scale(&rhs);
+        self
     }
 }
 
@@ -163,9 +198,9 @@ impl Index<Axis3> for Point3 {
 
     fn index(&self, index: Axis3) -> &Self::Output {
         match index {
-            Axis3::X => &self.x,
-            Axis3::Y => &self.y,
-            Axis3::Z => &self.z,
+            Axis3::X => &self.simd[0],
+            Axis3::Y => &self.simd[1],
+            Axis3::Z => &self.simd[2],
         }
     }
 }

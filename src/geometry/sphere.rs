@@ -112,8 +112,9 @@ impl SphereEx {
 }
 
 impl Shade for SphereEx {
-    fn get_color(&self, _scene: &Scene, _hit: &Hit) -> Color {
-        self.color.into()
+    fn get_color(&self, scene: &Scene, hit: &Hit) -> Color {
+        let normal = self.get_normal(scene, hit);
+        Color::from(normal)
     }
 
     fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3 {

@@ -14,20 +14,29 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn new(origin: Point3, dir: Vec3) -> Self {
-        Self {
-            origin,
-            dir,
-            rdir: Vec3::new(1.0 / dir.x, 1.0 / dir.y, 1.0 / dir.z),
-        }
+    pub fn new(mut origin: Point3, dir: Vec3) -> Self {
+        let rdir = dir.get_reciprocal();
+        origin.simd[3] = 1.0;
+        Self { origin, dir, rdir }
+    }
+
+    pub fn scale(&mut self, scale: &Vec3) {
+        self.dir.scale(scale);
+        self.dir.normalize();
+        self.rdir = self.dir.get_reciprocal();
+        self.origin.scale(scale);
+        self.origin.simd[3] = 1.0;
     }
 
     pub fn translate(&mut self, translation: &Vec3) {
         self.origin += translation;
+        self.origin.simd[3] = 1.0;
     }
 
     pub fn rotate(&mut self, rotation: &Quat) {
         self.dir.rotate(rotation);
+        self.rdir = self.dir.get_reciprocal();
+        self.origin.rotate(rotation);
     }
 }
 
@@ -84,7 +93,7 @@ mod test {
         let mut ray = Ray::default();
         let rot = Quat::new(-0.383, 0.0, 0.0, 0.924);
         ray.rotate(&rot);
-        println!("{} {} {}", ray.dir.x, ray.dir.y, ray.dir.z);
+        println!("{:?}", ray.dir);
         assert!(ray.dir.close(&Vec3::new(0.0, -0.707, -0.707)));
     }
 }
