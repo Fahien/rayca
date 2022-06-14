@@ -180,7 +180,7 @@ impl<'m> Intersect for Triangle<'m> {
         self.interpolate_normals(hit)
     }
 
-    fn get_metalness(&self, hit: &Hit) -> f32 {
+    fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32) {
         let material = self.get_material();
         if let Some(mr_handle) = material.metallic_roughness_texture {
             let mr_texture = self.model.textures.get(mr_handle).unwrap();
@@ -188,9 +188,10 @@ impl<'m> Intersect for Triangle<'m> {
             let image = self.model.images.get(mr_texture.image).unwrap();
             let color = sampler.sample(image, &self.interpolate_uvs(hit));
             // Blue channel contains metalness value
-            color.b
+            // Red channel contains roughness value
+            (color.b, color.r)
         } else {
-            material.metallic_factor
+            (material.metallic_factor, material.roughness_factor)
         }
     }
 }
