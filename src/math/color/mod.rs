@@ -79,7 +79,7 @@ impl From<u32> for Color {
 
 impl From<Vec3> for Color {
     fn from(v: Vec3) -> Self {
-        Self::new((v.x + 1.0) / 2.0, (v.y + 1.0) / 2.0, (v.z + 1.0) / 2.0, 1.0)
+        Self::new(v.simd[0], v.simd[1], v.simd[2], 1.0)
     }
 }
 
@@ -196,30 +196,6 @@ impl Mul<&Color> for &f32 {
 
     fn mul(self, rhs: &Color) -> Self::Output {
         Self::Output::new(self * rhs.r, self * rhs.g, self * rhs.b, rhs.a)
-    }
-}
-
-impl Mul<&Vec3> for &Color {
-    type Output = Color;
-
-    fn mul(self, rhs: &Vec3) -> Self::Output {
-        Self::Output::new(self.r * rhs.x, self.g * rhs.y, self.b * rhs.z, self.a)
-    }
-}
-
-impl Mul<&Vec3> for Color {
-    type Output = Color;
-
-    fn mul(self, rhs: &Vec3) -> Self::Output {
-        Self::Output::new(self.r * rhs.x, self.g * rhs.y, self.b * rhs.z, self.a)
-    }
-}
-
-impl Mul<Vec3> for Color {
-    type Output = Color;
-
-    fn mul(self, rhs: Vec3) -> Self::Output {
-        Self::Output::new(self.r * rhs.x, self.g * rhs.y, self.b * rhs.z, self.a)
     }
 }
 
