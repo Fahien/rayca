@@ -64,7 +64,7 @@ pub trait Intersect<'m> {
     fn intersects(&'m self, ray: &Ray) -> Option<Hit<'m>>;
     fn get_color(&self, hit: &Hit) -> Color;
     fn get_normal(&self, hit: &Hit) -> Vec3;
-    fn get_metalness(&self, hit: &Hit) -> f32;
+    fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32);
 }
 
 #[cfg(test)]
