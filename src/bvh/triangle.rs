@@ -1,4 +1,4 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -116,7 +116,7 @@ impl<'m> Intersect for BvhTriangle<'m> {
         let d = -n.dot(v0);
 
         // Compute t (equation 3)
-        let t = -(n.dot(ray.origin) + d) / n_dot_ray_dir;
+        let t = -(n.dot(Vec3::from(ray.origin)) + d) / n_dot_ray_dir;
 
         // Check if the triangle is behind the ray
         if t < 0.0 {
@@ -132,7 +132,7 @@ impl<'m> Intersect for BvhTriangle<'m> {
         let edge0 = v1 - v0;
         let vp0 = p - v0;
         // Vector perpendicular to triangle's plane
-        let c = edge0.cross(&vp0);
+        let c = edge0.cross(&vp0.into());
         if n.dot(c) < 0.0 {
             return None; // P is on the right side
         }
@@ -140,7 +140,7 @@ impl<'m> Intersect for BvhTriangle<'m> {
         // Edge 1
         let edge1 = v2 - v1;
         let vp1 = p - v1;
-        let c = edge1.cross(&vp1);
+        let c = edge1.cross(&vp1.into());
         let u = n.dot(c);
         if u < 0.0 {
             return None; // P is on the right side
@@ -149,7 +149,7 @@ impl<'m> Intersect for BvhTriangle<'m> {
         // Edge 2
         let edge2 = v0 - v2;
         let vp2 = p - v2;
-        let c = edge2.cross(&vp2);
+        let c = edge2.cross(&vp2.into());
         let v = n.dot(c);
         if v < 0.0 {
             return None; // P is on the right side;

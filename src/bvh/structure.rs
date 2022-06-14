@@ -17,7 +17,7 @@ impl AABB {
 
     fn area(&self) -> f32 {
         let e = self.b - self.a; // box extent
-        e.x * e.y + e.y * e.z + e.z * e.x
+        e.simd[0] * e.simd[1] + e.simd[1] * e.simd[2] + e.simd[2] * e.simd[0]
     }
 
     fn grow(&mut self, p: &Point3) {
@@ -27,20 +27,18 @@ impl AABB {
 
     /// Slab test. We do not care where we hit the box; only info we need is a yes/no answer.
     fn intersects(&self, ray: &Ray) -> f32 {
-        let tx1 = (self.a.x - ray.origin.x) * ray.rdir.x;
-        let tx2 = (self.b.x - ray.origin.x) * ray.rdir.x;
-        let tmin = tx1.min(tx2);
-        let tmax = tx1.max(tx2);
+        let origin_vec = Vec3::from(ray.origin);
+        let t1 = (self.a - origin_vec) * ray.rdir;
+        let t2 = (self.b - origin_vec) * ray.rdir;
 
-        let ty1 = (self.a.y - ray.origin.y) * ray.rdir.y;
-        let ty2 = (self.b.y - ray.origin.y) * ray.rdir.y;
-        let tmin = tmin.max(ty1.min(ty2));
-        let tmax = tmax.min(ty1.max(ty2));
+        let tmin = t1.simd[0].min(t2.simd[0]);
+        let tmax = t1.simd[0].max(t2.simd[0]);
 
-        let tz1 = (self.a.z - ray.origin.z) * ray.rdir.z;
-        let tz2 = (self.b.z - ray.origin.z) * ray.rdir.z;
-        let tmin = tmin.max(tz1.min(tz2));
-        let tmax = tmax.min(tz1.max(tz2));
+        let tmin = tmin.max(t1.simd[1].min(t2.simd[1]));
+        let tmax = tmax.min(t1.simd[1].max(t2.simd[1]));
+
+        let tmin = tmin.max(t1.simd[2].min(t2.simd[2]));
+        let tmax = tmax.min(t1.simd[2].max(t2.simd[2]));
 
         if tmax >= tmin && tmax > 0.0 {
             tmin

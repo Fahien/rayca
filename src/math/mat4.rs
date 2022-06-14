@@ -56,10 +56,14 @@ impl Mat4 {
         }
     }
 
+    pub fn get(&self, row: usize, col: usize) -> f32 {
+        self.values[row][col]
+    }
+
     pub fn scale(&mut self, scale: &Vec3) {
-        self[0][0] *= scale.x;
-        self[1][1] *= scale.y;
-        self[2][2] *= scale.z;
+        self[0][0] *= scale.get_x();
+        self[1][1] *= scale.get_y();
+        self[2][2] *= scale.get_z();
     }
 
     pub fn rotate(&mut self, q: &Quat) {
@@ -67,9 +71,9 @@ impl Mat4 {
     }
 
     pub fn translate(&mut self, translation: &Vec3) {
-        self[0][3] += translation.x;
-        self[1][3] += translation.y;
-        self[2][3] += translation.z;
+        self[0][3] += translation.get_x();
+        self[1][3] += translation.get_y();
+        self[2][3] += translation.get_z();
     }
 
     pub fn get_scale(&self) -> Vec3 {
@@ -215,7 +219,7 @@ macro_rules! impl_mul3 {
 
                 for i in 0..4 {
                     for j in 0..3 {
-                        let vv = rhs[j];
+                        let vv = rhs.simd[j];
                         let mv = self[i][j];
                         ret[i] += mv * vv;
                     }

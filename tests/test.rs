@@ -42,7 +42,7 @@ fn cube_over_plane() {
 
     let root0 = scene.model.nodes.get_mut(1.into()).unwrap();
     root0.trs.scale = Vec3::new(16.0, 16.0, 0.125);
-    root0.trs.translation.y -= 1.0;
+    root0.trs.translation.translate(&Vec3::new(0.0, -1.0, 0.0));
     let root0_child = scene.model.nodes.get_mut(2.into()).unwrap();
     root0_child.trs.rotation = Quat::default();
     {
@@ -56,26 +56,24 @@ fn cube_over_plane() {
         .nodes
         .get_mut(scene.model.root.children[1])
         .unwrap();
-    root1.trs.translation.x += 1.0;
-    root1.trs.translation.y += 1.0;
-    root1.trs.translation.z += -2.0;
+    let shift = Vec3::new(1.0, 1.0, -2.0);
+    root1.trs.translation += shift;
 
     let root2 = scene
         .model
         .nodes
         .get_mut(scene.model.root.children[2])
         .unwrap();
-    root2.trs.translation.x += 0.0;
-    root2.trs.translation.y += 0.0;
-    root2.trs.translation.z += -1.0;
+    let shift = Vec3::new(0.0, 0.0, -1.0);
+    root2.trs.translation += shift;
 
     let root3 = scene
         .model
         .nodes
         .get_mut(scene.model.root.children[3])
         .unwrap();
-    root3.trs.translation.x += -1.5;
-    root3.trs.translation.z += -4.0;
+    let shift = Vec3::new(-1.5, 0.0, -4.0);
+    root3.trs.translation += shift;
 
     scene.draw(&mut image);
     image.dump_png("target/cube-over-plane.png");
@@ -182,7 +180,7 @@ mod gltf {
 
     #[test]
     fn sponza() {
-        let mut image = Image::new(128, 128, ColorType::RGBA8);
+        let mut image = Image::new(32, 32, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene.load("tests/model/sponza/sponza.gltf").unwrap();

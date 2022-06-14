@@ -94,7 +94,8 @@ impl Primitive {
     ) -> Vec<BvhTriangle<'m>> {
         let mut ret = vec![];
 
-        let normal_trs = Inversed::from(trs);
+        let mut normal_trs = Inversed::from(trs.clone());
+        normal_trs.source.translation = Vec3::default();
         let normal_matrix = Mat4::from(normal_trs).get_transpose();
 
         for i in 0..(indices.len() / 3) {

@@ -228,11 +228,11 @@ mod test {
         let mut mat = Mat4::identity();
         assert!(Mat4::from(&trs) == mat);
 
-        trs.translation.x = 1.0;
+        trs.translation.set_x(1.0);
         mat[0][3] = 1.0;
         assert!(Mat4::from(&trs) == mat);
 
-        trs.scale.y = 2.0;
+        trs.scale.set_y(2.0);
         mat[1][1] = 2.0;
         assert!(Mat4::from(&trs) == mat);
     }

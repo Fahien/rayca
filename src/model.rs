@@ -411,9 +411,7 @@ impl ModelBuilder {
         let positions = self.get_slices(accessor);
         vertices.resize(positions.len(), Vertex::default());
         for (i, position) in positions.into_iter().enumerate() {
-            vertices[i].pos.x = position[0];
-            vertices[i].pos.y = position[1];
-            vertices[i].pos.z = position[2];
+            vertices[i].pos = Point3::new(position[0], position[1], position[2]);
         }
         Ok(())
     }
@@ -440,9 +438,7 @@ impl ModelBuilder {
         let normals = self.get_slices(accessor);
         vertices.resize(normals.len(), Vertex::default());
         for (i, normal) in normals.into_iter().enumerate() {
-            vertices[i].normal.x = normal[0];
-            vertices[i].normal.y = normal[1];
-            vertices[i].normal.z = normal[2];
+            vertices[i].normal = Vec3::new(normal[0], normal[1], normal[2]);
         }
         Ok(())
     }

@@ -38,7 +38,7 @@ fn distribution_ggx(n_dot_h: f32, n: &Vec3, h: &Vec3, roughness: f32) -> f32 {
 
 fn fresnel_schlick(cos_theta: f32, f0: Vec3) -> Vec3 {
     let f = (1.0 - cos_theta).powf(5.0);
-    f + f0 * (Vec3::iso(1.0) - f0)
+    f + f0 * (Vec3::splat(1.0) - f0)
 }
 
 /// Models the visibility of the microfacets, or occlusion or shadow-masking
@@ -170,7 +170,7 @@ impl Scene {
                     let l_dot_h = light_dir.dot(&h).clamp(0.0, 1.0);
                     let reflectance = 0.5;
                     let f0_value = 0.16 * reflectance * reflectance * (1.0 - metallic);
-                    let f0 = Vec3::iso(f0_value) + color * metallic;
+                    let f0 = Vec3::splat(f0_value) + Vec3::from(&color) * metallic;
                     let f = fresnel_schlick(l_dot_h, f0);
 
                     let g = geometry_smith_ggx(n_dot_v, n_dot_l, roughness);

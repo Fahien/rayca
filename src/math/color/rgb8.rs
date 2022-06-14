@@ -37,9 +37,9 @@ impl From<u32> for RGB8 {
 impl From<Vec3> for RGB8 {
     fn from(v: Vec3) -> Self {
         Self::new(
-            ((v.x + 1.0) * 127.5) as u8,
-            ((v.y + 1.0) * 127.5) as u8,
-            ((v.z + 1.0) * 127.5) as u8,
+            ((v.get_x() + 1.0) * 127.5) as u8,
+            ((v.get_y() + 1.0) * 127.5) as u8,
+            ((v.get_z() + 1.0) * 127.5) as u8,
         )
     }
 }
