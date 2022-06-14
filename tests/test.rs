@@ -45,7 +45,11 @@ fn cube_over_plane() {
     root0.trs.translation.y -= 1.0;
     let root0_child = scene.model.nodes.get_mut(2.into()).unwrap();
     root0_child.trs.rotation = Quat::default();
-    scene.model.materials.get_mut(0.into()).unwrap().color = Color::new(0.1, 0.2, 0.7, 1.0);
+    {
+        let blue_mat = scene.model.materials.get_mut(0.into()).unwrap();
+        blue_mat.color = Color::new(0.1, 0.2, 0.7, 1.0);
+        blue_mat.metallic_factor = 1.0;
+    }
 
     let root1 = scene
         .model
@@ -178,7 +182,7 @@ mod gltf {
 
     #[test]
     fn sponza() {
-        let mut image = Image::new(64, 64, ColorType::RGBA8);
+        let mut image = Image::new(128, 128, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene.load("tests/model/sponza/sponza.gltf").unwrap();

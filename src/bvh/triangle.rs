@@ -175,16 +175,17 @@ impl<'m> Intersect for BvhTriangle<'m> {
         self.interpolate_normals(&hit.uv)
     }
 
-    fn get_metalness(&self, hit: &Hit) -> f32 {
+    fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32) {
         let material = self.get_material();
         if let Some(mr_texture) = self.model.textures.get(material.metallic_roughness_texture) {
             let sampler = Sampler::default();
             let image = self.model.images.get(mr_texture.image).unwrap();
             let color = sampler.sample(image, &self.interpolate_uvs(hit));
             // Blue channel contains metalness value
-            color.b
+            // Red channel contains roughness value
+            (color.b, color.r)
         } else {
-            material.metallic_factor
+            (material.metallic_factor, material.roughness_factor)
         }
     }
 }
