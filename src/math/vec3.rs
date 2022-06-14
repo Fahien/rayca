@@ -2,9 +2,9 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, AddAssign, Div, Index, Mul, Neg, Sub, MulAssign};
+use std::ops::{Add, AddAssign, Div, Index, Mul, MulAssign, Neg, Sub};
 
-use crate::Quat;
+use crate::{Color, Quat};
 
 #[derive(Clone, Copy)]
 pub enum Axis3 {
@@ -24,6 +24,10 @@ pub struct Vec3 {
 const EPS: f32 = f32::EPSILON * 8192.0;
 
 impl Vec3 {
+    pub fn iso(d: f32) -> Self {
+        Self::new(d, d, d)
+    }
+
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
@@ -57,6 +61,12 @@ impl Vec3 {
         self.x /= len;
         self.y /= len;
         self.z /= len;
+    }
+
+    pub fn get_normalized(&self) -> Self {
+        let mut ret = self.clone();
+        ret.normalize();
+        ret
     }
 
     pub fn get_reciprocal(&self) -> Self {
@@ -95,7 +105,6 @@ impl Vec3 {
     pub fn reflect(&self, normal: &Vec3) -> Self {
         self - 2.0 * self.dot(normal) * normal
     }
-
 }
 
 impl Add for Vec3 {
@@ -128,8 +137,44 @@ impl Add<Vec3> for &Vec3 {
 impl Add<&Vec3> for Vec3 {
     type Output = Vec3;
 
-    fn add(self, rhs: &Vec3) -> Self::Output {
-        Self::Output::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    fn add(mut self, rhs: &Vec3) -> Self::Output {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+        self
+    }
+}
+
+impl Add<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn add(mut self, rhs: f32) -> Self::Output {
+        self.x += rhs;
+        self.y += rhs;
+        self.z += rhs;
+        self
+    }
+}
+
+impl Add<Vec3> for f32 {
+    type Output = Vec3;
+
+    fn add(self, mut rhs: Vec3) -> Self::Output {
+        rhs.x += self;
+        rhs.y += self;
+        rhs.z += self;
+        rhs
+    }
+}
+
+impl Add<Color> for Vec3 {
+    type Output = Vec3;
+
+    fn add(mut self, rhs: Color) -> Self::Output {
+        self.x += rhs.r;
+        self.y += rhs.g;
+        self.z += rhs.b;
+        self
     }
 }
 

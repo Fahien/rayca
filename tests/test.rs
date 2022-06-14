@@ -48,7 +48,11 @@ fn cube_over_plane() {
         .unwrap()
         .trs
         .rotation = Quat::default();
-    scene.models[0].materials.get_mut(0.into()).unwrap().color = Color::new(0.1, 0.2, 0.7, 1.0);
+    {
+        let blue_mat = scene.models[0].materials.get_mut(0.into()).unwrap();
+        blue_mat.color = Color::new(0.1, 0.2, 0.7, 1.0);
+        blue_mat.metallic_factor = 1.0;
+    }
 
     scene.models[1].root.trs.translation.x += 1.0;
     scene.models[1].root.trs.translation.y += 1.0;
@@ -143,7 +147,6 @@ mod gltf {
             .load("tests/model/orientation/OrientationTest.gltf")
             .unwrap();
 
-
         scene.models[0].root.trs.scale = Vec3::new(1.0 / 8.0, 1.0 / 8.0, 1.0 / 8.0);
 
         scene.draw(&mut image);
@@ -152,7 +155,7 @@ mod gltf {
 
     #[test]
     fn flight() {
-        let mut image = Image::new(256, 256, ColorType::RGBA8);
+        let mut image = Image::new(512, 512, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene
@@ -167,7 +170,7 @@ mod gltf {
 
     #[test]
     fn sponza() {
-        let mut image = Image::new(64, 64, ColorType::RGBA8);
+        let mut image = Image::new(128, 128, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene.load("tests/model/sponza/sponza.gltf").unwrap();
