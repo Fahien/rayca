@@ -2,9 +2,10 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+#![feature(portable_simd)]
+
 pub mod bvh;
 pub mod camera;
-pub mod www;
 pub mod draw;
 pub mod image;
 pub mod light;
@@ -20,10 +21,10 @@ pub mod texture;
 pub mod triangle;
 pub mod util;
 pub mod vertex;
+pub mod www;
 
 pub use bvh::*;
 pub use camera::*;
-pub use www::*;
 pub use draw::*;
 pub use image::*;
 pub use light::*;
@@ -39,3 +40,4 @@ pub use texture::*;
 pub use triangle::*;
 pub use util::*;
 pub use vertex::*;
+pub use www::*;

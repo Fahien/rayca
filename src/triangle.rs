@@ -70,12 +70,12 @@ impl<'m> Triangle<'m> {
     }
 
     /// Returns the interpolation of the vertices normals
-    pub fn interpolate_normals(&self, hit: &Hit) -> Vec3 {
+    pub fn interpolate_normals(&self, hit: &Hit) -> FVec3 {
         let mut n = self.vertices[2].normal * (1.0 - hit.uv.x - hit.uv.y)
             + self.vertices[0].normal * hit.uv.x
             + self.vertices[1].normal * hit.uv.y;
         n.normalize();
-        n
+        FVec3::from(&n)
     }
 
     pub fn get_material(&self) -> &Material {
@@ -91,9 +91,9 @@ impl<'m> Triangle<'m> {
 impl<'m> Intersect for Triangle<'m> {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
     fn intersects(&self, ray: &Ray) -> Option<Hit> {
-        let v0 = &self.vertices[0].pos;
-        let v1 = &self.vertices[1].pos;
-        let v2 = &self.vertices[2].pos;
+        let v0 = FVec3::from(&self.vertices[0].pos);
+        let v1 = FVec3::from(&self.vertices[1].pos);
+        let v2 = FVec3::from(&self.vertices[2].pos);
 
         // Plane's normal
         let v0v1 = v1 - v0;
@@ -176,7 +176,7 @@ impl<'m> Intersect for Triangle<'m> {
         color
     }
 
-    fn get_normal(&self, hit: &Hit) -> Vec3 {
+    fn get_normal(&self, hit: &Hit) -> FVec3 {
         self.interpolate_normals(hit)
     }
 
@@ -208,9 +208,9 @@ mod test {
         let triangles = triangle_prim.triangles(&Trs::default(), material, &model);
         let triangle_ref = &triangles[0];
 
-        let ray = Ray::new(Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
+        let ray = Ray::new(FVec3::new(0.0, 0.0, 1.0), FVec3::new(0.0, 0.0, -1.0));
         assert!(triangle_ref.intersects(&ray).is_some());
-        let ray = Ray::new(Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 1.0));
+        let ray = Ray::new(FVec3::new(0.0, 0.0, 1.0), FVec3::new(0.0, 0.0, 1.0));
         assert!(triangle_ref.intersects(&ray).is_none());
     }
 }

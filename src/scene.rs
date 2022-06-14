@@ -27,7 +27,7 @@ fn saturate_mediump(x: f32) -> f32 {
 /// Surfaces are not smooth at the micro level, but made of a
 /// large number of randomly aligned planar surface fragments.
 /// This implementation is good for half-precision floats.
-fn distribution_ggx(n_dot_h: f32, n: &Vec3, h: &Vec3, roughness: f32) -> f32 {
+fn distribution_ggx(n_dot_h: f32, n: &FVec3, h: &FVec3, roughness: f32) -> f32 {
     let n_x_h = n.cross(h);
     let a = n_dot_h * roughness;
     let k = roughness / (n_x_h.dot(&n_x_h) + a * a);
@@ -35,9 +35,9 @@ fn distribution_ggx(n_dot_h: f32, n: &Vec3, h: &Vec3, roughness: f32) -> f32 {
     saturate_mediump(d)
 }
 
-fn fresnel_schlick(cos_theta: f32, f0: Vec3) -> Vec3 {
+fn fresnel_schlick(cos_theta: f32, f0: FVec3) -> FVec3 {
     let f = (1.0 - cos_theta).powf(5.0);
-    f + f0 * (Vec3::iso(1.0) - f0)
+    f + f0 * (FVec3::splat(1.0) - f0)
 }
 
 /// Models the visibility of the microfacets, or occlusion or shadow-masking
@@ -157,19 +157,18 @@ impl Scene {
                     let l_dot_h = light_dir.dot(&h).clamp(0.0, 1.0);
                     let reflectance = 0.5;
                     let f0_value = 0.16 * reflectance * reflectance * (1.0 - metallic);
-                    let f0 = Vec3::iso(f0_value) + color * metallic;
+                    let f0 = FVec3::splat(f0_value) + FVec3::from(&color) * metallic;
                     let f = fresnel_schlick(l_dot_h, f0);
 
                     let g = geometry_smith_ggx(n_dot_v, n_dot_l, roughness);
 
                     let fr = (d * g) * f;
-                    let fr = Color::new(fr.x, fr.y, fr.z, 1.0);
 
                     // Lambertian diffuse (1/PI)
-                    let fd = color * std::f32::consts::FRAC_1_PI;
+                    let fd = FVec3::from(&color) * std::f32::consts::FRAC_1_PI;
 
                     let light_color = light.get_intensity(light_node, &hit.point);
-                    pixel_color += (fd + fr) * light_color * n_dot_l;
+                    pixel_color += Color::from((fd + fr) * light_color * n_dot_l);
                 }
             } // end iterate light
 
@@ -272,9 +271,9 @@ impl Draw for Scene {
                 // Generate primary ray
                 let xx = (2.0 * ((x as f32 + 0.5) * inv_width) - 1.0) * angle * aspectratio;
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
-                let mut dir = Vec3::new(xx, yy, -1.0);
+                let mut dir = FVec3::new(xx, yy, -1.0);
                 dir.normalize();
-                let origin = Vec3::new(0.0, 0.0, 0.0);
+                let origin = FVec3::new(0.0, 0.0, 0.0);
                 let ray = &camera_trs * Ray::new(origin, dir);
 
                 self.draw_pixel(ray, &bvh, light_nodes, lights, row[x]);

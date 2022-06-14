@@ -8,7 +8,7 @@ pub mod rgba8;
 pub use rgb8::*;
 pub use rgba8::*;
 
-use crate::Vec3;
+use crate::{FVec3, Vec3};
 
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
@@ -80,6 +80,12 @@ impl From<u32> for Color {
 impl From<Vec3> for Color {
     fn from(v: Vec3) -> Self {
         Self::new((v.x + 1.0) / 2.0, (v.y + 1.0) / 2.0, (v.z + 1.0) / 2.0, 1.0)
+    }
+}
+
+impl From<FVec3> for Color {
+    fn from(v: FVec3) -> Self {
+        Self::new(v.simd[0], v.simd[1], v.simd[2], 1.0)
     }
 }
 

@@ -6,24 +6,25 @@ use super::*;
 
 #[derive(Debug)]
 pub struct Ray {
-    pub origin: Vec3,
-    pub dir: Vec3,
+    pub origin: FVec3,
+    pub dir: FVec3,
 
     // Reciprocal of direction
-    pub rdir: Vec3,
+    pub rdir: FVec3,
 }
 
 impl Ray {
-    pub fn new(origin: Vec3, dir: Vec3) -> Self {
+    pub fn new(origin: FVec3, dir: FVec3) -> Self {
+        let rdir = 1.0 / dir;
         Self {
-            origin,
-            dir,
-            rdir: Vec3::new(1.0 / dir.x, 1.0 / dir.y, 1.0 / dir.z),
+            origin: origin,
+            dir: dir,
+            rdir: rdir,
         }
     }
 
     pub fn translate(&mut self, translation: &Vec3) {
-        self.origin += translation;
+        self.origin += FVec3::from(translation);
     }
 
     pub fn rotate(&mut self, rotation: &Quat) {
@@ -33,18 +34,18 @@ impl Ray {
 
 impl Default for Ray {
     fn default() -> Self {
-        Self::new(Vec3::default(), Vec3::new(0.0, 0.0, -1.0))
+        Self::new(FVec3::default(), FVec3::new(0.0, 0.0, -1.0))
     }
 }
 
 pub struct Hit {
     pub depth: f32,
-    pub point: Vec3,
+    pub point: FVec3,
     pub uv: Vec2,
 }
 
 impl Hit {
-    pub fn new(depth: f32, point: Vec3, uv: Vec2) -> Self {
+    pub fn new(depth: f32, point: FVec3, uv: Vec2) -> Self {
         Self { depth, point, uv }
     }
 }
@@ -52,7 +53,7 @@ impl Hit {
 pub trait Intersect {
     fn intersects(&self, ray: &Ray) -> Option<Hit>;
     fn get_color(&self, hit: &Hit) -> Color;
-    fn get_normal(&self, hit: &Hit) -> Vec3;
+    fn get_normal(&self, hit: &Hit) -> FVec3;
     fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32);
 }
 
@@ -65,7 +66,7 @@ mod test {
         let mut ray = Ray::default();
         let rot = Quat::new(-0.383, 0.0, 0.0, 0.924);
         ray.rotate(&rot);
-        println!("{} {} {}", ray.dir.x, ray.dir.y, ray.dir.z);
-        assert!(ray.dir.close(&Vec3::new(0.0, -0.707, -0.707)));
+        println!("{:?}", ray.dir);
+        assert!(ray.dir.close(&FVec3::new(0.0, -0.707, -0.707)));
     }
 }

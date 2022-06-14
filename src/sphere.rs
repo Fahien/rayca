@@ -7,14 +7,14 @@ use crate::ray::Intersect;
 use super::*;
 
 pub struct Sphere {
-    center: Vec3,
+    center: FVec3,
     _radius: f32,
     radius2: f32,
     pub color: RGBA8,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, color: RGBA8) -> Self {
+    pub fn new(center: FVec3, radius: f32, color: RGBA8) -> Self {
         let radius2 = radius * radius;
         Self {
             center,
@@ -74,10 +74,10 @@ impl Intersect for Sphere {
 
     fn get_color(&self, hit: &Hit) -> Color {
         let normal = self.get_normal(&hit);
-        Color::new(normal.x, normal.y, normal.z, 1.0)
+        Color::from(normal)
     }
 
-    fn get_normal(&self, hit: &Hit) -> Vec3 {
+    fn get_normal(&self, hit: &Hit) -> FVec3 {
         let mut normal = hit.point - self.center;
         normal.normalize();
         normal
@@ -94,18 +94,18 @@ mod test {
 
     #[test]
     fn intersect() {
-        let orig = Vec3::new(0.0, 0.0, 0.0);
+        let orig = FVec3::new(0.0, 0.0, 0.0);
         let sphere = Sphere::new(orig, 1.0, RGBA8::from(0xFFFFFFFFu32));
 
-        let right = Vec3::new(1.0, 0.0, 0.0);
+        let right = FVec3::new(1.0, 0.0, 0.0);
         let ray = Ray::new(orig, right);
         assert!(sphere.intersects(&ray).is_some());
 
-        let ray = Ray::new(Vec3::new(2.0, 0.0, 0.0), right);
+        let ray = Ray::new(FVec3::new(2.0, 0.0, 0.0), right);
         assert!(sphere.intersects(&ray).is_none());
 
-        let sphere = Sphere::new(Vec3::new(4.0, 0.0, 0.0), 1.0, RGBA8::from(0xFFFFFFFFu32));
-        let forward = Vec3::new(0.0, 0.0, -1.0);
+        let sphere = Sphere::new(FVec3::new(4.0, 0.0, 0.0), 1.0, RGBA8::from(0xFFFFFFFFu32));
+        let forward = FVec3::new(0.0, 0.0, -1.0);
         let ray = Ray::new(orig, forward);
         assert!(sphere.intersects(&ray).is_none());
     }

@@ -6,41 +6,38 @@ use super::*;
 
 #[derive(Default)]
 pub struct AABB {
-    pub a: Vec3,
-    pub b: Vec3,
+    a: FVec3,
+    b: FVec3,
 }
 
 impl AABB {
-    pub fn new(a: Vec3, b: Vec3) -> Self {
+    pub fn new(a: FVec3, b: FVec3) -> Self {
         Self { a, b }
     }
 
     fn area(&self) -> f32 {
         let e = self.b - self.a; // box extent
-        e.x * e.y + e.y * e.z + e.z * e.x
+        e.simd[0] * e.simd[1] + e.simd[1] * e.simd[2] + e.simd[2] * e.simd[0]
     }
 
-    fn grow(&mut self, p: &Vec3) {
+    fn grow(&mut self, p: &FVec3) {
         self.a = self.a.min(p);
         self.b = self.b.max(p);
     }
 
     /// Slab test. We do not care where we hit the box; only info we need is a yes/no answer.
     fn intersects(&self, ray: &Ray) -> f32 {
-        let tx1 = (self.a.x - ray.origin.x) * ray.rdir.x;
-        let tx2 = (self.b.x - ray.origin.x) * ray.rdir.x;
-        let tmin = tx1.min(tx2);
-        let tmax = tx1.max(tx2);
+        let t1 = (self.a - ray.origin) * ray.rdir;
+        let t2 = (self.b - ray.origin) * ray.rdir;
 
-        let ty1 = (self.a.y - ray.origin.y) * ray.rdir.y;
-        let ty2 = (self.b.y - ray.origin.y) * ray.rdir.y;
-        let tmin = tmin.max(ty1.min(ty2));
-        let tmax = tmax.min(ty1.max(ty2));
+        let tmin = t1.simd[0].min(t2.simd[0]);
+        let tmax = t1.simd[0].max(t2.simd[0]);
 
-        let tz1 = (self.a.z - ray.origin.z) * ray.rdir.z;
-        let tz2 = (self.b.z - ray.origin.z) * ray.rdir.z;
-        let tmin = tmin.max(tz1.min(tz2));
-        let tmax = tmax.min(tz1.max(tz2));
+        let tmin = tmin.max(t1.simd[1].min(t2.simd[1]));
+        let tmax = tmax.min(t1.simd[1].max(t2.simd[1]));
+
+        let tmin = tmin.max(t1.simd[2].min(t2.simd[2]));
+        let tmax = tmax.min(t1.simd[2].max(t2.simd[2]));
 
         if tmax >= tmin && tmax > 0.0 {
             tmin
@@ -96,14 +93,14 @@ impl<'m> BvhNode<'m> {
         for tri in &self.triangles {
             if tri.centroid[axis] < pos {
                 left_count += 1;
-                left_box.grow(&tri.vertices[0].pos);
-                left_box.grow(&tri.vertices[1].pos);
-                left_box.grow(&tri.vertices[2].pos);
+                left_box.grow(&FVec3::from(&tri.vertices[0].pos));
+                left_box.grow(&FVec3::from(&tri.vertices[1].pos));
+                left_box.grow(&FVec3::from(&tri.vertices[2].pos));
             } else {
                 right_count += 1;
-                right_box.grow(&tri.vertices[0].pos);
-                right_box.grow(&tri.vertices[1].pos);
-                right_box.grow(&tri.vertices[2].pos);
+                right_box.grow(&FVec3::from(&tri.vertices[0].pos));
+                right_box.grow(&FVec3::from(&tri.vertices[1].pos));
+                right_box.grow(&FVec3::from(&tri.vertices[2].pos));
             }
         }
 
@@ -161,13 +158,13 @@ impl<'m> BvhNode<'m> {
         assert!(!triangles.is_empty());
         self.triangles = triangles;
 
-        self.bounds.a = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
-        self.bounds.b = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
+        self.bounds.a = FVec3::new(f32::MAX, f32::MAX, f32::MAX);
+        self.bounds.b = FVec3::new(f32::MIN, f32::MIN, f32::MIN);
 
         // Visit each vertex of the triangles to find the lowest and highest x, y, and z
         for tri in self.triangles.iter() {
-            self.bounds.a = self.bounds.a.min(&tri.min());
-            self.bounds.b = self.bounds.b.max(&tri.max());
+            self.bounds.a = self.bounds.a.min(&FVec3::from(&tri.min()));
+            self.bounds.b = self.bounds.b.max(&FVec3::from(&tri.max()));
         }
 
         // Surface Area Heuristics
@@ -273,8 +270,8 @@ impl<'m> Bvh<'m> {
 
         let mut root = BvhNode::new();
         root.bounds = AABB::new(
-            Vec3::new(f32::MAX, f32::MAX, f32::MAX),
-            Vec3::new(f32::MIN, f32::MIN, f32::MIN),
+            FVec3::new(f32::MAX, f32::MAX, f32::MAX),
+            FVec3::new(f32::MIN, f32::MIN, f32::MIN),
         );
         root.set_triangles(triangles, &mut nodes);
 
