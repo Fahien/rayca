@@ -92,7 +92,7 @@ impl Primitive {
         indices: &[Index],
     ) -> Vec<BvhTriangle<'m>> {
         let mut ret = vec![];
-        let matrix = transform.into();
+        let matrix: Mat4 = transform.into();
 
         let mut normal_trs = Inversed::from(transform.clone());
         normal_trs.source.translation = Vec3::default();

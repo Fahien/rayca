@@ -121,7 +121,10 @@ fn tweak_box_scene(model: &mut Model) {
 
     let mut box_node = model.nodes.get(1.into()).unwrap().clone();
     box_node.trs.scale = Vec3::new(16.0, 0.125, 16.0);
-    box_node.trs.translation.y -= 0.75;
+    box_node
+        .trs
+        .translation
+        .set_y(box_node.trs.translation.get_y() - 0.75);
     box_node.mesh = blue_mesh_handle;
     box_node.id = model.nodes.len();
 

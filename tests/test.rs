@@ -41,7 +41,7 @@ fn cube_over_plane() {
     scene.load("tests/model/box/box.gltf").unwrap();
 
     scene.models[0].root.trs.scale = Vec3::new(16.0, 0.125, 16.0);
-    scene.models[0].root.trs.translation.y -= 1.0;
+    scene.models[0].root.trs.translation += Vec3::new(0.0, -1.0, 0.0);
     scene.models[0]
         .nodes
         .get_mut(1.into())
@@ -54,16 +54,14 @@ fn cube_over_plane() {
         blue_mat.metallic_factor = 1.0;
     }
 
-    scene.models[1].root.trs.translation.x += 1.0;
-    scene.models[1].root.trs.translation.y += 1.0;
-    scene.models[1].root.trs.translation.z += -2.0;
+    let shift = Vec3::new(1.0, 1.0, -2.0);
+    scene.models[1].root.trs.translation += shift;
 
-    scene.models[2].root.trs.translation.x += 0.0;
-    scene.models[2].root.trs.translation.y += 0.0;
-    scene.models[2].root.trs.translation.z += -1.0;
+    let shift = Vec3::new(0.0, 0.0, -1.0);
+    scene.models[2].root.trs.translation += shift;
 
-    scene.models[3].root.trs.translation.x += -1.5;
-    scene.models[3].root.trs.translation.z += -4.0;
+    let shift = Vec3::new(-1.5, 0.0, -4.0);
+    scene.models[3].root.trs.translation += shift;
 
     scene.draw(&mut image);
     image.dump_png("target/cube-over-plane.png");
@@ -170,7 +168,7 @@ mod gltf {
 
     #[test]
     fn sponza() {
-        let mut image = Image::new(128, 128, ColorType::RGBA8);
+        let mut image = Image::new(32, 32, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene.load("tests/model/sponza/sponza.gltf").unwrap();
