@@ -83,8 +83,8 @@ impl Intersect for Sphere {
         normal
     }
 
-    fn get_metalness(&self, _hit: &Hit) -> f32 {
-        1.0
+    fn get_metallic_roughness(&self, _hit: &Hit) -> (f32, f32) {
+        (1.0, 1.0) // glTF default values
     }
 }
 
