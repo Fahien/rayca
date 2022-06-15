@@ -131,15 +131,29 @@ impl Scene {
 
         if let Some((hit, triangle)) = bvh.intersects_iter(&ray) {
             let n = triangle.get_normal(&hit);
-            let mut pixel_color = Color::black();
-            let color = triangle.get_color(&hit);
+            let mut color = triangle.get_color(&hit);
+            let mut pixel_color = Color::black() + color / 8.0;
+
+            const RAY_BIAS: f32 = 1e-4;
+            if color.a < 1.0 {
+                let transmit_origin = hit.point + -n * RAY_BIAS;
+                let transmit_ray = Ray::new(transmit_origin, ray.dir);
+                let transmit_result =
+                    Self::trace(transmit_ray, bvh, light_nodes, lights, depth + 1);
+
+                if let Some(mut transmit_color) = transmit_result {
+                    // continue with the rest of the shading?
+                    transmit_color.over(color);
+                    color = transmit_color;
+                }
+            }
+
             let (metallic, roughness) = triangle.get_metallic_roughness(&hit);
 
             let n_dot_v = n.dot(&ray.dir).abs() + 1e-5;
 
-            const SHADOW_BIAS: f32 = 1e-4;
             // Before getting color, we should check whether it is visible from the sun
-            let shadow_origin = hit.point + n * SHADOW_BIAS;
+            let shadow_origin = hit.point + n * RAY_BIAS;
 
             for light_node in light_nodes {
                 let light = lights.get(light_node.light).unwrap();
@@ -151,11 +165,17 @@ impl Scene {
                 // Whether this object is light (verb) by a light (noun)
                 let is_light = match shadow_result {
                     None => true,
-                    Some((shadow_hit, _)) => {
+                    Some((shadow_hit, triangle)) => {
                         // Distance between current surface and the light source
                         let light_distance = light.get_distance(light_node, &hit.point);
                         // If the obstacle is beyong the light source then the current surface is light
-                        shadow_hit.depth > light_distance
+                        if shadow_hit.depth > light_distance {
+                            true
+                        } else {
+                            // check whether this is a transparent surface
+                            let shadow_color = triangle.get_color(&shadow_hit);
+                            shadow_color.a < 1.0
+                        }
                     }
                 };
 
@@ -193,7 +213,7 @@ impl Scene {
             {
                 // Cosine-law applies here as well
                 let n_dot_r = n.dot(&reflection_dir);
-                pixel_color += reflection_color * (metallic + 0.5) * n_dot_r;
+                pixel_color += reflection_color * (metallic + 0.125) * n_dot_r;
             }
 
             return Some(pixel_color);
