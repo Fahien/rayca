@@ -31,14 +31,11 @@ impl AABB {
         let t1 = (self.a - origin_vec) * ray.rdir;
         let t2 = (self.b - origin_vec) * ray.rdir;
 
-        let tmin = t1.simd[0].min(t2.simd[0]);
-        let tmax = t1.simd[0].max(t2.simd[0]);
+        let vmax = t1.max(&t2);
+        let vmin = t1.min(&t2);
 
-        let tmin = tmin.max(t1.simd[1].min(t2.simd[1]));
-        let tmax = tmax.min(t1.simd[1].max(t2.simd[1]));
-
-        let tmin = tmin.max(t1.simd[2].min(t2.simd[2]));
-        let tmax = tmax.min(t1.simd[2].max(t2.simd[2]));
+        let tmax = vmax.simd[0].min(vmax.simd[1].min(vmax.simd[2]));
+        let tmin = vmin.simd[0].max(vmin.simd[1].max(vmin.simd[2]));
 
         if tmax >= tmin && tmax > 0.0 {
             tmin
@@ -135,7 +132,7 @@ impl<'m> BvhNode<'m> {
             }
 
             // TODO tweak this
-            const AREA_COUNT: i32 = 32;
+            const AREA_COUNT: i32 = 64;
             let scale = (bounds_max - bounds_min) / AREA_COUNT as f32;
 
             for i in 1..AREA_COUNT {
@@ -385,10 +382,10 @@ mod test {
         left_triangles.append(&mut right_triangles);
         let triangles = left_triangles;
 
-        let _bvh = Bvh::new(triangles);
-        //assert!(!bvh.nodes.is_empty());
-        //assert!(bvh.root.left.is_some());
-        //assert!(bvh.root.right.is_some());
-        //assert!(bvh.root.triangles.is_empty());
+        let bvh = Bvh::new(triangles);
+        assert!(!bvh.nodes.is_empty());
+        assert!(bvh.root.left.is_some());
+        assert!(bvh.root.right.is_some());
+        assert!(bvh.root.triangles.is_empty());
     }
 }

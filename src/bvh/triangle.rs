@@ -12,6 +12,7 @@ const WHITE_MATERIAL: Material = Material {
         a: 1.0,
     },
     albedo_texture: None,
+    normal_texture: None,
     metallic_factor: 1.0,
     roughness_factor: 1.0,
     metallic_roughness_texture: None,
@@ -85,6 +86,24 @@ impl<'m> BvhTriangle<'m> {
             + self.vertices[0].normal * hit_uv.x
             + self.vertices[1].normal * hit_uv.y;
         n.get_normalized()
+    }
+
+    /// Returns the interpolation of the vertices tangents
+    pub fn interpolate_tangents(&self, hit: &Hit) -> Vec3 {
+        let mut t = self.vertices[2].tangent * (1.0 - hit.uv.x - hit.uv.y)
+            + self.vertices[0].tangent * hit.uv.x
+            + self.vertices[1].tangent * hit.uv.y;
+        t.normalize();
+        t
+    }
+
+    /// Returns the interpolation of the vertices bitangents
+    pub fn interpolate_bitangents(&self, hit: &Hit) -> Vec3 {
+        let mut b = self.vertices[2].bitangent * (1.0 - hit.uv.x - hit.uv.y)
+            + self.vertices[0].bitangent * hit.uv.x
+            + self.vertices[1].bitangent * hit.uv.y;
+        b.normalize();
+        b
     }
 
     pub fn get_material(&self) -> &Material {
@@ -185,7 +204,24 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
     }
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
-        self.interpolate_normals(&hit.uv)
+        let normal = self.interpolate_normals(&hit.uv);
+
+        let material = self.get_material();
+        if let Some(normal_handle) = material.normal_texture {
+            let texture = self.model.textures.get(normal_handle).unwrap();
+            let sampler = Sampler::default();
+            let image = self.model.images.get(texture.image).unwrap();
+            let mut sampled_normal = Vec3::from(sampler.sample(image, &self.interpolate_uvs(hit)));
+            sampled_normal = sampled_normal * 2.0 - 1.0;
+
+            let tangent = self.interpolate_tangents(hit);
+            let bitangent = self.interpolate_bitangents(hit);
+
+            let tbn = Mat3::tbn(&tangent, &bitangent, &normal);
+            (&tbn * sampled_normal).get_normalized()
+        } else {
+            normal
+        }
     }
 
     fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32) {
