@@ -208,6 +208,15 @@ impl Sub<&Vec3> for Vec3 {
     }
 }
 
+impl Sub<f32> for Vec3 {
+    type Output = Vec3;
+
+    fn sub(mut self, rhs: f32) -> Self::Output {
+        self.simd -= f32x4::splat(rhs);
+        self
+    }
+}
+
 impl SubAssign<&Vec3> for Vec3 {
     fn sub_assign(&mut self, rhs: &Vec3) {
         self.simd -= rhs.simd;
@@ -315,6 +324,12 @@ impl From<Point3> for Vec3 {
 impl From<&Color> for Vec3 {
     fn from(c: &Color) -> Self {
         Vec3::new(c.r * c.a, c.g * c.a, c.b * c.a)
+    }
+}
+
+impl From<Color> for Vec3 {
+    fn from(c: Color) -> Self {
+        Self::from(&c)
     }
 }
 

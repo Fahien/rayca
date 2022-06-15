@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    Color, Dot, GgxMaterial, GltfModel, Handle, Hit, Intersect, Point3, Ray, Sampler, Scene, Shade,
-    Vec2, Vec3, Vertex,
+    Color, Dot, GgxMaterial, GltfModel, Handle, Hit, Intersect, Mat3, Point3, Ray, Sampler, Scene,
+    Shade, Vec2, Vec3, Vertex,
 };
 
 pub struct Triangle {
@@ -180,6 +180,24 @@ impl TriangleEx {
         n.get_normalized()
     }
 
+    /// Returns the interpolation of the vertices tangents
+    pub fn interpolate_tangents(&self, hit: &Hit) -> Vec3 {
+        let mut t = self.vertices[2].tangent * (1.0 - hit.uv.x - hit.uv.y)
+            + self.vertices[0].tangent * hit.uv.x
+            + self.vertices[1].tangent * hit.uv.y;
+        t.normalize();
+        t
+    }
+
+    /// Returns the interpolation of the vertices bitangents
+    pub fn interpolate_bitangents(&self, hit: &Hit) -> Vec3 {
+        let mut b = self.vertices[2].bitangent * (1.0 - hit.uv.x - hit.uv.y)
+            + self.vertices[0].bitangent * hit.uv.x
+            + self.vertices[1].bitangent * hit.uv.y;
+        b.normalize();
+        b
+    }
+
     pub fn get_material<'a>(&self, model: &'a GltfModel) -> &'a GgxMaterial {
         model
             .materials
@@ -204,8 +222,28 @@ impl Shade for TriangleEx {
         color
     }
 
-    fn get_normal(&self, _scene: &Scene, hit: &Hit) -> Vec3 {
-        self.interpolate_normals(&hit.uv)
+    fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3 {
+        let normal = self.interpolate_normals(&hit.uv);
+
+        // TODO make it oneliner
+        let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
+        let model = scene.gltf_models.get(blas_node.model).unwrap();
+
+        let material = self.get_material(model);
+        if let Some(texture) = model.textures.get(material.normal_texture) {
+            let sampler = Sampler::default();
+            let image = model.images.get(texture.image).unwrap();
+            let mut sampled_normal = Vec3::from(sampler.sample(image, &self.interpolate_uvs(hit)));
+            sampled_normal = sampled_normal * 2.0 - 1.0;
+
+            let tangent = self.interpolate_tangents(hit);
+            let bitangent = self.interpolate_bitangents(hit);
+
+            let tbn = Mat3::tbn(&tangent, &bitangent, &normal);
+            (&tbn * sampled_normal).get_normalized()
+        } else {
+            normal
+        }
     }
 
     fn get_metallic_roughness(&self, scene: &Scene, hit: &Hit) -> (f32, f32) {

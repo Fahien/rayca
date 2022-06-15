@@ -53,14 +53,25 @@ impl Integrator for Scratcher {
         let bvh = scene.tlas.bvhs.get(blas_node.bvh).unwrap();
         let primitive = bvh.get_shade(hit.primitive);
         let n = primitive.get_normal(scene, &hit);
-        let color = primitive.get_color(scene, &hit);
+        let mut color = primitive.get_color(scene, &hit);
+        pixel_color += color / 8.0;
+
+        const RAY_BIAS: f32 = 1e-4;
+        if color.a < 1.0 {
+            let transmit_origin = hit.point + -n * RAY_BIAS;
+            let transmit_ray = Ray::new(transmit_origin, ray.dir);
+            let mut transmit_color = self.trace(scene, transmit_ray, depth + 1);
+            // continue with the rest of the shading?
+            transmit_color.over(color);
+            color = transmit_color;
+        }
+
         let (metallic, roughness) = primitive.get_metallic_roughness(scene, &hit);
 
-        let n_dot_v = n.dot(&-ray.dir).abs() + 1e-5;
+        let n_dot_v = n.dot(&ray.dir).abs() + 1e-5;
 
-        const SHADOW_BIAS: f32 = 1e-4;
         // Before getting color, we should check whether it is visible from the sun
-        let shadow_origin = hit.point + n * SHADOW_BIAS;
+        let shadow_origin = hit.point + n * RAY_BIAS;
 
         for light_node in scene.default_lights.nodes.iter() {
             let light = scene
@@ -73,13 +84,23 @@ impl Integrator for Scratcher {
             let shadow_ray = Ray::new(shadow_origin, light_dir);
             let shadow_result = scene.tlas.intersects(&shadow_ray);
 
+            // Whether this object is light (verb) by a light (noun)
             let is_lit = match shadow_result {
                 None => true,
                 Some(shadow_hit) => {
                     // Distance between current surface and the light source
                     let light_distance = light.get_distance(light_node, &hit.point);
                     // If the obstacle is beyong the light source then the current surface is light
-                    shadow_hit.depth > light_distance
+                    if shadow_hit.depth > light_distance {
+                        true
+                    } else {
+                        // Check whether this is a transparent surface
+                        let blas_node = &scene.tlas.blas_nodes[shadow_hit.blas as usize];
+                        let shadow_bvh = scene.tlas.bvhs.get(blas_node.bvh).unwrap();
+                        let shadow_primitive = shadow_bvh.get_shade(shadow_hit.primitive);
+                        let shadow_color = shadow_primitive.get_color(scene, &shadow_hit);
+                        shadow_color.a < 1.0
+                    }
                 }
             };
 
@@ -110,12 +131,11 @@ impl Integrator for Scratcher {
         } // end iterate light
 
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
-        let reflection_origin = hit.point + n * SHADOW_BIAS;
-        let reflection_ray = Ray::new(reflection_origin, reflection_dir);
+        let reflection_ray = Ray::new(shadow_origin, reflection_dir);
         let reflection_color = self.trace(scene, reflection_ray, depth + 1);
         // Cosine-law applies here as well
         let n_dot_r = n.dot(&reflection_dir);
-        pixel_color += reflection_color * (metallic + 0.5) * n_dot_r;
+        pixel_color += reflection_color * (metallic + 0.125) * n_dot_r;
 
         pixel_color
     }

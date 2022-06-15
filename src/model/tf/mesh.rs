@@ -96,7 +96,17 @@ impl GltfPrimitive {
         let gltf_vertex = &self.vertices[i];
         let pos = matrix * gltf_vertex.pos;
         let normal = normal_matrix * gltf_vertex.normal;
-        let ex = Vertex::new(normal, gltf_vertex.color, gltf_vertex.uv);
+        // Vector are not affected by the translation part,
+        // so it is fine to use the transform matrix as tangent matrix
+        let tangent = matrix * gltf_vertex.tangent;
+        let bitangent = matrix * gltf_vertex.bitangent;
+        let ex = Vertex::new(
+            gltf_vertex.color,
+            gltf_vertex.uv,
+            normal,
+            tangent,
+            bitangent,
+        );
         (pos, ex)
     }
 

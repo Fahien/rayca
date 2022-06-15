@@ -19,10 +19,17 @@ impl Quat {
     pub fn simd(simd: f32x4) -> Self {
         Self { simd }
     }
+
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Quat {
             simd: f32x4::from_array([x, y, z, w]),
         }
+    }
+
+    pub fn xyz(&self) -> Vec3 {
+        static ONE_XYZ: f32x4 = f32x4::from_array([1.0, 1.0, 1.0, 0.0]);
+        let xyz = self.simd * ONE_XYZ;
+        Vec3::simd(xyz)
     }
 
     pub fn get_x(&self) -> f32 {
@@ -75,6 +82,51 @@ impl Quat {
 impl Default for Quat {
     fn default() -> Self {
         Quat::new(0.0, 0.0, 0.0, 1.0)
+    }
+}
+
+impl From<&Mat3> for Quat {
+    fn from(matrix: &Mat3) -> Self {
+        let mut ret;
+
+        let t = matrix[0][0] + matrix[1][1] + matrix[2][2];
+        if t > 0.0 {
+            let s = 0.5 / (t + 1.0).sqrt();
+            ret = Quat::new(
+                (matrix[2][1] - matrix[1][2]) * s,
+                (matrix[0][2] - matrix[2][0]) * s,
+                (matrix[1][0] - matrix[0][1]) * s,
+                0.25 / s,
+            );
+        } else if matrix[0][0] > matrix[1][1] && matrix[0][0] > matrix[2][2] {
+            let s = 2.0 * (1.0 + matrix[0][0] - matrix[1][1] - matrix[2][2]).sqrt();
+            ret = Quat::new(
+                0.25 * s,
+                (matrix[0][1] + matrix[1][0]) / s,
+                (matrix[0][2] + matrix[2][0]) / s,
+                (matrix[2][1] - matrix[1][2]) / s,
+            );
+        } else if matrix[1][1] > matrix[2][2] {
+            let s = 2.0 * (1.0 + matrix[1][1] - matrix[0][0] - matrix[2][2]).sqrt();
+            ret = Quat::new(
+                (matrix[0][1] + matrix[1][0]) / s,
+                0.25 * s,
+                (matrix[1][2] + matrix[2][1]) / s,
+                (matrix[0][2] - matrix[2][0]) / s,
+            );
+        } else {
+            let s = 2.0 * (1.0 + matrix[2][2] - matrix[0][0] - matrix[1][1]).sqrt();
+            ret = Quat::new(
+                (matrix[0][2] + matrix[2][0]) / s,
+                (matrix[1][2] + matrix[2][1]) / s,
+                0.25 * s,
+                (matrix[1][0] - matrix[0][1]) / s,
+            );
+        }
+
+        ret.normalize();
+
+        ret
     }
 }
 

@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::simd::{f32x4, SimdFloat};
+
 use crate::*;
 
 #[derive(Default)]
@@ -35,14 +37,14 @@ impl AABB {
         let t1 = (self.a - origin_vec) * ray.rdir;
         let t2 = (self.b - origin_vec) * ray.rdir;
 
-        let tmin = t1.simd[0].min(t2.simd[0]);
-        let tmax = t1.simd[0].max(t2.simd[0]);
+        static WMAX: f32x4 = f32x4::from_array([1.0, 1.0, 1.0, f32::MAX]);
+        static WMIN: f32x4 = f32x4::from_array([1.0, 1.0, 1.0, f32::MIN]);
 
-        let tmin = tmin.max(t1.simd[1].min(t2.simd[1]));
-        let tmax = tmax.min(t1.simd[1].max(t2.simd[1]));
+        let vmax = t1.max(&t2).simd * WMAX;
+        let vmin = t1.min(&t2).simd * WMIN;
 
-        let tmin = tmin.max(t1.simd[2].min(t2.simd[2]));
-        let tmax = tmax.min(t1.simd[2].max(t2.simd[2]));
+        let tmax = vmax.reduce_min();
+        let tmin = vmin.reduce_max();
 
         if tmax >= tmin && tmax > 0.0 {
             tmin
@@ -152,7 +154,7 @@ impl BvhNode {
             }
 
             // TODO tweak this
-            const AREA_COUNT: i32 = 32;
+            const AREA_COUNT: i32 = 64;
             let scale = (bounds_max - bounds_min) / AREA_COUNT as f32;
 
             for i in 1..AREA_COUNT {

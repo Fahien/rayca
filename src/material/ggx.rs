@@ -7,6 +7,7 @@ use crate::{Color, Handle, Texture};
 pub struct GgxMaterial {
     pub color: Color,
     pub albedo_texture: Handle<Texture>,
+    pub normal_texture: Handle<Texture>,
 
     pub metallic_factor: f32,
     pub roughness_factor: f32,
@@ -22,6 +23,7 @@ impl GgxMaterial {
             a: 1.0,
         },
         albedo_texture: Handle::NONE,
+        normal_texture: Handle::NONE,
         metallic_factor: 1.0,
         roughness_factor: 1.0,
         metallic_roughness_texture: Handle::NONE,
@@ -31,6 +33,7 @@ impl GgxMaterial {
         Self {
             color: Color::white(),
             albedo_texture: Handle::NONE,
+            normal_texture: Handle::NONE,
             metallic_factor: 1.0,
             roughness_factor: 1.0,
             metallic_roughness_texture: Handle::NONE,

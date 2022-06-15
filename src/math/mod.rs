@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 pub mod color;
+pub mod mat3;
 pub mod mat4;
 pub mod ops;
 pub mod point3;
@@ -13,6 +14,7 @@ pub mod vec2;
 pub mod vec3;
 
 pub use color::*;
+pub use mat3::*;
 pub use mat4::*;
 pub use ops::*;
 pub use point3::*;
