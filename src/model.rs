@@ -271,6 +271,11 @@ impl ModelBuilder {
                 material.albedo_texture = Some(Handle::new(gtexture.texture().index()));
             }
 
+            // Load normal
+            if let Some(gtexture) = gmaterial.normal_texture() {
+                material.normal_texture = Some(Handle::new(gtexture.texture().index()));
+            }
+
             // Load metallic roughness factors and texture
             material.metallic_factor = pbr.metallic_factor();
             material.roughness_factor = pbr.roughness_factor();
@@ -302,6 +307,8 @@ impl ModelBuilder {
                 gltf::mesh::Semantic::Positions => self.load_positions(&mut vertices, &accessor)?,
                 gltf::mesh::Semantic::TexCoords(_) => self.load_uvs(&mut vertices, &accessor)?,
                 gltf::mesh::Semantic::Colors(_) => self.load_colors(&mut vertices, &accessor)?,
+                gltf::mesh::Semantic::Normals => (), // Already loaded
+                gltf::mesh::Semantic::Tangents => self.load_tangents(&mut vertices, &accessor)?,
                 _ => rlog!(
                     "{:>12} {} {:?}",
                     "Skipping".yellow().bold(),
@@ -461,6 +468,39 @@ impl ModelBuilder {
             vertices[i].color.b = color[2];
             vertices[i].color.a = if color.len() == 4 { color[3] } else { 1.0 };
         }
+        Ok(())
+    }
+
+    fn load_tangents(
+        &self,
+        vertices: &mut Vec<Vertex>,
+        accessor: &gltf::Accessor,
+    ) -> Result<(), Box<dyn Error>> {
+        let data_type = accessor.data_type();
+        assert!(data_type == gltf::accessor::DataType::F32);
+        let count = accessor.count();
+        let dimensions = accessor.dimensions();
+        assert!(dimensions == gltf::accessor::Dimensions::Vec4);
+
+        let view = accessor.view().unwrap();
+        let target = view.target().unwrap_or(gltf::buffer::Target::ArrayBuffer);
+        assert!(target == gltf::buffer::Target::ArrayBuffer);
+
+        let data = self.get_data_start(accessor);
+        let stride = get_stride(accessor);
+
+        for i in 0..count {
+            let offset = i * stride;
+            assert!(offset < data.len());
+            let d = &data[offset];
+            let tangent = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 4) };
+
+            vertices[i].tangent = Vec3::new(tangent[0], tangent[1], tangent[2]);
+
+            // Compute bitangent as for glTF 2.0 spec
+            vertices[i].bitangent = vertices[i].normal.cross(&vertices[i].tangent) * tangent[3];
+        }
+
         Ok(())
     }
 

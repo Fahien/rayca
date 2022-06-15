@@ -73,6 +73,53 @@ impl Default for Quat {
     }
 }
 
+impl From<&Mat3> for Quat {
+    fn from(matrix: &Mat3) -> Self {
+        let mut ret;
+
+        let t = matrix[0][0] + matrix[1][1] + matrix[2][2];
+        if t > 0.0 {
+            let s = 0.5 / (t + 1.0).sqrt();
+            ret = Quat::new(
+                (matrix[2][1] - matrix[1][2]) * s,
+                (matrix[0][2] - matrix[2][0]) * s,
+                (matrix[1][0] - matrix[0][1]) * s,
+                0.25 / s,
+            );
+        } else {
+            if matrix[0][0] > matrix[1][1] && matrix[0][0] > matrix[2][2] {
+                let s = 2.0 * (1.0 + matrix[0][0] - matrix[1][1] - matrix[2][2]).sqrt();
+                ret = Quat::new(
+                    0.25 * s,
+                    (matrix[0][1] + matrix[1][0]) / s,
+                    (matrix[0][2] + matrix[2][0]) / s,
+                    (matrix[2][1] - matrix[1][2]) / s,
+                );
+            } else if matrix[1][1] > matrix[2][2] {
+                let s = 2.0 * (1.0 + matrix[1][1] - matrix[0][0] - matrix[2][2]).sqrt();
+                ret = Quat::new(
+                    (matrix[0][1] + matrix[1][0]) / s,
+                    0.25 * s,
+                    (matrix[1][2] + matrix[2][1]) / s,
+                    (matrix[0][2] - matrix[2][0]) / s,
+                );
+            } else {
+                let s = 2.0 * (1.0 + matrix[2][2] - matrix[0][0] - matrix[1][1]).sqrt();
+                ret = Quat::new(
+                    (matrix[0][2] + matrix[2][0]) / s,
+                    (matrix[1][2] + matrix[2][1]) / s,
+                    0.25 * s,
+                    (matrix[1][0] - matrix[0][1]) / s,
+                );
+            }
+        }
+
+        ret.normalize();
+
+        ret
+    }
+}
+
 impl From<&Mat4> for Quat {
     fn from(matrix: &Mat4) -> Self {
         let mut ret;

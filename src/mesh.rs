@@ -93,6 +93,7 @@ impl Primitive {
     ) -> Vec<BvhTriangle<'m>> {
         let mut ret = vec![];
         let matrix: Mat4 = transform.into();
+        let tangent_matrix = Mat3::from(&matrix);
 
         let mut normal_trs = Inversed::from(transform.clone());
         normal_trs.source.translation = Vec3::default();
@@ -103,14 +104,20 @@ impl Primitive {
             let mut a = self.vertices[indices[i * 3].to_usize().unwrap()].clone();
             a.pos = &matrix * a.pos;
             a.normal = &normal_matrix * a.normal;
+            a.tangent = &tangent_matrix * a.tangent;
+            a.bitangent = &tangent_matrix * a.bitangent;
 
             let mut b = self.vertices[indices[i * 3 + 1].to_usize().unwrap()].clone();
             b.pos = &matrix * b.pos;
             b.normal = &normal_matrix * b.normal;
+            b.tangent = &tangent_matrix * b.tangent;
+            b.bitangent = &tangent_matrix * b.bitangent;
 
             let mut c = self.vertices[indices[i * 3 + 2].to_usize().unwrap()].clone();
             c.pos = &matrix * c.pos;
             c.normal = &normal_matrix * c.normal;
+            c.tangent = &tangent_matrix * c.tangent;
+            c.bitangent = &tangent_matrix * c.bitangent;
 
             ret.push(BvhTriangle::new(a, b, c, material, model));
         }
