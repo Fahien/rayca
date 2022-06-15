@@ -7,6 +7,7 @@ use super::*;
 pub struct Material {
     pub color: Color,
     pub albedo_texture: Option<Handle<Texture>>,
+    pub normal_texture: Option<Handle<Texture>>,
 
     pub metallic_factor: f32,
     pub roughness_factor: f32,
@@ -18,6 +19,7 @@ impl Material {
         Self {
             color: Color::white(),
             albedo_texture: None,
+            normal_texture: None,
             metallic_factor: 1.0,
             roughness_factor: 1.0,
             metallic_roughness_texture: None,
