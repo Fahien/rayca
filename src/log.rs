@@ -20,8 +20,29 @@ macro_rules! print_success {
 }
 
 #[macro_export]
+macro_rules! print_info {
+    ( $s:expr, $( $t:tt )* ) => {
+        println!("{:>12} {}", owo_colors::OwoColorize::bold(&owo_colors::OwoColorize::blue($s)), format!($( $t )*))
+    }
+}
+
+#[macro_export]
 macro_rules! fail {
     ( $( $t:tt )* ) => {
-        format!("{:>12} {}", owo_colors::OwoColorize::red(&owo_colors::OwoColorize::bold(&"Failed")), $( $t )*)
+        format!("{:>12} {}", owo_colors::OwoColorize::bold(&owo_colors::OwoColorize::red(&"Failed")), format!($( $t )*))
+    }
+}
+
+#[macro_export]
+macro_rules! warn {
+    ( $s:expr, $( $t:tt )* ) => {
+        format!("{:>12} {}", owo_colors::OwoColorize::bold(&owo_colors::OwoColorize::yellow($s)), format!($( $t )*))
+    }
+}
+
+#[macro_export]
+macro_rules! panic_fail {
+    ( $( $t:tt )* ) => {
+        panic!("{:>12} {}", "Failed".red().bold(), format!($( $t )*))
     }
 }

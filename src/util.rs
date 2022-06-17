@@ -9,6 +9,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+pub use owo_colors::OwoColorize;
+
 use instant::{Duration, Instant};
 
 /// Useful timer to get delta time, and previous time
@@ -336,5 +338,12 @@ mod test {
         thread::spawn(move || {
             assert!(!handle.valid());
         });
+    }
+}
+
+#[macro_export]
+macro_rules! rfmt {
+    ( $( $t:tt )* ) => {
+        format!($( $t )*)
     }
 }

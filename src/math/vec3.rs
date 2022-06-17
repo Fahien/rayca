@@ -52,7 +52,8 @@ impl Vec3 {
         Self::new(d, d, d)
     }
 
-    pub fn simd(simd: f32x4) -> Self {
+    pub fn simd(mut simd: f32x4) -> Self {
+        simd[3] = 0.0;
         Self { simd }
     }
 
