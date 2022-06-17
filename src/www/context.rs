@@ -31,13 +31,6 @@ extern "C" {
     pub fn log(s: &str);
 }
 
-#[macro_export]
-macro_rules! rfmt {
-    ( $( $t:tt )* ) => {
-        format!($( $t )*)
-    }
-}
-
 // Wrap web-sys console log function in a println! style macro
 #[cfg(target_arch = "wasm32")]
 #[macro_export]
@@ -46,9 +39,6 @@ macro_rules! rlog {
         log(&format!( $( $t )* ))
     }
 }
-
-#[wasm_bindgen]
-pub struct Context {}
 
 fn get_canvas(id: &str) -> Result<CanvasRenderingContext2d, JsValue> {
     let doc = window().unwrap().document().unwrap();
