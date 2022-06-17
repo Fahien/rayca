@@ -6,8 +6,10 @@ use std::{
     hash::{Hash, Hasher},
     iter::FromIterator,
     marker::PhantomData,
-    ops::Deref,
+    ops::{Deref, DerefMut},
 };
+
+pub use owo_colors::OwoColorize;
 
 use instant::{Duration, Instant};
 
@@ -223,6 +225,12 @@ impl<T> Deref for Pack<T> {
     }
 }
 
+impl<T> DerefMut for Pack<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.vec
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::{collections::HashMap, thread};
@@ -317,5 +325,40 @@ mod test {
         thread::spawn(move || {
             assert!(!handle.valid());
         });
+    }
+}
+
+#[macro_export]
+macro_rules! rfmt {
+    ( $( $t:tt )* ) => {
+        format!($( $t )*)
+    }
+}
+
+#[macro_export]
+macro_rules! print_info {
+    ( $s:expr, $( $t:tt )* ) => {
+        println!("{:>12} {}", $s.blue().bold(), format!($( $t )*))
+    }
+}
+
+#[macro_export]
+macro_rules! fail {
+    ( $( $t:tt )* ) => {
+        format!("{:>12} {}", "Failed".red().bold(), format!($( $t )*))
+    }
+}
+
+#[macro_export]
+macro_rules! warn {
+    ( $s:expr, $( $t:tt )* ) => {
+        format!("{:>12} {}", $s.yellow().bold(), format!($( $t )*))
+    }
+}
+
+#[macro_export]
+macro_rules! panic_fail {
+    ( $( $t:tt )* ) => {
+        panic!("{:>12} {}", "Failed".red().bold(), format!($( $t )*))
     }
 }

@@ -11,10 +11,3 @@ macro_rules! rlog {
         println!($( $t )*)
     }
 }
-
-#[macro_export]
-macro_rules! fail {
-    ( $( $t:tt )* ) => {
-        format!("{:>12} {}", "Failed".red().bold(), $( $t )*)
-    }
-}
