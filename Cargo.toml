@@ -1,9 +1,11 @@
 [package]
 name = "rayca"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Antonio Caggiano <info@antoniocaggiano.eu>"]
 edition = "2018"
 license = "MIT"
+description = "Experimental project which purpose is to learn and apply graphics rendering algorithms such as raytracing"
+repository = "https://github.com/fahien/rayca"
 
 [profile.dev.package."*"]
 opt-level = 3
@@ -52,4 +54,5 @@ features = [
 ]
 
 [features]
-parallel = [ "rayon" ]
+default = ["parallel"]
+parallel = ["rayon"]
