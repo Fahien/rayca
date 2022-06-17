@@ -23,30 +23,28 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Profile
+    - name: Check
+      run: cargo check --release
+
+    - name: Test
       run: |
         git submodule update --init
+        cargo test --release
+
+    - name: Profile
+      run: |
         cargo install flamegraph
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
         sudo chmod 666 /proc/kallsyms
-        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph -c "record -F 997 --call-graph dwarf,16384 -g -o ./perf.data" --test test -- cube_over_plane
+        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph -c "record -F 997 --call-graph dwarf,16384 -g -o ./perf.data" --no-default-features --test test -- cube_over_plane
         mkdir www/dist
         mv flamegraph.svg www/dist/
 
-    - name: Check
-      run: CARGO_PROFILE_RELEASE_DEBUG=true cargo check --release --features=parallel
-
-    - name: Run tests
+    - name: Web
       run: |
-        CARGO_PROFILE_RELEASE_DEBUG=true cargo test --release --features=parallel
-
-    - name: install wasm-pack
-      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-    - name: Build
-      run: |
-        wasm-pack build
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        wasm-pack build -- --no-default-features
         cd www
         npm install
         npm run build

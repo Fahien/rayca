@@ -138,7 +138,8 @@ impl Scene {
             if color.a < 1.0 {
                 let transmit_origin = hit.point + -n * RAY_BIAS;
                 let transmit_ray = Ray::new(transmit_origin, ray.dir);
-                let transmit_result = Self::trace(transmit_ray, bvh, light_nodes, lights, depth + 1);
+                let transmit_result =
+                    Self::trace(transmit_ray, bvh, light_nodes, lights, depth + 1);
 
                 if let Some(mut transmit_color) = transmit_result {
                     // continue with the rest of the shading?
