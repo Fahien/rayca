@@ -58,14 +58,23 @@
 /******/ 					"__wbg_context_new": function(p0i32) {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_context_new"](p0i32);
 /******/ 					},
-/******/ 					"__wbg_log_46f9baacd341658a": function(p0i32,p1i32) {
-/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_log_46f9baacd341658a"](p0i32,p1i32);
-/******/ 					},
 /******/ 					"__wbindgen_object_drop_ref": function(p0i32) {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_object_drop_ref"](p0i32);
 /******/ 					},
 /******/ 					"__wbindgen_cb_drop": function(p0i32) {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_cb_drop"](p0i32);
+/******/ 					},
+/******/ 					"__wbg_log_cfe97bb2dbb8eba9": function(p0i32,p1i32) {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_log_cfe97bb2dbb8eba9"](p0i32,p1i32);
+/******/ 					},
+/******/ 					"__wbg_new_693216e109162396": function() {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_new_693216e109162396"]();
+/******/ 					},
+/******/ 					"__wbg_stack_0ddaca5d1abfb52f": function(p0i32,p1i32) {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_stack_0ddaca5d1abfb52f"](p0i32,p1i32);
+/******/ 					},
+/******/ 					"__wbg_error_09919627ac0992f5": function(p0i32,p1i32) {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_error_09919627ac0992f5"](p0i32,p1i32);
 /******/ 					},
 /******/ 					"__wbg_instanceof_Window_0e6c0f1096d66c3c": function(p0i32) {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbg_instanceof_Window_0e6c0f1096d66c3c"](p0i32);
@@ -190,8 +199,8 @@
 /******/ 					"__wbindgen_memory": function() {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_memory"]();
 /******/ 					},
-/******/ 					"__wbindgen_closure_wrapper554": function(p0i32,p1i32,p2i32) {
-/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_closure_wrapper554"](p0i32,p1i32,p2i32);
+/******/ 					"__wbindgen_closure_wrapper579": function(p0i32,p1i32,p2i32) {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_closure_wrapper579"](p0i32,p1i32,p2i32);
 /******/ 					}
 /******/ 				}
 /******/ 			};
@@ -294,7 +303,7 @@
 /******/ 				promises.push(installedWasmModuleData);
 /******/ 			else {
 /******/ 				var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/rayca_bg.wasm":"fb7912c92478c92f5269"}[wasmModuleId] + ".module.wasm");
+/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/rayca_bg.wasm":"21ce3a15523faa60eeff"}[wasmModuleId] + ".module.wasm");
 /******/ 				var promise;
 /******/ 				if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 					promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
