@@ -32,34 +32,12 @@ extern "C" {
     pub fn log(s: &str);
 }
 
-#[macro_export]
-macro_rules! rfmt {
-    ( $( $t:tt )* ) => {
-        format!($( $t )*)
-    }
-}
-
-#[macro_export]
-macro_rules! fail {
-    ( $( $t:tt )* ) => {
-        format!("{:>12} {}", "Failed".red().bold(), $( $t )*)
-    }
-}
-
 // Wrap web-sys console log function in a println! style macro
 #[cfg(target_arch = "wasm32")]
 #[macro_export]
 macro_rules! rlog {
     ( $( $t:tt )* ) => {
         log(&format!( $( $t )* ))
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-#[macro_export]
-macro_rules! rlog {
-    ( $( $t:tt )* ) => {
-        println!($( $t )*)
     }
 }
 
