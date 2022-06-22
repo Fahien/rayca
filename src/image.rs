@@ -143,8 +143,8 @@ impl Image {
     /// Opens a PNG file without loading data yet
     pub fn load_png_file<P: AsRef<Path>>(path: P) -> Image {
         let current_dir = std::env::current_dir().expect("Failed to get current dir");
-        let err_msg = format!(
-            "Failed to load PNG file: {}/{}",
+        let err_msg = fail!(
+            "to load PNG file: {}/{}",
             current_dir.display(),
             path.as_ref().display()
         );
