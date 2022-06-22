@@ -143,17 +143,17 @@ impl Mul<Mat4> for Mat4 {
 
 impl From<&Quat> for Mat4 {
     fn from(q: &Quat) -> Self {
-        let xx = q.x * q.x;
-        let xy = q.x * q.y;
-        let xz = q.x * q.z;
-        let xw = q.x * q.w;
+        let xx = q.get_x() * q.get_x();
+        let xy = q.get_x() * q.get_y();
+        let xz = q.get_x() * q.get_z();
+        let xw = q.get_x() * q.get_w();
 
-        let yy = q.y * q.y;
-        let yz = q.y * q.z;
-        let yw = q.y * q.w;
+        let yy = q.get_y() * q.get_y();
+        let yz = q.get_y() * q.get_z();
+        let yw = q.get_y() * q.get_w();
 
-        let zz = q.z * q.z;
-        let zw = q.z * q.w;
+        let zz = q.get_z() * q.get_z();
+        let zw = q.get_z() * q.get_w();
 
         Mat4::from([
             [1.0 - 2.0 * (yy + zz), 2.0 * (xy - zw), 2.0 * (xz + yw), 0.0],
