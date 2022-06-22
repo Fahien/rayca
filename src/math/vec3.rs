@@ -111,11 +111,12 @@ impl Vec3 {
 
     pub fn rotate(&mut self, rotation: &Quat) {
         // Extract the vector part of the quaternion
-        let u = Vec3::new(rotation.x, rotation.y, rotation.z);
+        let u = Vec3::simd(rotation.simd * f32x4::from_array([1.0, 1.0, 1.0, 0.0]));
+
         let v = *self;
 
         // Extract the scalar part of the quaternion
-        let s = rotation.w;
+        let s = rotation.get_w();
 
         // Do the math
         *self = 2.0 * u.dot(&v) * u + (s * s - u.dot(&u)) * v + 2.0 * s * u.cross(&v);

@@ -46,11 +46,11 @@ impl Point3 {
 
     pub fn rotate(&mut self, rotation: &Quat) {
         // Extract the vector part of the quaternion
-        let u = Vec3::new(rotation.x, rotation.y, rotation.z);
+        let u = rotation.get_xyz();
         let v = Vec3::from(*self);
 
         // Extract the scalar part of the quaternion
-        let s = rotation.w;
+        let s = rotation.get_w();
 
         // Do the math
         let rotated = 2.0 * u.dot(v) * u + (s * s - u.dot(u)) * v + 2.0 * s * u.cross(&v);
