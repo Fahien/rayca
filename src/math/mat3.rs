@@ -2,7 +2,10 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Index, IndexMut, Mul};
+use std::{
+    ops::{Index, IndexMut, Mul},
+    simd::f32x4,
+};
 
 use super::*;
 
@@ -131,22 +134,26 @@ impl Mul<Mat3> for Mat3 {
 
 impl From<&Quat> for Mat3 {
     fn from(q: &Quat) -> Self {
-        let xx = q.get_x() * q.get_x();
-        let xy = q.get_x() * q.get_y();
-        let xz = q.get_x() * q.get_z();
-        let xw = q.get_x() * q.get_w();
-
-        let yy = q.get_y() * q.get_y();
-        let yz = q.get_y() * q.get_z();
-        let yw = q.get_y() * q.get_w();
-
-        let zz = q.get_z() * q.get_z();
-        let zw = q.get_z() * q.get_w();
+        let xq = f32x4::splat(q.simd[0]) * q.simd;
+        let yq = f32x4::splat(q.simd[1]) * q.simd;
+        let zq = f32x4::splat(q.simd[2]) * q.simd;
 
         Mat3::from([
-            [1.0 - 2.0 * (yy + zz), 2.0 * (xy - zw), 2.0 * (xz + yw)],
-            [2.0 * (xy + zw), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - xw)],
-            [2.0 * (xz - yw), 2.0 * (yz + xw), 1.0 - 2.0 * (xx + yy)],
+            [
+                1.0 - 2.0 * (yq[1] + zq[2]),
+                2.0 * (xq[1] - zq[3]),
+                2.0 * (xq[2] + yq[3]),
+            ],
+            [
+                2.0 * (xq[1] + zq[3]),
+                1.0 - 2.0 * (xq[0] + zq[2]),
+                2.0 * (yq[2] - xq[3]),
+            ],
+            [
+                2.0 * (xq[2] - yq[3]),
+                2.0 * (yq[2] + xq[3]),
+                1.0 - 2.0 * (xq[0] + yq[1]),
+            ],
         ])
     }
 }
