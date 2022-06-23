@@ -2,29 +2,33 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Index, IndexMut, Mul};
+use std::{
+    ops::{Index, IndexMut, Mul},
+    simd::{f32x4, num::SimdFloat},
+};
 
 use super::*;
 
 #[derive(Default, PartialEq)]
+/// Row-major 4x4 Matrix
 pub struct Mat4 {
-    /// Row-major
-    values: [[f32; 4]; 4],
+    values: [f32x4; 4],
 }
 
 impl From<[[f32; 4]; 4]> for Mat4 {
     fn from(values: [[f32; 4]; 4]) -> Self {
-        let mut ret = Self::new();
-        ret.values = values;
-        ret
+        Self::new([
+            f32x4::from_array(values[0]),
+            f32x4::from_array(values[1]),
+            f32x4::from_array(values[2]),
+            f32x4::from_array(values[3]),
+        ])
     }
 }
 
 impl Mat4 {
-    pub fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
+    pub fn new(values: [f32x4; 4]) -> Self {
+        Self { values }
     }
 
     pub fn from_translation(translation: &Vec3) -> Self {
@@ -48,10 +52,10 @@ impl Mat4 {
     pub fn identity() -> Self {
         Self {
             values: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
+                f32x4::from_array([1.0, 0.0, 0.0, 0.0]),
+                f32x4::from_array([0.0, 1.0, 0.0, 0.0]),
+                f32x4::from_array([0.0, 0.0, 1.0, 0.0]),
+                f32x4::from_array([0.0, 0.0, 0.0, 1.0]),
             ],
         }
     }
@@ -89,7 +93,7 @@ impl Mat4 {
     }
 
     pub fn get_transpose(&self) -> Self {
-        let mut ret = Self::new();
+        let mut ret = Self::default();
         for i in 0..4 {
             for j in 0..4 {
                 ret[i][j] = self[j][i]
@@ -100,14 +104,14 @@ impl Mat4 {
 }
 
 impl Index<usize> for Mat4 {
-    type Output = [f32; 4];
+    type Output = f32x4;
     fn index(&self, i: usize) -> &Self::Output {
         &self.values[i]
     }
 }
 
 impl IndexMut<usize> for Mat4 {
-    fn index_mut(&mut self, i: usize) -> &mut [f32; 4] {
+    fn index_mut(&mut self, i: usize) -> &mut f32x4 {
         &mut self.values[i]
     }
 }
@@ -116,20 +120,20 @@ impl Mul<&Mat4> for Mat4 {
     type Output = Mat4;
 
     fn mul(self, rhs: &Mat4) -> Self::Output {
-        let mut ret = Mat4::new();
+        let mut ret = Mat4::default();
 
         for i in 0..4 {
-            let a = self.values[i][0];
-            let b = self.values[i][1];
-            let c = self.values[i][2];
-            let d = self.values[i][3];
+            let row = &self.values[i];
 
             for j in 0..4 {
-                let e = a * rhs.values[0][j];
-                let f = b * rhs.values[1][j];
-                let g = c * rhs.values[2][j];
-                let h = d * rhs.values[3][j];
-                ret[i][j] = e + f + g + h;
+                let column = f32x4::from_array([
+                    rhs.values[0][j],
+                    rhs.values[1][j],
+                    rhs.values[2][j],
+                    rhs.values[3][j],
+                ]);
+
+                ret[i][j] = (row * column).reduce_sum();
             }
         }
 
@@ -147,22 +151,29 @@ impl Mul<Mat4> for Mat4 {
 
 impl From<&Quat> for Mat4 {
     fn from(q: &Quat) -> Self {
-        let xx = q.get_x() * q.get_x();
-        let xy = q.get_x() * q.get_y();
-        let xz = q.get_x() * q.get_z();
-        let xw = q.get_x() * q.get_w();
-
-        let yy = q.get_y() * q.get_y();
-        let yz = q.get_y() * q.get_z();
-        let yw = q.get_y() * q.get_w();
-
-        let zz = q.get_z() * q.get_z();
-        let zw = q.get_z() * q.get_w();
+        let xq = f32x4::splat(q.simd[0]) * q.simd;
+        let yq = f32x4::splat(q.simd[1]) * q.simd;
+        let zq = f32x4::splat(q.simd[2]) * q.simd;
 
         Mat4::from([
-            [1.0 - 2.0 * (yy + zz), 2.0 * (xy - zw), 2.0 * (xz + yw), 0.0],
-            [2.0 * (xy + zw), 1.0 - 2.0 * (xx + zz), 2.0 * (yz - xw), 0.0],
-            [2.0 * (xz - yw), 2.0 * (yz + xw), 1.0 - 2.0 * (xx + yy), 0.0],
+            [
+                1.0 - 2.0 * (yq[1] + zq[2]),
+                2.0 * (xq[1] - zq[3]),
+                2.0 * (xq[2] + yq[3]),
+                0.0,
+            ],
+            [
+                2.0 * (xq[1] + zq[3]),
+                1.0 - 2.0 * (xq[0] + zq[2]),
+                2.0 * (yq[2] - xq[3]),
+                0.0,
+            ],
+            [
+                2.0 * (xq[2] - yq[3]),
+                2.0 * (yq[2] + xq[3]),
+                1.0 - 2.0 * (xq[0] + yq[1]),
+                0.0,
+            ],
             [0.0, 0.0, 0.0, 1.0],
         ])
     }
@@ -218,13 +229,10 @@ macro_rules! impl_mul3 {
                 let mut ret = [0.0, 0.0, 0.0, 0.0];
 
                 for i in 0..4 {
-                    for j in 0..3 {
-                        let vv = rhs.simd[j];
-                        let mv = self[i][j];
-                        ret[i] += mv * vv;
-                    }
-                    let mv = self[i][3];
-                    ret[i] += mv;
+                    let row = self[i];
+                    // Use last element
+                    let column = rhs.simd + f32x4::from_array([0.0, 0.0, 0.0, 1.0]);
+                    ret[i] = (row * column).reduce_sum();
                 }
 
                 <$T3>::new(ret[0] / ret[3], ret[1] / ret[3], ret[2] / ret[3])
