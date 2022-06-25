@@ -10,7 +10,7 @@ use std::{
 use crate::*;
 
 /// Quaternion structure
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Quat {
     pub simd: f32x4,
 }
