@@ -133,12 +133,34 @@ impl Mul<&Trs> for &Trs {
     }
 }
 
+impl Mul<Vec3> for &Trs {
+    type Output = Vec3;
+
+    fn mul(self, mut rhs: Vec3) -> Self::Output {
+        rhs.scale(&self.scale);
+        rhs.rotate(&self.rotation);
+        rhs.translate(&self.translation);
+        rhs
+    }
+}
+
+impl Mul<Point3> for &Trs {
+    type Output = Point3;
+
+    fn mul(self, mut rhs: Point3) -> Self::Output {
+        rhs.scale(&self.scale);
+        rhs.rotate(&self.rotation);
+        rhs.translate(&self.translation);
+        rhs
+    }
+}
+
 impl Mul<Ray> for &Trs {
     type Output = Ray;
 
     fn mul(self, mut rhs: Ray) -> Self::Output {
         rhs.rotate(&self.rotation);
-        rhs.translate(&(self.rotation * self.translation));
+        rhs.translate(&self.translation);
         rhs
     }
 }
