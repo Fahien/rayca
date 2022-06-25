@@ -174,6 +174,17 @@ impl Mul<&mut Trs> for Trs {
     }
 }
 
+impl Mul<Vec3> for &Trs {
+    type Output = Vec3;
+
+    fn mul(self, mut rhs: Vec3) -> Self::Output {
+        rhs.scale(&self.scale);
+        rhs.rotate(&self.rotation);
+        rhs.translate(&self.translation);
+        rhs
+    }
+}
+
 impl Mul<Ray> for &Trs {
     type Output = Ray;
 

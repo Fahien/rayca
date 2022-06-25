@@ -108,6 +108,12 @@ impl Mat4 {
         Vec3::new(self[0][3], self[1][3], self[2][3])
     }
 
+    pub fn set_translation(&mut self, translation: &Vec3) {
+        self[0][3] = translation.get_x();
+        self[1][3] = translation.get_y();
+        self[2][3] = translation.get_z();
+    }
+
     pub fn get_transpose(&self) -> Self {
         let mut ret = Self::default();
         for i in 0..4 {

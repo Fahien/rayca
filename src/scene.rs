@@ -68,7 +68,8 @@ impl Scene {
 
         Self {
             default_model,
-            ..Default::default()
+            model: Default::default(),
+            config: Default::default(),
         }
     }
 

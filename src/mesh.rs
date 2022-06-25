@@ -2,61 +2,86 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use num_traits::NumCast;
-
 use super::*;
 
 #[derive(Default)]
 pub struct PrimitiveBuilder {
-    vertices: Vec<Vertex>,
-    indices: Vec<u8>,
-    index_size: usize,
-    material: Handle<Material>,
+    geometry: Geometry,
+    material: Option<Handle<Material>>,
 }
 
 impl PrimitiveBuilder {
     pub fn new() -> Self {
         Self {
-            vertices: vec![],
-            indices: vec![],
-            index_size: 1,
-            material: Handle::none(),
+            geometry: Geometry::default(),
+            material: None,
         }
     }
 
     pub fn vertices(mut self, vertices: Vec<Vertex>) -> Self {
-        self.vertices = vertices;
+        match &mut self.geometry {
+            Geometry::Triangles(triangles) => {
+                triangles.vertices = vertices;
+            }
+            _ => self.geometry = Geometry::Triangles(Triangles::new(vertices, vec![])),
+        }
         self
     }
 
     pub fn indices(mut self, indices: Vec<u8>) -> Self {
-        self.indices = indices;
+        match &mut self.geometry {
+            Geometry::Triangles(triangles) => {
+                triangles.indices = indices;
+            }
+            _ => self.geometry = Geometry::Triangles(Triangles::new(vec![], indices)),
+        }
         self
     }
 
-    pub fn index_size(mut self, index_size: usize) -> Self {
-        self.index_size = index_size;
+    pub fn index_size(mut self, index_size_in_bytes: usize) -> Self {
+        match &mut self.geometry {
+            Geometry::Triangles(triangles) => {
+                triangles.index_size_in_bytes = index_size_in_bytes;
+            }
+            _ => {
+                let mut triangle = Triangles::new(vec![], vec![]);
+                triangle.index_size_in_bytes = index_size_in_bytes;
+                self.geometry = Geometry::Triangles(triangle);
+            }
+        }
+        self
+    }
+    pub fn sphere(mut self, center: Point3, radius: f32) -> Self {
+        match &mut self.geometry {
+            Geometry::Sphere(sphere) => {
+                sphere.center = center;
+                sphere.set_radius(radius);
+            }
+            _ => {
+                let sphere = Sphere::new(center, radius);
+                self.geometry = Geometry::Sphere(sphere);
+            }
+        }
         self
     }
 
     pub fn material(mut self, material: Handle<Material>) -> Self {
-        self.material = material;
+        self.material = Some(material);
         self
     }
 
     pub fn build(self) -> Primitive {
-        let mut prim = Primitive::new(self.vertices, self.indices);
-        prim.index_size = self.index_size;
-        prim.material = self.material;
+        let mut prim = Primitive::new(self.geometry);
+        if let Some(material) = self.material {
+            prim.material = material;
+        }
         prim
     }
 }
 
 #[derive(Default, Clone)]
 pub struct Primitive {
-    pub vertices: Vec<Vertex>,
-    pub indices: Vec<u8>,
-    index_size: usize,
+    pub geometry: Geometry,
     pub material: Handle<Material>,
 }
 
@@ -65,11 +90,9 @@ impl Primitive {
         PrimitiveBuilder::new()
     }
 
-    pub fn new(vertices: Vec<Vertex>, indices: Vec<u8>) -> Self {
+    pub fn new(geometry: Geometry) -> Self {
         Self {
-            vertices,
-            indices,
-            index_size: 1, // byte
+            geometry,
             material: Handle::none(),
         }
     }
@@ -85,69 +108,15 @@ impl Primitive {
             .build()
     }
 
-    fn triangles_impl<'m, Index: NumCast>(
-        &self,
-        trs: &Trs,
-        material: Handle<Material>,
-        model: &'m Model,
-        indices: &[Index],
-    ) -> Vec<BvhTriangle<'m>> {
-        let mut ret = vec![];
-
-        let normal_trs = Inversed::from(trs.clone());
-        let normal_matrix = Mat3::from(&normal_trs).get_transpose();
-        let tangent_matrix = Mat3::from(trs);
-
-        for i in 0..(indices.len() / 3) {
-            let mut a = self.vertices[indices[i * 3].to_usize().unwrap()];
-            a.pos = trs * a.pos;
-            a.normal = &normal_matrix * a.normal;
-            a.tangent = &tangent_matrix * a.tangent;
-            a.bitangent = &tangent_matrix * a.bitangent;
-
-            let mut b = self.vertices[indices[i * 3 + 1].to_usize().unwrap()];
-            b.pos = trs * b.pos;
-            b.normal = &normal_matrix * b.normal;
-            b.tangent = &tangent_matrix * b.tangent;
-            b.bitangent = &tangent_matrix * b.bitangent;
-
-            let mut c = self.vertices[indices[i * 3 + 2].to_usize().unwrap()];
-            c.pos = trs * c.pos;
-            c.normal = &normal_matrix * c.normal;
-            c.tangent = &tangent_matrix * c.tangent;
-            c.bitangent = &tangent_matrix * c.bitangent;
-
-            ret.push(BvhTriangle::new(a, b, c, material, model));
-        }
-
-        ret
-    }
-
     pub fn triangles<'m>(
         &self,
         trs: &Trs,
         material: Handle<Material>,
         model: &'m Model,
     ) -> Vec<BvhTriangle<'m>> {
-        let indices_len = self.indices.len() / self.index_size;
-
-        match self.index_size {
-            1 => self.triangles_impl(trs, material, model, &self.indices),
-            2 => {
-                let indices = unsafe {
-                    std::slice::from_raw_parts(self.indices.as_ptr() as *const u16, indices_len)
-                };
-
-                self.triangles_impl(trs, material, model, indices)
-            }
-            4 => {
-                let indices = unsafe {
-                    std::slice::from_raw_parts(self.indices.as_ptr() as *const u32, indices_len)
-                };
-
-                self.triangles_impl(trs, material, model, indices)
-            }
-            _ => panic!("Index size not supported"),
+        match &self.geometry {
+            Geometry::Triangles(triangles) => triangles.triangles(trs, material, model),
+            _ => panic!("Can not get triangles from {:?}", self.geometry),
         }
     }
 }
