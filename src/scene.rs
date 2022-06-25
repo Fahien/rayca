@@ -273,7 +273,7 @@ impl Draw for Scene {
             }
         }
 
-        let bvh = Bvh::new(triangles);
+        let bvh = Bvh::new(triangles, 1);
 
         let mut timer = Timer::new();
 
