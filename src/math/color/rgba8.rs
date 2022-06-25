@@ -61,6 +61,7 @@ impl From<Color> for RGBA8 {
         )
     }
 }
+
 impl From<RGB8> for RGBA8 {
     fn from(color: RGB8) -> Self {
         Self::new(color.r, color.g, color.b, 255)

@@ -232,7 +232,7 @@ mod test {
         let model = Model::new();
         let triangle_prim = Primitive::unit_triangle();
         let trs = Trs::default();
-        let triangles = triangle_prim.primitives(&trs, &model);
+        let (triangles, _) = triangle_prim.primitives(&trs, &model);
         let triangle_ref = &triangles[0];
 
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));

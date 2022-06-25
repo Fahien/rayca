@@ -495,9 +495,9 @@ mod test {
         let model = Model::new();
         let triangle_prim = Primitive::unit_triangle();
         let trs = Trs::default();
-        let triangles = triangle_prim.primitives(&trs, &model);
+        let (triangles, spheres) = triangle_prim.primitives(&trs, &model);
 
-        let bvh = Bvh::builder().triangles(triangles).build();
+        let bvh = Bvh::builder().triangles(triangles).spheres(spheres).build();
         assert!(bvh.nodes.is_empty());
         assert!(bvh.root.left.is_none());
         assert!(bvh.root.right.is_none());
@@ -519,9 +519,11 @@ mod test {
         let right_triangle_prim = Primitive::unit_triangle();
 
         let trs = Trs::default();
-        let mut left_primitives = left_triangle_prim.primitives(&trs, &model);
-        let mut right_primitives = right_triangle_prim.primitives(&trs, &model);
+        let (mut left_primitives, mut left_spheres) = left_triangle_prim.primitives(&trs, &model);
+        let (mut right_primitives, mut right_spheres) =
+            right_triangle_prim.primitives(&trs, &model);
         left_primitives.append(&mut right_primitives);
+        left_spheres.append(&mut right_spheres);
         let triangles = left_primitives;
 
         let bvh = Bvh::builder().triangles(triangles).build();

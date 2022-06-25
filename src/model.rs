@@ -590,8 +590,9 @@ impl<'m> SolvedTrs<'m> {
             let mesh = self.model.meshes.get(mesh_handle).unwrap();
             for prim_handle in mesh.primitives.iter() {
                 let prim = self.model.primitives.get(*prim_handle).unwrap();
-                let prims = prim.primitives(&self.trs, self.model);
-                triangles.extend(prims);
+                let (tris, sphs) = prim.primitives(&self.trs, self.model);
+                triangles.extend(tris);
+                spheres.extend(sphs);
             }
         }
 

@@ -5,13 +5,37 @@
 use rayca::*;
 
 #[test]
+fn sphere() {
+    let mut image = Image::new(256, 256, ColorType::RGBA8);
+    let mut scene = Scene::new_with_config(Config::new(false, Box::new(Scratcher::new())));
+
+    let mut model = Model::new();
+    let sphere = Sphere::new(Point3::default(), 1.0);
+    let prim = Primitive::sphere(sphere);
+    let prim_handle = model.primitives.push(prim);
+    let mesh = Mesh::new(vec![prim_handle]);
+    let mesh_handle = model.meshes.push(mesh);
+    let node = Node::builder()
+        .mesh(mesh_handle)
+        .translation(Vec3::new(0.0, 0.0, -1.0))
+        .scale(Vec3::new(1.0, 2.0, 1.0))
+        .build();
+    let node_handle = model.nodes.push(node);
+    model.root.children.push(node_handle);
+    scene.models.push(model);
+
+    scene.draw(&mut image);
+    image.dump_png("target/sphere.png");
+}
+
+#[test]
 fn triangle() {
     let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();
 
     let mut model = Model::new();
     let mut prim = Primitive::unit_triangle();
-    let triangles = &mut prim.triangles;
+    let triangles = prim.triangles.as_mut().unwrap();
     triangles.vertices[0].color = Color::from(0xFF0000FF);
     triangles.vertices[1].color = Color::from(0x00FF00FF);
     triangles.vertices[2].color = Color::from(0x0000FFFF);

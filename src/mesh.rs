@@ -4,32 +4,52 @@
 
 use super::*;
 
-#[derive(Default)]
 pub struct PrimitiveBuilder {
-    triangles: Triangles,
+    triangles: Option<Triangles>,
+    sphere: Option<Sphere>,
     material: Option<Handle<Material>>,
+}
+
+impl Default for PrimitiveBuilder {
+    fn default() -> Self {
+        Self {
+            triangles: Some(Triangles::default()),
+            sphere: None,
+            material: None,
+        }
+    }
 }
 
 impl PrimitiveBuilder {
     pub fn new() -> Self {
         Self {
-            triangles: Triangles::default(),
+            triangles: None,
+            sphere: None,
             material: None,
         }
     }
 
     pub fn vertices(mut self, vertices: Vec<Vertex>) -> Self {
-        self.triangles.vertices = vertices;
+        if self.triangles.is_none() {
+            self.triangles.replace(Triangles::default());
+        }
+        self.triangles.as_mut().unwrap().vertices = vertices;
         self
     }
 
     pub fn indices(mut self, indices: Vec<u8>) -> Self {
-        self.triangles.indices = indices;
+        if self.triangles.is_none() {
+            self.triangles.replace(Triangles::default());
+        }
+        self.triangles.as_mut().unwrap().indices = indices;
         self
     }
 
     pub fn index_size(mut self, index_size_in_bytes: usize) -> Self {
-        self.triangles.index_size_in_bytes = index_size_in_bytes;
+        if self.triangles.is_none() {
+            self.triangles.replace(Triangles::default());
+        }
+        self.triangles.as_mut().unwrap().index_size_in_bytes = index_size_in_bytes;
         self
     }
 
@@ -39,15 +59,18 @@ impl PrimitiveBuilder {
     }
 
     pub fn build(self) -> Primitive {
-        let mut prim = Primitive::new(self.triangles);
-        prim.material = self.material;
-        prim
+        Primitive {
+            triangles: self.triangles,
+            sphere: self.sphere,
+            material: self.material,
+        }
     }
 }
 
 #[derive(Default, Clone)]
 pub struct Primitive {
-    pub triangles: Triangles,
+    pub triangles: Option<Triangles>,
+    pub sphere: Option<Sphere>,
     pub material: Option<Handle<Material>>,
 }
 
@@ -56,9 +79,18 @@ impl Primitive {
         PrimitiveBuilder::new()
     }
 
-    pub fn new(triangles: Triangles) -> Self {
+    pub fn triangles(triangles: Triangles) -> Self {
         Self {
-            triangles,
+            triangles: Some(triangles),
+            sphere: None,
+            material: None,
+        }
+    }
+
+    pub fn sphere(sphere: Sphere) -> Self {
+        Self {
+            triangles: None,
+            sphere: Some(sphere),
             material: None,
         }
     }
@@ -74,8 +106,24 @@ impl Primitive {
             .build()
     }
 
-    pub fn primitives<'m>(&self, trs: &'m Trs, model: &'m Model) -> Vec<BvhTriangle<'m>> {
-        self.triangles.primitives(trs, self.material, model)
+    pub fn primitives<'m>(
+        &self,
+        trs: &'m Trs,
+        model: &'m Model,
+    ) -> (Vec<BvhTriangle<'m>>, Vec<BvhSphere<'m>>) {
+        let triangles = if let Some(triangles) = &self.triangles {
+            triangles.primitives(trs, self.material, model)
+        } else {
+            vec![]
+        };
+
+        let sphere = if let Some(sphere) = &self.sphere {
+            sphere.primitives(trs, self.material, model)
+        } else {
+            vec![]
+        };
+
+        (triangles, sphere)
     }
 }
 

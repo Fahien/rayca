@@ -59,11 +59,15 @@ impl Integrator for Scratcher {
         let hit = bvh.intersects_iter(&ray)?;
 
         let n = hit.primitive.get_normal(&hit);
+
+        const RAY_BIAS: f32 = 1e-4;
+
+        let n_dot_v = n.dot(&ray.dir).abs() + RAY_BIAS;
+
         let mut color = hit.primitive.get_color(&hit);
 
         let mut pixel_color = Color::black() + color / 8.0;
 
-        const RAY_BIAS: f32 = 1e-4;
         if color.a < 1.0 {
             let transmit_origin = hit.point + -n * RAY_BIAS;
             let transmit_ray = Ray::new(transmit_origin, ray.dir);
@@ -78,16 +82,14 @@ impl Integrator for Scratcher {
 
         let (metallic, roughness) = hit.primitive.get_metallic_roughness(&hit);
 
-        let n_dot_v = n.dot(&ray.dir).abs() + 1e-5;
-
         // Before getting color, we should check whether it is visible from the sun
-        let shadow_origin = hit.point + n * RAY_BIAS;
+        let next_origin = hit.point + n * RAY_BIAS;
 
         for light_node in light_nodes {
             let light = lights.get(light_node.light.unwrap()).unwrap();
             let light_dir = light.get_direction(light_node, &hit.point);
 
-            let shadow_ray = Ray::new(shadow_origin, light_dir);
+            let shadow_ray = Ray::new(next_origin, light_dir);
             let shadow_result = bvh.intersects_iter(&shadow_ray);
 
             // Whether this object is light (verb) by a light (noun)
@@ -135,7 +137,7 @@ impl Integrator for Scratcher {
         } // end iterate light
 
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
-        let reflection_ray = Ray::new(hit.point, reflection_dir);
+        let reflection_ray = Ray::new(next_origin, reflection_dir);
         if let Some(reflection_color) =
             self.trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
         {
