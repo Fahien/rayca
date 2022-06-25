@@ -57,6 +57,8 @@ impl Integrator for Scratcher {
         pixel_color += color / 8.0;
 
         const RAY_BIAS: f32 = 1e-4;
+        let n_dot_v = n.dot(&ray.dir).abs() + RAY_BIAS;
+
         if color.a < 1.0 {
             let transmit_origin = hit.point + -n * RAY_BIAS;
             let transmit_ray = Ray::new(transmit_origin, ray.dir);
@@ -68,10 +70,8 @@ impl Integrator for Scratcher {
 
         let (metallic, roughness) = primitive.get_metallic_roughness(scene, &hit);
 
-        let n_dot_v = n.dot(&ray.dir).abs() + 1e-5;
-
         // Before getting color, we should check whether it is visible from the sun
-        let shadow_origin = hit.point + n * RAY_BIAS;
+        let next_origin = hit.point + n * RAY_BIAS;
 
         for light_node in scene.default_lights.nodes.iter() {
             let light = scene
@@ -81,7 +81,7 @@ impl Integrator for Scratcher {
                 .unwrap();
             let light_dir = light.get_direction(light_node, &hit.point);
 
-            let shadow_ray = Ray::new(shadow_origin, light_dir);
+            let shadow_ray = Ray::new(next_origin, light_dir);
             let shadow_result = scene.tlas.intersects(&shadow_ray);
 
             let is_lit = match shadow_result {
@@ -130,7 +130,7 @@ impl Integrator for Scratcher {
         } // end iterate light
 
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
-        let reflection_ray = Ray::new(shadow_origin, reflection_dir);
+        let reflection_ray = Ray::new(next_origin, reflection_dir);
         let reflection_color = self.trace(scene, reflection_ray, depth + 1);
         // Cosine-law applies here as well
         let n_dot_r = n.dot(&reflection_dir);

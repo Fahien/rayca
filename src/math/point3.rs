@@ -44,6 +44,18 @@ impl Point3 {
         self.simd[2] = z;
     }
 
+    pub fn get_x(&self) -> f32 {
+        self.simd[0]
+    }
+
+    pub fn get_y(&self) -> f32 {
+        self.simd[1]
+    }
+
+    pub fn get_z(&self) -> f32 {
+        self.simd[2]
+    }
+
     pub fn scale(&mut self, scale: &Vec3) {
         // Make sure we do not scale w
         static B: f32x4 = f32x4::from_slice(&[0.0, 0.0, 0.0, 1.0]);
@@ -119,6 +131,15 @@ impl Sub<&Point3> for &Point3 {
     type Output = Vec3;
 
     fn sub(self, rhs: &Point3) -> Self::Output {
+        // `point.w - point.w = 0.0` hence a vector
+        Self::Output::simd(self.simd - rhs.simd)
+    }
+}
+
+impl Sub<Point3> for &Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: Point3) -> Self::Output {
         // `point.w - point.w = 0.0` hence a vector
         Self::Output::simd(self.simd - rhs.simd)
     }

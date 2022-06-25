@@ -3,9 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 pub mod mesh;
+pub mod spheres;
 pub mod triangles;
 pub mod vertex;
 pub use mesh::*;
+pub use spheres::*;
 pub use triangles::*;
 pub use vertex::*;
 
@@ -280,6 +282,8 @@ pub struct GltfModel {
     pub lights: Pack<Light>,
     pub nodes: Pack<Node>,
     pub root: Node,
+
+    pub trs: Pack<SolvedTrs>,
 }
 
 impl GltfModel {

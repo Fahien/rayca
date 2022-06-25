@@ -473,9 +473,12 @@ impl Bvh {
                 let mesh = model.meshes.get(mesh_handle).unwrap();
                 for prim_handle in mesh.primitives.iter() {
                     let prim = model.primitives.get(*prim_handle).unwrap();
-                    let (prim_triangles, prim_triangles_ex) = prim.primitives(&trs.trs);
+                    let (prim_triangles, prim_triangles_ex, prim_spheres, prim_spheres_ex) =
+                        prim.primitives(&ret, Handle::new(i));
                     ret.triangles.extend(prim_triangles);
                     ret.triangles_ex.extend(prim_triangles_ex);
+                    ret.spheres.extend(prim_spheres);
+                    ret.spheres_ex.extend(prim_spheres_ex);
                 }
             }
 
@@ -535,6 +538,14 @@ impl Bvh {
         root.set_primitives(self, triangles_range, spheres_range);
 
         self.root = root;
+    }
+
+    pub fn get_trs(&self, trs_handle: Handle<SolvedTrs>) -> &Trs {
+        if let Some(solved_trs) = self.trss.get(trs_handle) {
+            &solved_trs.trs
+        } else {
+            &Trs::IDENTITY
+        }
     }
 
     pub fn get_shade(&self, primitive: u32) -> &dyn Shade {

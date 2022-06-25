@@ -22,21 +22,23 @@ impl Ray {
 
     pub fn scale(&mut self, scale: &Vec3) {
         self.dir.scale(scale);
-        self.dir.normalize();
         self.rdir = self.dir.get_reciprocal();
         self.origin.scale(scale);
-        self.origin.simd[3] = 1.0;
+
+        assert!(self.origin.simd[3] == 1.0);
     }
 
     pub fn translate(&mut self, translation: &Vec3) {
         self.origin += translation;
-        self.origin.simd[3] = 1.0;
+
+        assert!(self.origin.simd[3] == 1.0);
     }
 
     pub fn rotate(&mut self, rotation: &Quat) {
         self.dir.rotate(rotation);
         self.rdir = self.dir.get_reciprocal();
         self.origin.rotate(rotation);
+        self.origin.simd[3] = 1.0;
     }
 }
 

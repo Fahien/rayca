@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    ray::Intersect, Bvh, Color, Dot, Handle, Hit, Inversed, Point3, Ray, Scene, Shade, SolvedTrs,
-    Vec2, Vec3, RGBA8,
+    ray::Intersect, Bvh, Color, Dot, GgxMaterial, GltfModel, Handle, Hit, Inversed, Mat3, Point3,
+    Ray, Scene, Shade, SolvedTrs, Vec2, Vec3, RGBA8,
 };
 
 #[derive(Debug, Clone)]
@@ -12,7 +12,7 @@ pub struct Sphere {
     center: Point3,
     radius: f32,
     radius2: f32,
-    trs: Handle<SolvedTrs>,
+    pub trs: Handle<SolvedTrs>,
 }
 
 impl Sphere {
@@ -40,38 +40,50 @@ impl Sphere {
         self.radius
     }
 
-    /// Ray is expected to be in model space
+    /// - `point`: should be in model space
+    fn get_normal_impl(&self, point: &Point3) -> Vec3 {
+        (point - self.center).get_normalized()
+    }
+
+    /// Geometric formula.
+    /// - `ray`: Should be in model space
     pub fn intersects_impl(&self, ray: &Ray) -> Option<Hit> {
-        let l = self.center - ray.origin;
-        // angle between sphere-center-to-ray-origin and ray-direction
-        let tca = l.dot(&ray.dir);
-        if tca < 0.0 {
+        // a = p1 * p1
+        let a = ray.dir.dot(&ray.dir);
+
+        // b = 2(p1 * (p0 - c))
+        // sphere center to ray origin vector
+        let c_to_r = ray.origin - self.center;
+        let b = 2.0 * c_to_r.dot(&ray.dir);
+
+        // c = (p0 - c) * (p0 - c) - r^2
+        let c = c_to_r.dot(&c_to_r) - self.radius2;
+
+        // (-b +- sqrt(b^2 - 4ac) ) / 2a;
+        let det = b * b - 4.0 * a * c;
+        if det < 0.0 {
             return None;
         }
 
-        let d2 = l.dot(&l) - tca * tca;
-        if d2 > self.radius2 {
-            return None;
+        let t0 = (-b + det.sqrt()) / (2.0 * a);
+        let t1 = (-b - det.sqrt()) / (2.0 * a);
+
+        if t0 < 0.0 && t1 < 0.0 {
+            return None; // Sphere behind ray origin
         }
 
-        let thc = (self.radius2 - d2).sqrt();
-        let mut t0 = tca - thc;
-        let mut t1 = tca + thc;
+        let t = if t0 >= 0.0 && t1 >= 0.0 {
+            // Two positive roots, pick smaller
+            t0.min(t1)
+        } else if t0 >= 0.0 {
+            // Ray origin inside sphere, pick positive
+            t0
+        } else {
+            t1
+        };
 
-        if t0 > t1 {
-            std::mem::swap(&mut t0, &mut t1);
-        }
-
-        if t0 < 0.0 {
-            t0 = t1;
-            if t0 < 0.0 {
-                return None;
-            }
-        }
-
-        let point = ray.origin + ray.dir * t0;
-        let hit = Hit::new(u32::MAX, u32::MAX, t0, point, Vec2::default());
-
+        let point = ray.origin + ray.dir * t;
+        let hit = Hit::new(u32::MAX, u32::MAX, t, point, Vec2::default());
         Some(hit)
     }
 }
@@ -143,28 +155,39 @@ mod test {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct SphereEx {
     pub color: RGBA8,
+    pub material: Handle<GgxMaterial>,
 }
 
 impl Default for SphereEx {
     fn default() -> Self {
         Self {
             color: RGBA8::WHITE,
+            material: Handle::none(),
         }
     }
 }
 
 impl SphereEx {
-    pub fn new(color: RGBA8) -> Self {
-        Self { color }
+    pub fn new(color: RGBA8, material: Handle<GgxMaterial>) -> Self {
+        Self { color, material }
+    }
+
+    pub fn get_material<'a>(&self, model: &'a GltfModel) -> &'a GgxMaterial {
+        model
+            .materials
+            .get(self.material)
+            .unwrap_or(&GgxMaterial::WHITE)
     }
 }
 
 impl Shade for SphereEx {
     fn get_color(&self, scene: &Scene, hit: &Hit) -> Color {
-        let normal = self.get_normal(scene, hit);
-        Color::from(normal)
+        let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
+        let model = scene.gltf_models.get(blas_node.model).unwrap();
+        self.get_material(model).color
     }
 
     fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3 {
@@ -172,9 +195,11 @@ impl Shade for SphereEx {
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let bvh = scene.tlas.bvhs.get(blas_node.bvh).unwrap();
         let sphere = bvh.get_sphere(hit.primitive);
-        let mut normal = hit.point - sphere.get_center(bvh);
-        normal.normalize();
-        normal
+        let inverse = bvh.get_trs(sphere.trs).get_inversed();
+        let hit_point = &inverse * hit.point;
+        let normal = sphere.get_normal_impl(&hit_point);
+        let normal_matrix = Mat3::from(&inverse).get_transpose();
+        (&normal_matrix * normal).get_normalized()
     }
 
     fn get_metallic_roughness(&self, _scene: &Scene, _hit: &Hit) -> (f32, f32) {

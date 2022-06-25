@@ -13,21 +13,35 @@ fn run(mut scene: Scene, out_path: &str, width: u32, height: u32) {
     image.dump_png(out_path);
 }
 
-fn _circle() {
-    let scene = Scene::new();
-    //let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 1.0);
-    //let sphere_ex = SphereEx::new(RGBA8::from(0xFF0000FFu32));
-    //scene.spheres.push(sphere);
-    //scene.spheres_ex.push(sphere_ex);
-    run(scene, "target/sphere.png", 128, 128);
+#[test]
+fn sphere() {
+    let mut scene = Scene::new(Config::new(false, Box::<Scratcher>::default()));
+
+    let mut model = GltfModel::default();
+
+    let spheres = GltfSpheres::unit_sphere();
+    let prim = GltfPrimitive::sphere(spheres);
+    let prim_handle = model.primitives.push(prim);
+    let mesh = GltfMesh::new(vec![prim_handle]);
+    let mesh_handle = model.meshes.push(mesh);
+    let node = Node::builder()
+        .mesh(mesh_handle)
+        .translation(Vec3::new(0.0, 0.0, -1.0))
+        .scale(Vec3::new(1.0, 2.0, 1.0))
+        .build();
+    let node_handle = model.nodes.push(node);
+    model.root.children.push(node_handle);
+
+    scene.gltf_models.push(model);
+    run(scene, "target/sphere.png", 256, 256);
 }
 
 #[test]
 fn triangle() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
     let mut model = GltfModel::default();
     let mut prim = GltfPrimitive::unit_triangle();
-    let triangles = &mut prim.triangles;
+    let triangles = prim.triangles.as_mut().unwrap();
     triangles.vertices[0].color = Color::from(0xFF0000FF);
     triangles.vertices[1].color = Color::from(0x00FF00FF);
     triangles.vertices[2].color = Color::from(0x0000FFFF);
@@ -48,7 +62,7 @@ fn triangle() {
 
 #[test]
 fn boxes_over_plane() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
 
     let mut timer = Timer::new();
     let mut model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
@@ -80,7 +94,7 @@ fn boxes_over_plane() {
 
 #[test]
 fn gltf_box() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
     let model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
     scene.gltf_models.push(model);
     run(scene, "target/gltf-box.png", 128, 128);
@@ -88,7 +102,7 @@ fn gltf_box() {
 
 #[test]
 fn gltf_triangle() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
     let model = GltfModel::load_path("tests/model/triangle/triangle.gltf").unwrap();
 
     scene.gltf_models.push(model);
@@ -97,7 +111,7 @@ fn gltf_triangle() {
 
 #[test]
 fn gltf_suzanne() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
     let model = GltfModel::load_path("tests/model/suzanne/suzanne.gltf").unwrap();
     scene.gltf_models.push(model);
     run(scene, "target/gltf-suzanne.png", 128, 128);
@@ -116,7 +130,7 @@ fn add_camera(model: &mut GltfModel, camera_position: Vec3) {
 
 #[test]
 fn gltf_duck() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
     let mut model = GltfModel::load_path("tests/model/duck/duck.gltf").unwrap();
     add_camera(&mut model, Vec3::new(0.1, 0.8, 2.2));
     scene.gltf_models.push(model);
@@ -125,7 +139,7 @@ fn gltf_duck() {
 
 #[test]
 fn gltf_cameras() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
     let model = GltfModel::load_path("tests/model/cameras/cameras.gltf").unwrap();
     scene.gltf_models.push(model);
     run(scene, "target/gltf-cameras.png", 256, 256);
@@ -133,14 +147,19 @@ fn gltf_cameras() {
 
 #[test]
 fn gltf_orientation() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
     let mut model = GltfModel::load_path("tests/model/orientation/orientation.gltf").unwrap();
 
     // Custom camera
     let mut camera_node = Node::builder()
         .id(model.nodes.len())
-        .translation(Vec3::new(0.0, 0.1, 24.0))
+        .translation(Vec3::new(16.0, 1.0, 24.0))
+        .rotation(Quat::axis_angle(
+            Vec3::new(0.0, 1.0, 0.0),
+            std::f32::consts::FRAC_PI_4,
+        ))
         .build();
+
     camera_node.camera = Some(model.cameras.push(Camera::default()));
     let camera_node_handle = model.nodes.push(camera_node);
     model.root.children.push(camera_node_handle);
@@ -151,7 +170,7 @@ fn gltf_orientation() {
 
 #[test]
 fn gltf_flight() {
-    let mut scene = Scene::new();
+    let mut scene = Scene::default();
     let mut model = GltfModel::load_path("tests/model/flight-helmet/flight-helmet.gltf").unwrap();
     add_camera(&mut model, Vec3::new(0.0, 0.32, 1.0));
     scene.gltf_models.push(model);
@@ -160,8 +179,7 @@ fn gltf_flight() {
 
 #[test]
 fn gltf_sponza() {
-    let mut scene = Scene::new();
-
+    let mut scene = Scene::default();
     let mut model = GltfModel::load_path("tests/model/sponza/sponza.gltf").unwrap();
 
     // Custom camera

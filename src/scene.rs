@@ -79,8 +79,11 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(config: Config) -> Self {
+        Self {
+            config,
+            ..Default::default()
+        }
     }
 
     fn draw_pixel(&self, ray: Ray, pixel: &mut RGBA8) {

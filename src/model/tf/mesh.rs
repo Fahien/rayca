@@ -2,12 +2,25 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{GgxMaterial, GltfTriangles, GltfVertex, Handle, Triangle, TriangleEx, Trs};
+use crate::{
+    Bvh, GgxMaterial, GltfSpheres, GltfTriangles, GltfVertex, Handle, Point3, SolvedTrs, Sphere,
+    SphereEx, Triangle, TriangleEx,
+};
 
-#[derive(Default)]
 pub struct GltfPrimitiveBuilder {
-    triangles: GltfTriangles,
+    triangles: Option<GltfTriangles>,
+    spheres: Option<GltfSpheres>,
     material: Handle<GgxMaterial>,
+}
+
+impl Default for GltfPrimitiveBuilder {
+    fn default() -> Self {
+        Self {
+            triangles: Some(GltfTriangles::default()),
+            spheres: None,
+            material: Handle::none(),
+        }
+    }
 }
 
 impl GltfPrimitiveBuilder {
@@ -16,17 +29,26 @@ impl GltfPrimitiveBuilder {
     }
 
     pub fn vertices(mut self, vertices: Vec<GltfVertex>) -> Self {
-        self.triangles.vertices = vertices;
+        if self.triangles.is_none() {
+            self.triangles.replace(GltfTriangles::default());
+        }
+        self.triangles.as_mut().unwrap().vertices = vertices;
         self
     }
 
     pub fn indices(mut self, indices: Vec<u8>) -> Self {
-        self.triangles.indices = indices;
+        if self.triangles.is_none() {
+            self.triangles.replace(GltfTriangles::default());
+        }
+        self.triangles.as_mut().unwrap().indices = indices;
         self
     }
 
     pub fn index_size(mut self, index_size_in_bytes: usize) -> Self {
-        self.triangles.index_size_in_bytes = index_size_in_bytes;
+        if self.triangles.is_none() {
+            self.triangles.replace(GltfTriangles::default());
+        }
+        self.triangles.as_mut().unwrap().index_size_in_bytes = index_size_in_bytes;
         self
     }
 
@@ -36,15 +58,18 @@ impl GltfPrimitiveBuilder {
     }
 
     pub fn build(self) -> GltfPrimitive {
-        let mut prim = GltfPrimitive::new(self.triangles);
-        prim.material = self.material;
-        prim
+        GltfPrimitive {
+            triangles: self.triangles,
+            spheres: self.spheres,
+            material: self.material,
+        }
     }
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct GltfPrimitive {
-    pub triangles: GltfTriangles,
+    pub triangles: Option<GltfTriangles>,
+    pub spheres: Option<GltfSpheres>,
     pub material: Handle<GgxMaterial>,
 }
 
@@ -53,19 +78,52 @@ impl GltfPrimitive {
         GltfPrimitiveBuilder::new()
     }
 
-    pub fn unit_triangle() -> Self {
-        Self::new(GltfTriangles::unit_triangle())
-    }
-
-    pub fn new(triangles: GltfTriangles) -> Self {
+    pub fn triangles(triangles: GltfTriangles) -> Self {
         Self {
-            triangles,
+            triangles: Some(triangles),
+            spheres: None,
             material: Handle::none(),
         }
     }
 
-    pub fn primitives(&self, trs: &Trs) -> (Vec<Triangle>, Vec<TriangleEx>) {
-        self.triangles.primitives(trs, self.material)
+    pub fn sphere(spheres: GltfSpheres) -> Self {
+        Self {
+            triangles: None,
+            spheres: Some(spheres),
+            material: Handle::none(),
+        }
+    }
+
+    pub fn unit_triangle() -> Self {
+        Self::builder()
+            .vertices(vec![
+                GltfVertex::from_position(Point3::new(-1.0, 0.0, 0.0)),
+                GltfVertex::from_position(Point3::new(1.0, 0.0, 0.0)),
+                GltfVertex::from_position(Point3::new(0.0, 1.0, 0.0)),
+            ])
+            .indices(vec![0, 1, 2])
+            .build()
+    }
+
+    pub fn primitives(
+        &self,
+        bvh: &Bvh,
+        trs: Handle<SolvedTrs>,
+    ) -> (Vec<Triangle>, Vec<TriangleEx>, Vec<Sphere>, Vec<SphereEx>) {
+        let (triangles, triangles_ex) = if let Some(triangles) = &self.triangles {
+            let trs = bvh.get_trs(trs);
+            triangles.primitives(trs, self.material)
+        } else {
+            (Default::default(), Default::default())
+        };
+
+        let (sphere, sphere_ex) = if let Some(sphere) = &self.spheres {
+            sphere.primitives(trs, self.material)
+        } else {
+            (Default::default(), Default::default())
+        };
+
+        (triangles, triangles_ex, sphere, sphere_ex)
     }
 }
 
