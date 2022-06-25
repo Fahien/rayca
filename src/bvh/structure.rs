@@ -97,9 +97,17 @@ impl BvhNode {
         triangles: &mut [Triangle],
         triangles_ex: &mut [TriangleEx],
         nodes: &mut Pack<BvhNode>,
+        max_depth: u8,
     ) {
         let mut timer = Timer::new();
-        self.set_triangles_recursive(triangles_range, triangles, triangles_ex, nodes);
+        self.set_triangles_recursive(
+            triangles_range,
+            triangles,
+            triangles_ex,
+            nodes,
+            max_depth,
+            0,
+        );
         print_success!("Built", "BVH in {:.2}ms", timer.get_delta().as_millis());
     }
 
@@ -181,6 +189,8 @@ impl BvhNode {
         triangles: &mut [Triangle],
         triangles_ex: &mut [TriangleEx],
         nodes: &mut Pack<BvhNode>,
+        max_depth: u8,
+        level: u8,
     ) {
         assert!(!triangles_range.is_empty());
         self.triangles = triangles_range;
@@ -195,6 +205,10 @@ impl BvhNode {
             let tri = &triangles[i as usize];
             self.bounds.a = self.bounds.a.min(&tri.min());
             self.bounds.b = self.bounds.b.max(&tri.max());
+        }
+
+        if level >= max_depth {
+            return;
         }
 
         // Surface Area Heuristics
@@ -233,6 +247,8 @@ impl BvhNode {
                 triangles,
                 triangles_ex,
                 nodes,
+                max_depth,
+                level + 1,
             );
 
             let mut right_child = BvhNode::new();
@@ -241,6 +257,8 @@ impl BvhNode {
                 triangles,
                 triangles_ex,
                 nodes,
+                max_depth,
+                level + 1,
             );
 
             self.left = nodes.push(left_child);
@@ -302,8 +320,46 @@ impl BvhNode {
     }
 }
 
+pub struct BvhBuilder {
+    max_depth: u8,
+    triangles: Vec<Triangle>,
+    triangles_ex: Vec<TriangleEx>,
+}
+
+impl Default for BvhBuilder {
+    fn default() -> Self {
+        Self {
+            max_depth: u8::MAX,
+            triangles: Default::default(),
+            triangles_ex: Default::default(),
+        }
+    }
+}
+
+impl BvhBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn max_depth(mut self, max_depth: u8) -> Self {
+        self.max_depth = max_depth;
+        self
+    }
+
+    pub fn triangles(mut self, triangles: Vec<Triangle>, triangles_ex: Vec<TriangleEx>) -> Self {
+        self.triangles = triangles;
+        self.triangles_ex = triangles_ex;
+        self
+    }
+
+    pub fn build(self) -> Bvh {
+        Bvh::new(self.max_depth, self.triangles, self.triangles_ex)
+    }
+}
+
 #[derive(Default)]
 pub struct Bvh {
+    pub max_depth: u8,
     pub root: BvhNode,
     pub nodes: Pack<BvhNode>,
 
@@ -364,8 +420,13 @@ impl From<&GltfModel> for Bvh {
 }
 
 impl Bvh {
-    pub fn new(triangles: Vec<Triangle>, triangles_ex: Vec<TriangleEx>) -> Self {
+    pub fn builder() -> BvhBuilder {
+        BvhBuilder::new()
+    }
+
+    pub fn new(max_depth: u8, triangles: Vec<Triangle>, triangles_ex: Vec<TriangleEx>) -> Self {
         let mut ret = Self {
+            max_depth,
             triangles,
             triangles_ex,
             ..Default::default()
@@ -374,7 +435,7 @@ impl Bvh {
         ret
     }
 
-    // TODO: rename in replace_primitives
+    // TODO: rename in reset primitives
     pub fn set_primitives(&mut self) {
         self.nodes.clear();
 
@@ -389,6 +450,7 @@ impl Bvh {
             &mut self.triangles,
             &mut self.triangles_ex,
             &mut self.nodes,
+            self.max_depth,
         );
 
         self.root = root;
@@ -796,7 +858,7 @@ mod test {
         let triangle_prim = GltfPrimitive::unit_triangle();
         let (triangles, triangles_ex) = triangle_prim.triangles(&Trs::default());
 
-        let bvh = Bvh::new(triangles, triangles_ex);
+        let bvh = Bvh::builder().triangles(triangles, triangles_ex).build();
         assert!(bvh.nodes.is_empty());
         assert!(bvh.root.left.is_none());
         assert!(bvh.root.right.is_none());
@@ -822,7 +884,9 @@ mod test {
         left_triangles.append(&mut right_triangles);
         left_triangles_ex.append(&mut right_triangles_ex);
 
-        let bvh = Bvh::new(left_triangles, left_triangles_ex);
+        let bvh = Bvh::builder()
+            .triangles(left_triangles, left_triangles_ex)
+            .build();
         assert!(!bvh.nodes.is_empty());
         assert!(bvh.root.left.is_some());
         assert!(bvh.root.right.is_some());
