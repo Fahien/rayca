@@ -74,8 +74,8 @@ impl Primitive {
             .build()
     }
 
-    pub fn triangles<'m>(&self, transform: &Trs, model: &'m Model) -> Vec<BvhTriangle<'m>> {
-        self.triangles.triangles(transform, self.material, model)
+    pub fn primitives<'m>(&self, trs: &'m Trs, model: &'m Model) -> Vec<BvhTriangle<'m>> {
+        self.triangles.primitives(trs, self.material, model)
     }
 }
 

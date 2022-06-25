@@ -4,7 +4,7 @@
 
 use super::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ray {
     pub origin: Point3,
     pub dir: Vec3,

@@ -100,8 +100,8 @@ impl Integrator for Scratcher {
                     if shadow_hit.depth > light_distance {
                         true
                     } else {
-                        // check whether this is a transparent surface
-                        let shadow_color = shadow_hit.primitive.get_color(&shadow_hit);
+                        // Check whether the obstacle is a transparent surface
+                        let shadow_color = hit.primitive.get_color(&shadow_hit);
                         shadow_color.a < 1.0
                     }
                 }

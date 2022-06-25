@@ -170,7 +170,7 @@ mod gltf {
 
     #[test]
     fn sponza() {
-        let mut image = Image::new(32, 32, ColorType::RGBA8);
+        let mut image = Image::new(8, 8, ColorType::RGBA8);
         let mut scene = Scene::new();
 
         scene.load("tests/model/sponza/sponza.gltf").unwrap();

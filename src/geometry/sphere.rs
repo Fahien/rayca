@@ -27,6 +27,22 @@ impl Sphere {
         self.radius = radius;
         self.radius2 = radius * radius;
     }
+
+    pub fn get_radius(&self) -> f32 {
+        self.radius
+    }
+
+    pub fn primitives<'m>(
+        &self,
+        trs: &'m Trs,
+        material: Handle<Material>,
+        model: &'m Model,
+    ) -> Vec<BvhSphere<'m>> {
+        // Transforming a sphere is complicated. The trick is to store transform with sphere,
+        // then pre-transform the ray, and post-transform the intersection point.
+        let sphere = BvhSphere::new(self.center, self.radius, trs, material, model);
+        vec![sphere]
+    }
 }
 
 impl Default for Sphere {

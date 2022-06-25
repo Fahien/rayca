@@ -31,9 +31,9 @@ impl Triangles {
         }
     }
 
-    fn triangles_impl<'m, Index: NumCast>(
+    fn primitives_impl<'m, Index: NumCast>(
         &self,
-        trs: &Trs,
+        trs: &'m Trs,
         material: Option<Handle<Material>>,
         model: &'m Model,
         indices: &[Index],
@@ -63,35 +63,36 @@ impl Triangles {
             c.tangent = &tangent_matrix * c.tangent;
             c.bitangent = &tangent_matrix * c.bitangent;
 
-            ret.push(BvhTriangle::new(a, b, c, material, model));
+            let triangle = BvhTriangle::new(a, b, c, trs, material, model);
+            ret.push(triangle)
         }
 
         ret
     }
 
-    pub fn triangles<'m>(
+    pub fn primitives<'m>(
         &self,
-        transform: &Trs,
+        transform: &'m Trs,
         material: Option<Handle<Material>>,
         model: &'m Model,
     ) -> Vec<BvhTriangle<'m>> {
         let indices_len = self.indices.len() / self.index_size_in_bytes;
 
         match self.index_size_in_bytes {
-            1 => self.triangles_impl(transform, material, model, &self.indices),
+            1 => self.primitives_impl(transform, material, model, &self.indices),
             2 => {
                 let indices = unsafe {
                     std::slice::from_raw_parts(self.indices.as_ptr() as *const u16, indices_len)
                 };
 
-                self.triangles_impl(transform, material, model, indices)
+                self.primitives_impl(transform, material, model, indices)
             }
             4 => {
                 let indices = unsafe {
                     std::slice::from_raw_parts(self.indices.as_ptr() as *const u32, indices_len)
                 };
 
-                self.triangles_impl(transform, material, model, indices)
+                self.primitives_impl(transform, material, model, indices)
             }
             _ => panic!("Index size not supported"),
         }

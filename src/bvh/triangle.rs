@@ -4,23 +4,11 @@
 
 use crate::*;
 
-const WHITE_MATERIAL: Material = Material {
-    color: Color {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
-        a: 1.0,
-    },
-    albedo_texture: None,
-    normal_texture: None,
-    metallic_factor: 1.0,
-    roughness_factor: 1.0,
-    metallic_roughness_texture: None,
-};
-
 pub struct BvhTriangle<'m> {
     pub vertices: [Vertex; 3],
     pub centroid: Point3,
+
+    pub trs: &'m Trs,
     pub material: Option<Handle<Material>>,
     pub model: &'m Model,
 }
@@ -30,26 +18,19 @@ impl<'m> BvhTriangle<'m> {
         a: Vertex,
         b: Vertex,
         c: Vertex,
+        trs: &'m Trs,
         material: Option<Handle<Material>>,
         model: &'m Model,
     ) -> Self {
-        let centroid = (a.pos + Vec3::from(b.pos) + Vec3::from(c.pos)) * 0.3333;
+        let centroid =
+            Point3::from((Vec3::from(a.pos) + Vec3::from(b.pos) + Vec3::from(c.pos)) * 0.3333);
         Self {
             vertices: [a, b, c],
             centroid,
+            trs,
             material,
             model,
         }
-    }
-
-    pub fn unit(material: Option<Handle<Material>>, model: &'m Model) -> Self {
-        Self::new(
-            Vertex::new(-1.0, 0.0, 0.0),
-            Vertex::new(1.0, 0.0, 0.0),
-            Vertex::new(0.0, 1.0, 0.0),
-            material,
-            model,
-        )
     }
 
     pub fn min(&self) -> Point3 {
@@ -110,7 +91,7 @@ impl<'m> BvhTriangle<'m> {
         if let Some(material_handle) = self.material {
             self.model.materials.get(material_handle).unwrap()
         } else {
-            &WHITE_MATERIAL
+            &Material::WHITE
         }
     }
 }
@@ -133,7 +114,7 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
             return None;
         }
 
-        let denom = n.dot(&n);
+        let denom = n.dot(n);
 
         // Step 1: finding P
 
@@ -161,17 +142,17 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
 
         // Edge 0
         let edge0 = v1 - v0;
-        let vp0 = p - v0;
+        let vp0 = Vec3::from(p - v0);
         // Vector perpendicular to triangle's plane
-        let c = edge0.cross(&vp0.into());
+        let c = edge0.cross(&vp0);
         if n.dot(c) < 0.0 {
             return None; // P is on the right side
         }
 
         // Edge 1
         let edge1 = v2 - v1;
-        let vp1 = p - v1;
-        let c = edge1.cross(&vp1.into());
+        let vp1 = Vec3::from(p - v1);
+        let c = edge1.cross(&vp1);
         let u = n.dot(c);
         if u < 0.0 {
             return None; // P is on the right side
@@ -179,8 +160,8 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
 
         // Edge 2
         let edge2 = v0 - v2;
-        let vp2 = p - v2;
-        let c = edge2.cross(&vp2.into());
+        let vp2 = Vec3::from(p - v2);
+        let c = edge2.cross(&vp2);
         let v = n.dot(c);
         if v < 0.0 {
             return None; // P is on the right side;
@@ -193,6 +174,7 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
 
     fn get_color(&self, hit: &Hit) -> Color {
         let material = self.get_material();
+
         let mut color = self.interpolate_colors(hit) * material.color;
         if let Some(albedo_handle) = material.albedo_texture {
             let texture = self.model.textures.get(albedo_handle).unwrap();
@@ -205,8 +187,8 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
 
     fn get_normal(&self, hit: &Hit) -> Vec3 {
         let normal = self.interpolate_normals(&hit.uv);
-
         let material = self.get_material();
+
         if let Some(normal_handle) = material.normal_texture {
             let texture = self.model.textures.get(normal_handle).unwrap();
             let sampler = Sampler::default();
@@ -226,6 +208,7 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
 
     fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32) {
         let material = self.get_material();
+
         if let Some(mr_handle) = material.metallic_roughness_texture {
             let mr_texture = self.model.textures.get(mr_handle).unwrap();
             let sampler = Sampler::default();
@@ -248,7 +231,8 @@ mod test {
     fn intersect() {
         let model = Model::new();
         let triangle_prim = Primitive::unit_triangle();
-        let triangles = triangle_prim.triangles(&Trs::default(), &model);
+        let trs = Trs::default();
+        let triangles = triangle_prim.primitives(&trs, &model);
         let triangle_ref = &triangles[0];
 
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
