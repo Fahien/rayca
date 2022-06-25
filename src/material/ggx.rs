@@ -4,6 +4,30 @@
 
 use crate::{Color, Handle, Texture};
 
+#[derive(Default)]
+pub struct GgxMaterialBuilder {
+    color: Color,
+}
+
+impl GgxMaterialBuilder {
+    pub fn new() -> Self {
+        Self {
+            color: Color::default(),
+        }
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = color;
+        self
+    }
+
+    pub fn build(self) -> GgxMaterial {
+        let mut material = GgxMaterial::new();
+        material.color = self.color;
+        material
+    }
+}
+
 pub struct GgxMaterial {
     pub color: Color,
     pub albedo_texture: Handle<Texture>,
@@ -28,6 +52,10 @@ impl GgxMaterial {
         roughness_factor: 1.0,
         metallic_roughness_texture: Handle::NONE,
     };
+
+    pub fn builder() -> GgxMaterialBuilder {
+        GgxMaterialBuilder::new()
+    }
 
     pub fn new() -> Self {
         Self {
