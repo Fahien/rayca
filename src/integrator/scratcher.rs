@@ -84,7 +84,6 @@ impl Integrator for Scratcher {
             let shadow_ray = Ray::new(shadow_origin, light_dir);
             let shadow_result = scene.tlas.intersects(&shadow_ray);
 
-            // Whether this object is light (verb) by a light (noun)
             let is_lit = match shadow_result {
                 None => true,
                 Some(shadow_hit) => {

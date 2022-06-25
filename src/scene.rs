@@ -66,8 +66,9 @@ impl Default for DefaultLights {
     }
 }
 
+#[derive(Default)]
 pub struct Scene {
-    pub integrator: Box<dyn Integrator + Sync>,
+    pub config: Config,
 
     pub tlas: Tlas,
     pub gltf_models: Pack<GltfModel>,
@@ -77,31 +78,20 @@ pub struct Scene {
     pub default_lights: DefaultLights,
 }
 
-#[allow(clippy::derivable_impls)]
-impl Default for Scene {
-    fn default() -> Self {
-        Self {
-            integrator: Box::<Scratcher>::default(),
-            tlas: Default::default(),
-            gltf_models: Default::default(),
-            default_camera: Default::default(),
-            default_lights: Default::default(),
-        }
-    }
-}
-
 impl Scene {
     pub fn new() -> Self {
         Self::default()
     }
 
     fn draw_pixel(&self, ray: Ray, pixel: &mut RGBA8) {
-        let color = self.integrator.trace(self, ray, 0);
-        // No over operation here as transparency should be handled by the lighting model
+        let color = self.config.integrator.trace(self, ray, 0);
+        // No over operation here as transparency should be handled by the lighting mode
         *pixel = color.into();
     }
 
     pub fn update(&mut self) {
+        let bvh_max_depth = if self.config.bvh { u8::MAX } else { 1 };
+        self.tlas.max_depth = bvh_max_depth;
         self.tlas.replace_models(&self.gltf_models);
 
         let solved_cameras = &self.tlas.bvhs[0].cameras;

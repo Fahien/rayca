@@ -7,6 +7,6 @@ pub use scratcher::*;
 
 use crate::{Color, Ray, Scene};
 
-pub trait Integrator {
+pub trait Integrator: Sync {
     fn trace(&self, scene: &Scene, ray: Ray, depth: u8) -> Color;
 }

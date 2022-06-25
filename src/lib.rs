@@ -5,6 +5,7 @@
 #![feature(portable_simd)]
 
 pub mod bvh;
+pub mod config;
 pub mod draw;
 pub mod geometry;
 pub mod integrator;
@@ -18,6 +19,7 @@ pub mod util;
 pub mod www;
 
 pub use bvh::*;
+pub use config::*;
 pub use draw::*;
 pub use geometry::*;
 pub use integrator::*;

@@ -353,7 +353,7 @@ impl BvhBuilder {
     }
 
     pub fn build(self) -> Bvh {
-        Bvh::new(self.max_depth, self.triangles, self.triangles_ex)
+        Bvh::from_triangles(self.max_depth, self.triangles, self.triangles_ex)
     }
 }
 
@@ -375,11 +375,12 @@ pub struct Bvh {
     pub spheres_ex: Vec<SphereEx>,
 }
 
-impl From<&GltfModel> for Bvh {
-    fn from(model: &GltfModel) -> Self {
+impl Bvh {
+    fn new(max_depth: u8, model: &GltfModel) -> Self {
         let mut timer = Timer::new();
 
         let mut ret = Self {
+            max_depth,
             trss: model.collect_transforms(),
             ..Default::default()
         };
@@ -417,14 +418,16 @@ impl From<&GltfModel> for Bvh {
 
         ret
     }
-}
 
-impl Bvh {
     pub fn builder() -> BvhBuilder {
         BvhBuilder::new()
     }
 
-    pub fn new(max_depth: u8, triangles: Vec<Triangle>, triangles_ex: Vec<TriangleEx>) -> Self {
+    pub fn from_triangles(
+        max_depth: u8,
+        triangles: Vec<Triangle>,
+        triangles_ex: Vec<TriangleEx>,
+    ) -> Self {
         let mut ret = Self {
             max_depth,
             triangles,
@@ -750,6 +753,9 @@ impl BlasNode {
 /// Top Level Acceleration Structure
 #[derive(Default)]
 pub struct Tlas {
+    /// Max depth to use for BVHs
+    pub max_depth: u8,
+
     pub root: TlasNode,
 
     /// TODO: Use index 0 as root, ignore 1, and children from 2 onwards
@@ -776,7 +782,7 @@ impl Tlas {
         self.clear();
 
         for (i, model) in models.iter().enumerate() {
-            let bvh_handle = self.bvhs.push(Bvh::from(model));
+            let bvh_handle = self.bvhs.push(Bvh::new(self.max_depth, model));
             self.blas_nodes
                 .push(BlasNode::new(bvh_handle, Handle::new(i)))
         }
