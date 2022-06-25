@@ -45,6 +45,17 @@ impl Quat {
         self.simd[3]
     }
 
+    pub fn axis_angle(axis: Vec3, angle_radians: f32) -> Self {
+        let factor = (angle_radians / 2.0).sin();
+
+        let simd = axis.simd * f32x4::splat(factor)
+            + f32x4::from_array([0.0, 0.0, 0.0, (angle_radians / 2.0).cos()]);
+
+        let mut ret = Quat::simd(simd);
+        ret.normalize();
+        ret
+    }
+
     /// Standard euclidean for product in 4D
     pub fn dot(&self, rhs: &Quat) -> f32 {
         (self.simd * rhs.simd).reduce_sum()
