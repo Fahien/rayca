@@ -30,6 +30,18 @@ impl Mat3 {
         }
     }
 
+    pub fn from_rotation(rotation: &Quat) -> Self {
+        let mut ret = Mat3::identity();
+        ret.rotate(rotation);
+        ret
+    }
+
+    pub fn from_scale(scale: &Vec3) -> Self {
+        let mut ret = Mat3::identity();
+        ret.scale(scale);
+        ret
+    }
+
     pub fn identity() -> Self {
         Self {
             values: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
@@ -85,6 +97,12 @@ impl From<&Mat4> for Mat3 {
             }
         }
         ret
+    }
+}
+
+impl From<&Inversed<Trs>> for Mat3 {
+    fn from(inv_trs: &Inversed<Trs>) -> Self {
+        Self::from_scale(&inv_trs.get_scale()) * Self::from_rotation(&inv_trs.get_rotation())
     }
 }
 
