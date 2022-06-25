@@ -139,9 +139,9 @@ impl Scene {
             return None;
         }
 
-        if let Some((hit, triangle)) = bvh.intersects_iter(&ray) {
-            let n = triangle.get_normal(&hit);
-            let mut color = triangle.get_color(&hit);
+        if let Some((hit, primitive)) = bvh.intersects_iter(&ray) {
+            let n = primitive.get_normal(&hit);
+            let mut color = primitive.get_color(&hit);
 
             if self.lighting == Lighting::Flat {
                 return Some(color);
@@ -162,7 +162,7 @@ impl Scene {
                 }
             }
 
-            let (metallic, roughness) = triangle.get_metallic_roughness(&hit);
+            let (metallic, roughness) = primitive.get_metallic_roughness(&hit);
 
             let n_dot_v = n.dot(&ray.dir).abs() + 1e-5;
 
@@ -179,15 +179,15 @@ impl Scene {
                 // Whether this object is light (verb) by a light (noun)
                 let is_light = match shadow_result {
                     None => true,
-                    Some((shadow_hit, triangle)) => {
+                    Some((shadow_hit, primitive)) => {
                         // Distance between current surface and the light source
                         let light_distance = light.get_distance(light_node, &hit.point);
                         // If the obstacle is beyong the light source then the current surface is light
                         if shadow_hit.depth > light_distance {
                             true
                         } else {
-                            // check whether this is a transparent surface
-                            let shadow_color = triangle.get_color(&shadow_hit);
+                            // Check whether the obstacle is a transparent surface
+                            let shadow_color = primitive.get_color(&shadow_hit);
                             shadow_color.a < 1.0
                         }
                     }
@@ -251,19 +251,27 @@ impl Scene {
         triangle_count
     }
 
-    fn collect(&self) -> (Vec<BvhTriangle>, Vec<(&Camera, Trs)>) {
+    fn collect_trs(&self) -> Vec<SolvedTrs> {
+        let mut solved_trs = Vec::new();
+        for model in self.models.iter() {
+            solved_trs.extend(model.collect_trs());
+        }
+        solved_trs.extend(self.default_model.collect_trs());
+        solved_trs
+    }
+
+    fn collect<'m>(
+        &'m self,
+        solved_trs: &'m Vec<SolvedTrs<'m>>,
+    ) -> (Vec<BvhPrimitive>, Vec<(&'m Camera, &'m Trs)>) {
         let mut triangles = vec![];
         let mut cameras = vec![];
 
-        for model in self.models.iter() {
-            let (mut curr_triangles, mut curr_cameras) = model.collect();
-            triangles.append(&mut curr_triangles);
-            cameras.append(&mut curr_cameras);
+        for trs in solved_trs {
+            let (curr_triangles, curr_cameras) = trs.collect();
+            triangles.extend(curr_triangles);
+            cameras.extend(curr_cameras);
         }
-
-        let (mut def_triangles, mut def_cameras) = self.default_model.collect();
-        triangles.append(&mut def_triangles);
-        cameras.append(&mut def_cameras);
 
         (triangles, cameras)
     }
@@ -271,9 +279,10 @@ impl Scene {
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
-        let (triangles, cameras) = self.collect();
+        let solved_trs = self.collect_trs();
+        let (primitives, cameras) = self.collect(&solved_trs);
 
-        let mut bvh_builder = Bvh::builder().triangles(triangles);
+        let mut bvh_builder = Bvh::builder().primitives(primitives);
         if !self.bvh {
             bvh_builder = bvh_builder.max_depth(0);
         }
@@ -288,7 +297,7 @@ impl Draw for Scene {
         let inv_height = 1.0 / height;
 
         assert!(cameras.len() > 0);
-        let (camera, camera_trs) = &cameras[0];
+        let (camera, camera_trs) = cameras[0];
 
         let aspectratio = width / height;
         let angle = camera.get_angle();

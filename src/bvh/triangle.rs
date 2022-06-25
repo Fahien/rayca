@@ -4,41 +4,17 @@
 
 use crate::*;
 
-const WHITE_MATERIAL: Material = Material {
-    color: Color {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
-        a: 1.0,
-    },
-    albedo_texture: None,
-    normal_texture: None,
-    metallic_factor: 1.0,
-    roughness_factor: 1.0,
-    metallic_roughness_texture: None,
-};
-
-pub struct BvhTriangle<'m> {
+pub struct BvhTriangle {
     pub vertices: [Vertex; 3],
     pub centroid: Vec3,
-    pub material: Handle<Material>,
-    pub model: &'m Model,
 }
 
-impl<'m> BvhTriangle<'m> {
-    pub fn new(
-        a: Vertex,
-        b: Vertex,
-        c: Vertex,
-        material: Handle<Material>,
-        model: &'m Model,
-    ) -> Self {
+impl BvhTriangle {
+    pub fn new(a: Vertex, b: Vertex, c: Vertex) -> Self {
         let centroid = (a.pos + b.pos + c.pos) * 0.3333;
         Self {
             vertices: [a, b, c],
             centroid,
-            material,
-            model,
         }
     }
 
@@ -96,18 +72,9 @@ impl<'m> BvhTriangle<'m> {
         b.normalize();
         b
     }
-
-    pub fn get_material(&self) -> &Material {
-        let material = self
-            .model
-            .materials
-            .get(self.material)
-            .unwrap_or(&WHITE_MATERIAL);
-        material
-    }
 }
 
-impl<'m> Intersect for BvhTriangle<'m> {
+impl Intersect for BvhTriangle {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
     fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let v0 = &self.vertices[0].pos;
@@ -183,26 +150,24 @@ impl<'m> Intersect for BvhTriangle<'m> {
         Some(hit) // This ray hits the triangle
     }
 
-    fn get_color(&self, hit: &Hit) -> Color {
-        let material = self.get_material();
+    fn get_color(&self, material: &Material, model: &Model, hit: &Hit) -> Color {
         let mut color = self.interpolate_colors(hit) * material.color;
         if let Some(albedo_handle) = material.albedo_texture {
-            let texture = self.model.textures.get(albedo_handle).unwrap();
+            let texture = model.textures.get(albedo_handle).unwrap();
             let sampler = Sampler::default();
-            let image = self.model.images.get(texture.image).unwrap();
+            let image = model.images.get(texture.image).unwrap();
             color *= sampler.sample(image, &self.interpolate_uvs(hit));
         }
         color
     }
 
-    fn get_normal(&self, hit: &Hit) -> Vec3 {
+    fn get_normal(&self, material: &Material, model: &Model, hit: &Hit) -> Vec3 {
         let normal = self.interpolate_normals(hit);
 
-        let material = self.get_material();
         if let Some(normal_handle) = material.normal_texture {
-            let texture = self.model.textures.get(normal_handle).unwrap();
+            let texture = model.textures.get(normal_handle).unwrap();
             let sampler = Sampler::default();
-            let image = self.model.images.get(texture.image).unwrap();
+            let image = model.images.get(texture.image).unwrap();
             let mut sampled_normal = Vec3::from(sampler.sample(image, &self.interpolate_uvs(hit)));
             sampled_normal = sampled_normal * 2.0 - 1.0;
 
@@ -216,12 +181,11 @@ impl<'m> Intersect for BvhTriangle<'m> {
         }
     }
 
-    fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32) {
-        let material = self.get_material();
+    fn get_metallic_roughness(&self, material: &Material, model: &Model, hit: &Hit) -> (f32, f32) {
         if let Some(mr_handle) = material.metallic_roughness_texture {
-            let mr_texture = self.model.textures.get(mr_handle).unwrap();
+            let mr_texture = model.textures.get(mr_handle).unwrap();
             let sampler = Sampler::default();
-            let image = self.model.images.get(mr_texture.image).unwrap();
+            let image = model.images.get(mr_texture.image).unwrap();
             let color = sampler.sample(image, &self.interpolate_uvs(hit));
             // Blue channel contains metalness value
             // Red channel contains roughness value
@@ -241,7 +205,8 @@ mod test {
         let mut model = Model::new();
         let material = model.materials.push(Material::new());
         let triangle_prim = Primitive::unit_triangle();
-        let triangles = triangle_prim.triangles(&Trs::default(), material, &model);
+        let trs = Trs::default();
+        let triangles = triangle_prim.primitives(&trs, material, &model);
         let triangle_ref = &triangles[0];
 
         let ray = Ray::new(Vec3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));

@@ -30,13 +30,13 @@ impl Triangle {
         }
     }
 
-    fn triangles_impl<'m, Index: NumCast>(
+    fn primitives_impl<'m, Index: NumCast>(
         &self,
-        transform: &Trs,
+        transform: &'m Trs,
         material: Handle<Material>,
         model: &'m Model,
         indices: &[Index],
-    ) -> Vec<BvhTriangle<'m>> {
+    ) -> Vec<BvhPrimitive<'m>> {
         let mut ret = vec![];
         let matrix: Mat4 = transform.into();
         let tangent_matrix = Mat3::from(&matrix);
@@ -65,35 +65,38 @@ impl Triangle {
             c.tangent = &tangent_matrix * c.tangent;
             c.bitangent = &tangent_matrix * c.bitangent;
 
-            ret.push(BvhTriangle::new(a, b, c, material, model));
+            let triangle = BvhTriangle::new(a, b, c);
+            let geometry = BvhGeometry::Triangle(triangle);
+            let primitive = BvhPrimitive::new(geometry, transform, material, model);
+            ret.push(primitive)
         }
 
         ret
     }
 
-    pub fn triangles<'m>(
+    pub fn primitives<'m>(
         &self,
-        transform: &Trs,
+        transform: &'m Trs,
         material: Handle<Material>,
         model: &'m Model,
-    ) -> Vec<BvhTriangle<'m>> {
+    ) -> Vec<BvhPrimitive<'m>> {
         let indices_len = self.indices.len() / self.index_size;
 
         match self.index_size {
-            1 => self.triangles_impl(transform, material, model, &self.indices),
+            1 => self.primitives_impl(transform, material, model, &self.indices),
             2 => {
                 let indices = unsafe {
                     std::slice::from_raw_parts(self.indices.as_ptr() as *const u16, indices_len)
                 };
 
-                self.triangles_impl(transform, material, model, indices)
+                self.primitives_impl(transform, material, model, indices)
             }
             4 => {
                 let indices = unsafe {
                     std::slice::from_raw_parts(self.indices.as_ptr() as *const u32, indices_len)
                 };
 
-                self.triangles_impl(transform, material, model, indices)
+                self.primitives_impl(transform, material, model, indices)
             }
             _ => panic!("Index size not supported"),
         }
