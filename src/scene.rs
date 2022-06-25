@@ -13,12 +13,33 @@ use super::*;
 
 pub struct Scene {
     pub models: Vec<Model>,
+    /// This can be used for default values which are not defined in any other model in the scene
+    pub default_model: Model,
 }
 
 impl Scene {
+    fn create_default_model() -> Model {
+        let mut model = Model::new();
+
+        // Add 1 camera
+        let camera = Camera::default();
+        let camera_handle = model.cameras.push(camera);
+        let camera_node = Node::builder()
+            .camera(camera_handle)
+            .translation(Vec3::new(0.0, 0.0, 4.0))
+            .build();
+        let camera_node_handle = model.nodes.push(camera_node);
+        model.root.children.push(camera_node_handle);
+
+        model
+    }
+
     pub fn new() -> Self {
+        let default_model = Self::create_default_model();
+
         Self {
             models: Default::default(),
+            default_model,
         }
     }
 
@@ -81,6 +102,15 @@ impl Draw for Scene {
             }
         }
 
+        let default_transforms = self.default_model.collect_transforms();
+        for (node, trs) in default_transforms {
+            // Collect cameras
+            if let Some(camera_handle) = node.camera {
+                let camera = self.default_model.cameras.get(camera_handle).unwrap();
+                cameras.push((camera, trs));
+            }
+        }
+
         let bvh = Bvh::new(triangles);
 
         let width = image.width() as f32;
@@ -89,22 +119,11 @@ impl Draw for Scene {
         let inv_width = 1.0 / width;
         let inv_height = 1.0 / height;
 
-        let mut fov = 0.7;
-
-        let camera_trs = if cameras.len() > 0 {
-            let (camera, camera_trs) = &cameras[0];
-            fov = camera.yfov_radians;
-            camera_trs.clone()
-        } else {
-            Trs::new(
-                Vec3::new(0.0, 0.0, 4.0),
-                Quat::default(),
-                Vec3::new(1.0, 1.0, 1.0),
-            )
-        };
+        assert!(cameras.len() > 0);
+        let (camera, camera_trs) = &cameras[0];
 
         let aspectratio = width / height;
-        let angle = (fov * 0.5).tan();
+        let angle = camera.get_angle();
 
         #[cfg(feature = "parallel")]
         let pixel_iter = image.pixels_mut().into_par_iter();
@@ -119,7 +138,7 @@ impl Draw for Scene {
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
                 let origin = Vec3::new(0.0, 0.0, 0.0);
-                let ray = &camera_trs * Ray::new(origin, dir);
+                let ray = camera_trs * Ray::new(origin, dir);
 
                 self.draw_pixel(ray, &bvh, row[x]);
             }
