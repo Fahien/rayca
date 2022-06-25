@@ -11,11 +11,19 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 
 use super::*;
 
-#[derive(Default)]
+#[derive(PartialEq)]
+pub enum Lighting {
+    Flat,
+    Pbr,
+}
+
 pub struct Scene {
     pub models: Vec<Model>,
     /// This can be used for default values which are not defined in any other model in the scene
     pub default_model: Model,
+
+    pub lighting: Lighting,
+    pub bvh: bool,
 }
 
 fn saturate_mediump(x: f32) -> f32 {
@@ -46,6 +54,12 @@ fn geometry_smith_ggx(n_dot_v: f32, n_dot_l: f32, roughness: f32) -> f32 {
     let ggxv = n_dot_l * (n_dot_v * (1.0 - a) + a);
     let ggxl = n_dot_v * (n_dot_l * (1.0 - a) + a);
     0.5 / (ggxv + ggxl)
+}
+
+impl Default for Scene {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Scene {
@@ -91,6 +105,8 @@ impl Scene {
         Self {
             models: Default::default(),
             default_model,
+            lighting: Lighting::Pbr,
+            bvh: true,
         }
     }
 
@@ -131,6 +147,11 @@ impl Scene {
         if let Some((hit, triangle)) = bvh.intersects_iter(&ray) {
             let n = triangle.get_normal(&hit);
             let mut color = triangle.get_color(&hit);
+
+            if self.lighting == Lighting::Flat {
+                return Some(color);
+            }
+
             let mut pixel_color = Color::black() + color / 8.0;
 
             const RAY_BIAS: f32 = 1e-4;
@@ -245,21 +266,25 @@ impl Scene {
             let (mut curr_triangles, mut curr_cameras) = model.collect();
             triangles.append(&mut curr_triangles);
             cameras.append(&mut curr_cameras);
-                }
+        }
 
         let (mut def_triangles, mut def_cameras) = self.default_model.collect();
         triangles.append(&mut def_triangles);
         cameras.append(&mut def_cameras);
 
         (triangles, cameras)
-            }
-        }
+    }
+}
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
         let (triangles, cameras) = self.collect();
 
-        let bvh = Bvh::new(triangles, 1);
+        let mut bvh_builder = Bvh::builder().triangles(triangles);
+        if !self.bvh {
+            bvh_builder = bvh_builder.max_depth(0);
+        }
+        let bvh = bvh_builder.build();
 
         let mut timer = Timer::new();
 
