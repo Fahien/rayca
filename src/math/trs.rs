@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::Mul;
+use std::{ops::Mul, simd::f32x4};
 
 use crate::Ray;
 
@@ -21,6 +21,25 @@ impl TrsBuilder {
             rotation: Quat::default(),
             scale: Vec3::new(1.0, 1.0, 1.0),
         }
+    }
+
+    pub fn look_at(mut self, target: Vec3, eye: Vec3, up: Vec3) -> Self {
+        // Z axis points towards the eye!
+        let z_axis = (eye - target).get_normalized();
+        let x_axis = up.cross(&z_axis).get_normalized();
+        let y_axis = z_axis.cross(&x_axis);
+
+        self.translation = Vec3::new(x_axis.dot(&-eye), y_axis.dot(&-eye), z_axis.dot(&-eye));
+
+        let rotation_matrix = Mat4::new([
+            x_axis.simd,
+            y_axis.simd,
+            z_axis.simd,
+            f32x4::from_array([0.0, 0.0, 0.0, 1.0]),
+        ]);
+        self.rotation = Quat::from(rotation_matrix);
+
+        self
     }
 
     pub fn translation(mut self, translation: Vec3) -> Self {
@@ -235,5 +254,20 @@ mod test {
         trs.scale.set_y(2.0);
         mat[1][1] = 2.0;
         assert!(Mat4::from(&trs) == mat);
+    }
+
+    #[test]
+    fn look_at() {
+        let origin = Vec3::default();
+        let y_axis = Vec3::new(0.0, 1.0, 0.0);
+        let eye = Vec3::new(0.0, 0.0, 1.0);
+
+        // This transforms world coordinates into camera coordinates
+        let world_to_camera_trs = Trs::builder().look_at(origin, eye, y_axis).build();
+
+        // This transforms camera coordinates to world transform
+        let camera_to_world_trs = world_to_camera_trs.get_inversed();
+        assert_eq!(camera_to_world_trs.get_translation(), eye);
+        assert_eq!(camera_to_world_trs.get_rotation(), Quat::default());
     }
 }
