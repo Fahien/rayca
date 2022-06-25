@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::{ops::{Mul, Div}, simd::f32x4};
+use std::{ops::Mul, simd::f32x4};
 
 use crate::Ray;
 
@@ -192,6 +192,17 @@ impl Mul<Vec3> for &Trs {
     }
 }
 
+impl Mul<Point3> for &Trs {
+    type Output = Point3;
+
+    fn mul(self, mut rhs: Point3) -> Self::Output {
+        rhs.scale(&self.scale);
+        rhs.rotate(&self.rotation);
+        rhs.translate(&(self.rotation * self.translation));
+        rhs
+    }
+}
+
 impl Mul<Ray> for &Trs {
     type Output = Ray;
 
@@ -202,18 +213,6 @@ impl Mul<Ray> for &Trs {
         rhs
     }
 }
-
-impl Div<Ray> for &Trs {
-    type Output = Ray;
-
-    fn div(self, mut rhs: Ray) -> Self::Output {
-        rhs.translate(& self.translation);
-        rhs.rotate(&self.rotation);
-        rhs.scale(&self.scale);
-        rhs
-    }
-}
-
 pub struct Inversed<T> {
     pub source: T,
 }
@@ -235,6 +234,17 @@ impl From<Trs> for Inversed<Trs> {
 impl<'a> From<&'a Trs> for Inversed<&'a Trs> {
     fn from(source: &'a Trs) -> Self {
         Self { source }
+    }
+}
+
+impl Mul<Ray> for &Inversed<&Trs> {
+    type Output = Ray;
+
+    fn mul(self, mut rhs: Ray) -> Self::Output {
+        rhs.translate(&-self.source.translation);
+        rhs.rotate(&self.source.rotation.get_inverse());
+        rhs.scale(&self.source.scale.get_reciprocal());
+        rhs
     }
 }
 
