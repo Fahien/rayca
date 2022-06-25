@@ -22,22 +22,27 @@ fn _circle() {
     run(scene, "target/sphere.png", 128, 128);
 }
 
-fn _triangle() {
-    let scene = Scene::new();
-    //let triangle = Triangle::new(
-    //    Point3::new(-1.0, -1.0, -1.0),
-    //    Point3::new(1.0, -1.0, -1.0),
-    //    Point3::new(0.0, 1.0, -1.0),
-    //);
-    //let mut triangle_ex = TriangleEx::default();
-    //triangle_ex.vertices[0].color = Color::from(0xFF0000FF);
-    //triangle_ex.vertices[1].color = Color::from(0x00FF00FF);
-    //triangle_ex.vertices[2].color = Color::from(0x0000FFFF);
-    //triangle_ex.vertices[0].normal = Vec3::new(0.0, 0.0, 1.0);
-    //triangle_ex.vertices[1].normal = Vec3::new(1.0, 0.0, 0.0);
-    //triangle_ex.vertices[2].normal = Vec3::new(0.0, 1.0, 0.0);
-    //scene.triangles.push(triangle);
-    //scene.triangles_ex.push(triangle_ex);
+#[test]
+fn triangle() {
+    let mut scene = Scene::new();
+    let mut model = GltfModel::default();
+    let mut prim = GltfPrimitive::unit_triangle();
+    let triangles = &mut prim.triangles;
+    triangles.vertices[0].color = Color::from(0xFF0000FF);
+    triangles.vertices[1].color = Color::from(0x00FF00FF);
+    triangles.vertices[2].color = Color::from(0x0000FFFF);
+
+    let prim_handle = model.primitives.push(prim);
+    let mesh = GltfMesh::new(vec![prim_handle]);
+    let mesh_handle = model.meshes.push(mesh);
+    let node = Node::builder()
+        .mesh(mesh_handle)
+        .translation(Vec3::new(0.0, -1.0, 0.0))
+        .scale(Vec3::new(1.0, 2.0, 1.0))
+        .build();
+    let node_handle = model.nodes.push(node);
+    model.root.children.push(node_handle);
+    scene.gltf_models.push(model);
     run(scene, "target/triangle.png", 256, 256);
 }
 

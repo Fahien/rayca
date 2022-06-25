@@ -3,8 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 pub mod mesh;
+pub mod triangles;
 pub mod vertex;
 pub use mesh::*;
+pub use triangles::*;
 pub use vertex::*;
 
 use std::{error::Error, path::Path};

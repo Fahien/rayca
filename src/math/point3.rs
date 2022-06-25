@@ -57,6 +57,10 @@ impl Point3 {
         *self = rotated.into();
     }
 
+    pub fn translate(&mut self, translation: &Vec3) {
+        self.simd += translation.simd;
+    }
+
     pub fn min(&self, other: &Self) -> Self {
         Self::simd(self.simd.simd_min(other.simd))
     }

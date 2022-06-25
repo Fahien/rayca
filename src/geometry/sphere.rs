@@ -4,9 +4,10 @@
 
 use crate::{ray::Intersect, Color, Dot, Hit, Point3, Ray, Scene, Shade, Vec2, Vec3, RGBA8};
 
+#[derive(Debug, Clone)]
 pub struct Sphere {
     center: Point3,
-    _radius: f32,
+    radius: f32,
     radius2: f32,
 }
 
@@ -15,9 +16,14 @@ impl Sphere {
         let radius2 = radius * radius;
         Self {
             center,
-            _radius: radius,
+            radius,
             radius2,
         }
+    }
+
+    pub fn set_radius(&mut self, radius: f32) {
+        self.radius = radius;
+        self.radius2 = radius * radius;
     }
 }
 
@@ -25,7 +31,7 @@ impl Default for Sphere {
     fn default() -> Self {
         Self {
             center: Default::default(),
-            _radius: 1.0,
+            radius: 1.0,
             radius2: 1.0,
         }
     }
