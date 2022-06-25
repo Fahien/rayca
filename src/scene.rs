@@ -109,7 +109,6 @@ impl Scene {
             path_str,
             timer.get_delta().as_millis()
         );
-
         Ok(())
     }
 
@@ -237,39 +236,26 @@ impl Scene {
         }
         triangle_count
     }
+
+    fn collect(&self) -> (Vec<BvhTriangle>, Vec<(&Camera, Trs)>) {
+        let mut triangles = vec![];
+        let mut cameras = vec![];
+
+        let (mut curr_triangles, mut curr_cameras) = self.model.collect();
+        triangles.append(&mut curr_triangles);
+        cameras.append(&mut curr_cameras);
+
+        let (mut def_triangles, mut def_cameras) = self.default_model.collect();
+        triangles.append(&mut def_triangles);
+        cameras.append(&mut def_cameras);
+
+        (triangles, cameras)
+    }
 }
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
-        let mut triangles = vec![];
-        let mut cameras = vec![];
-
-        let transforms = self.model.collect_transforms();
-        for (node, trs) in transforms {
-            // Collect triangles
-            let node = self.model.nodes.get(node).unwrap();
-            if let Some(mesh) = self.model.meshes.get(node.mesh) {
-                for prim_handle in mesh.primitives.iter() {
-                    let prim = self.model.primitives.get(*prim_handle).unwrap();
-                    let mut prim_triangles = prim.triangles(&trs, prim.material, &self.model);
-                    triangles.append(&mut prim_triangles);
-                }
-            }
-
-            // Collect cameras
-            if let Some(camera) = self.model.cameras.get(node.camera) {
-                cameras.push((camera, trs));
-            }
-        }
-
-        let default_transforms = self.default_model.collect_transforms();
-        for (node, trs) in default_transforms {
-            // Collect cameras
-            let node = self.default_model.nodes.get(node).unwrap();
-            if let Some(camera) = self.default_model.cameras.get(node.camera) {
-                cameras.push((camera, trs));
-            }
-        }
+        let (triangles, cameras) = self.collect();
 
         let bvh = Bvh::new(triangles, 1);
 
