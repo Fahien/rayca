@@ -100,7 +100,15 @@ impl BvhPrimitive {
                 let material = self.get_material(model);
                 triangle.get_normal(material, model, hit)
             }
-            BvhGeometry::Sphere(sphere) => (sphere.center - hit.point).get_normalized(),
+            BvhGeometry::Sphere(sphere) => {
+                let trs = model.solved_trs.get(&self.node).unwrap();
+                let inverse = trs.get_inversed();
+                let hit_point = &inverse * hit.point;
+                let normal = sphere.get_normal(&hit_point);
+
+                let normal_matrix = Mat3::from(&inverse).get_transpose();
+                (&normal_matrix * normal).get_normalized()
+            }
         }
     }
 

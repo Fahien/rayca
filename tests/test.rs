@@ -5,6 +5,30 @@
 use rayca::*;
 
 #[test]
+fn sphere() {
+    let mut image = Image::new(256, 256, ColorType::RGBA8);
+    let mut scene = Scene::new_with_config(Config::new(false, Box::new(Scratcher::new())));
+
+    let mut model = Model::new();
+    let prim = Primitive::unit_sphere();
+    let prim_handle = model.primitives.push(prim);
+    let mesh = Mesh::new(vec![prim_handle]);
+    let mesh_handle = model.meshes.push(mesh);
+    let node = Node::builder()
+        .mesh(mesh_handle)
+        .translation(Vec3::new(0.0, 0.0, -1.0))
+        .scale(Vec3::new(1.0, 2.0, 1.0))
+        .build();
+    let node_handle = model.nodes.push(node);
+    model.root.children.push(node_handle);
+    scene.push(model);
+    scene.push_default_model();
+
+    scene.draw(&mut image);
+    image.dump_png("target/sphere.png");
+}
+
+#[test]
 fn triangle() {
     let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();

@@ -69,6 +69,12 @@ impl Scene {
         }
     }
 
+    pub fn new_with_config(config: Config) -> Self {
+        let mut scene = Self::new();
+        scene.config = config;
+        scene
+    }
+
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Box<dyn Error>> {
         let mut timer = Timer::new();
         let path_str = path.as_ref().to_string_lossy().to_string();
