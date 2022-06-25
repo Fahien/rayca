@@ -3,13 +3,13 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    Color, Dot, GgxMaterial, GltfModel, Handle, Hit, Intersect, Mat3, Point3, Ray, Sampler, Scene,
-    Shade, Vec2, Vec3, Vertex,
+    Bvh, Color, Dot, GgxMaterial, GltfModel, Handle, Hit, Intersect, Mat3, Point3, Ray, Sampler,
+    Scene, Shade, Vec2, Vec3, Vertex,
 };
 
 pub struct Triangle {
     pub vertices: [Point3; 3],
-    pub centroid: Vec3,
+    centroid: Vec3,
 }
 
 impl Triangle {
@@ -19,24 +19,6 @@ impl Triangle {
             vertices: [a, b, c],
             centroid,
         }
-    }
-
-    pub fn get_vertex_mut(&mut self, index: usize) -> &mut Point3 {
-        &mut self.vertices[index]
-    }
-
-    pub fn min(&self) -> Point3 {
-        Point3::new(f32::MAX, f32::MAX, f32::MAX)
-            .min(&self.vertices[0])
-            .min(&self.vertices[1])
-            .min(&self.vertices[2])
-    }
-
-    pub fn max(&self) -> Point3 {
-        Point3::new(f32::MIN, f32::MIN, f32::MIN)
-            .max(&self.vertices[0])
-            .max(&self.vertices[1])
-            .max(&self.vertices[2])
     }
 }
 
@@ -52,7 +34,7 @@ impl Default for Triangle {
 
 impl Intersect for Triangle {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
-    fn intersects(&self, ray: &Ray) -> Option<Hit> {
+    fn intersects(&self, _bvh: &Bvh, ray: &Ray) -> Option<Hit> {
         let v0 = Vec3::from(self.vertices[0]);
         let v1 = Vec3::from(self.vertices[1]);
         let v2 = Vec3::from(self.vertices[2]);
@@ -68,7 +50,7 @@ impl Intersect for Triangle {
             return None;
         }
 
-        let denom = n.dot(&n);
+        let denom = n.dot(n);
 
         // Step 1: finding P
 
@@ -96,17 +78,17 @@ impl Intersect for Triangle {
 
         // Edge 0
         let edge0 = v1 - v0;
-        let vp0 = p - v0;
+        let vp0 = Vec3::from(p - v0);
         // Vector perpendicular to triangle's plane
-        let c = edge0.cross(&vp0.into());
+        let c = edge0.cross(&vp0);
         if n.dot(c) < 0.0 {
             return None; // P is on the right side
         }
 
         // Edge 1
         let edge1 = v2 - v1;
-        let vp1 = p - v1;
-        let c = edge1.cross(&vp1.into());
+        let vp1 = Vec3::from(p - v1);
+        let c = edge1.cross(&vp1);
         let u = n.dot(c);
         if u < 0.0 {
             return None; // P is on the right side
@@ -114,8 +96,8 @@ impl Intersect for Triangle {
 
         // Edge 2
         let edge2 = v0 - v2;
-        let vp2 = p - v2;
-        let c = edge2.cross(&vp2.into());
+        let vp2 = Vec3::from(p - v2);
+        let c = edge2.cross(&vp2);
         let v = n.dot(c);
         if v < 0.0 {
             return None; // P is on the right side;
@@ -128,6 +110,24 @@ impl Intersect for Triangle {
         let hit = Hit::new(u32::MAX, u32::MAX, t, p, uv);
         Some(hit) // This ray hits the triangle
     }
+
+    fn get_centroid(&self, _bvh: &Bvh) -> Vec3 {
+        self.centroid
+    }
+
+    fn min(&self, _bvh: &Bvh) -> Point3 {
+        Point3::new(f32::MAX, f32::MAX, f32::MAX)
+            .min(&self.vertices[0])
+            .min(&self.vertices[1])
+            .min(&self.vertices[2])
+    }
+
+    fn max(&self, _bvh: &Bvh) -> Point3 {
+        Point3::new(f32::MIN, f32::MIN, f32::MIN)
+            .max(&self.vertices[0])
+            .max(&self.vertices[1])
+            .max(&self.vertices[2])
+    }
 }
 
 #[cfg(test)]
@@ -136,11 +136,12 @@ mod test {
 
     #[test]
     fn intersect() {
+        let bvh = Bvh::default();
         let triangle = Triangle::default();
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
-        assert!(triangle.intersects(&ray).is_some());
+        assert!(triangle.intersects(&bvh, &ray).is_some());
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 1.0));
-        assert!(triangle.intersects(&ray).is_none());
+        assert!(triangle.intersects(&bvh, &ray).is_none());
     }
 }
 

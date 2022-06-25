@@ -39,7 +39,7 @@ pub struct Scratcher {}
 
 impl Integrator for Scratcher {
     fn trace(&self, scene: &Scene, ray: Ray, depth: u8) -> Color {
-        let mut pixel_color = Color::BLACK;
+        let mut pixel_color = Color::new(0.0, 0.0, 0.0, 0.0);
 
         if depth > 1 {
             return pixel_color;
@@ -93,7 +93,7 @@ impl Integrator for Scratcher {
                     if shadow_hit.depth > light_distance {
                         true
                     } else {
-                        // Check whether this is a transparent surface
+                        // Check whether the obstacle is a transparent surface
                         let blas_node = &scene.tlas.blas_nodes[shadow_hit.blas as usize];
                         let shadow_bvh = scene.tlas.bvhs.get(blas_node.bvh).unwrap();
                         let shadow_primitive = shadow_bvh.get_shade(shadow_hit.primitive);

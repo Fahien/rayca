@@ -4,7 +4,7 @@
 
 use crate::{Color, ColorType, Image, Vec2, RGB8, RGBA8};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Sampler {}
 
 impl Sampler {

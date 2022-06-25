@@ -10,9 +10,15 @@ use std::{
 use crate::{Axis3, Dot, Quat, Vec3};
 
 #[repr(C)]
-#[derive(Clone, Copy, Default, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point3 {
     pub simd: f32x4,
+}
+
+impl Default for Point3 {
+    fn default() -> Self {
+        Self::new(0.0, 0.0, 0.0)
+    }
 }
 
 impl Point3 {
@@ -58,14 +64,15 @@ impl Point3 {
     }
 
     pub fn translate(&mut self, translation: &Vec3) {
+        // `translation.w == 0` hence this is fine
         self.simd += translation.simd;
     }
 
-    pub fn min(&self, other: &Self) -> Self {
+    pub fn min(self, other: &Self) -> Self {
         Self::simd(self.simd.simd_min(other.simd))
     }
 
-    pub fn max(&self, other: &Self) -> Self {
+    pub fn max(self, other: &Self) -> Self {
         Self::simd(self.simd.simd_max(other.simd))
     }
 }
@@ -100,12 +107,28 @@ impl Add<Vec3> for Point3 {
     }
 }
 
+impl Sub<&Point3> for Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Point3) -> Self::Output {
+        (&self).sub(rhs)
+    }
+}
+
+impl Sub<&Point3> for &Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Point3) -> Self::Output {
+        // `point.w - point.w = 0.0` hence a vector
+        Self::Output::simd(self.simd - rhs.simd)
+    }
+}
+
 impl Sub for Point3 {
     type Output = Vec3;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        // `point.w - point.w = 0.0` hence a vector
-        Self::Output::simd(self.simd - rhs.simd)
+        self.sub(&rhs)
     }
 }
 
@@ -138,14 +161,6 @@ impl Sub<&Vec3> for &Point3 {
 
     fn sub(self, rhs: &Vec3) -> Self::Output {
         *self + (-rhs)
-    }
-}
-
-impl Sub<&Point3> for &Point3 {
-    type Output = Vec3;
-
-    fn sub(self, rhs: &Point3) -> Self::Output {
-        Self::Output::simd(self.simd - rhs.simd)
     }
 }
 

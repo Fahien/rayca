@@ -12,7 +12,7 @@ use crate::Vec3;
 
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorType {
     RGB8,
     RGBA8,

@@ -26,9 +26,37 @@ impl AABB {
         e.simd[0] * e.simd[1] + e.simd[1] * e.simd[2] + e.simd[2] * e.simd[0]
     }
 
+    fn grow_range(&mut self, bvh: &Bvh, range: BvhRange, primitives: &[impl Intersect]) {
+        // Visit each primitive to find the lowest and highest x, y, and z
+        let a = range.offset;
+        let b = a + range.count;
+        for i in a..b {
+            let prim = &primitives[i as usize];
+            self.a = self.a.min(&prim.min(bvh));
+            self.b = self.b.max(&prim.max(bvh));
+        }
+    }
+
     fn grow(&mut self, p: &Point3) {
         self.a = self.a.min(p);
         self.b = self.b.max(p);
+    }
+
+    fn grow_triangle(&mut self, triangle: &Triangle) {
+        self.grow(&triangle.vertices[0]);
+        self.grow(&triangle.vertices[1]);
+        self.grow(&triangle.vertices[2]);
+    }
+
+    fn grow_sphere(&mut self, sphere: &Sphere, bvh: &Bvh) {
+        let radius = sphere.get_radius();
+        let center = sphere.get_center(bvh);
+        self.grow(&(center + Vec3::new(-radius, 0.0, 0.0)));
+        self.grow(&(center + Vec3::new(radius, 0.0, 0.0)));
+        self.grow(&(center + Vec3::new(0.0, -radius, 0.0)));
+        self.grow(&(center + Vec3::new(0.0, radius, 0.0)));
+        self.grow(&(center + Vec3::new(0.0, 0.0, -radius)));
+        self.grow(&(center + Vec3::new(0.0, 0.0, radius)));
     }
 
     /// Slab test. We do not care where we hit the box; only info we need is a yes/no answer.
@@ -80,6 +108,7 @@ pub struct BvhNode {
     right: Handle<BvhNode>,
 
     triangles: BvhRange,
+    spheres: BvhRange,
 }
 
 impl BvhNode {
@@ -91,30 +120,21 @@ impl BvhNode {
         self.left.is_none() && self.right.is_none()
     }
 
-    fn set_triangles(
+    fn set_primitives(
         &mut self,
+        bvh: &mut Bvh,
         triangles_range: BvhRange,
-        triangles: &mut [Triangle],
-        triangles_ex: &mut [TriangleEx],
-        nodes: &mut Pack<BvhNode>,
-        max_depth: u8,
+        spheres_range: BvhRange,
     ) {
         let mut timer = Timer::new();
-        self.set_triangles_recursive(
-            triangles_range,
-            triangles,
-            triangles_ex,
-            nodes,
-            max_depth,
-            0,
-        );
+        self.set_primitives_recursive(bvh, triangles_range, spheres_range, 0);
         print_success!("Built", "BVH in {:.2}ms", timer.get_delta().as_millis());
     }
 
     /// Surface Area Heuristics:
     /// The cost of a split is proportional to the summed cost of intersecting the two
     /// resulting boxes, including the triangles they store.
-    fn evaluate_sah(&self, triangles: &[Triangle], axis: Axis3, pos: f32) -> f32 {
+    fn evaluate_sah(&self, bvh: &Bvh, axis: Axis3, pos: f32) -> f32 {
         // determine triangle counts and bounds for this split candidate
         let mut left_box = AABB::default();
         let mut right_box = AABB::default();
@@ -123,17 +143,25 @@ impl BvhNode {
 
         let a = self.triangles.offset as usize;
         let b = a + self.triangles.count as usize;
-        for tri in triangles.iter().take(b).skip(a) {
-            if tri.centroid[axis] < pos {
+        for tri in bvh.triangles.iter().take(b).skip(a) {
+            if tri.get_centroid(bvh)[axis] < pos {
                 left_count += 1;
-                left_box.grow(&tri.vertices[0]);
-                left_box.grow(&tri.vertices[1]);
-                left_box.grow(&tri.vertices[2]);
+                left_box.grow_triangle(tri);
             } else {
                 right_count += 1;
-                right_box.grow(&tri.vertices[0]);
-                right_box.grow(&tri.vertices[1]);
-                right_box.grow(&tri.vertices[2]);
+                right_box.grow_triangle(tri);
+            }
+        }
+
+        let a = self.spheres.offset as usize;
+        let b = a + self.spheres.count as usize;
+        for sphere in bvh.spheres.iter().take(b).skip(a) {
+            if sphere.get_center(bvh)[axis] < pos {
+                left_count += 1;
+                left_box.grow_sphere(sphere, bvh);
+            } else {
+                right_count += 1;
+                right_box.grow_sphere(sphere, bvh);
             }
         }
 
@@ -147,7 +175,7 @@ impl BvhNode {
 
     /// Finds the optimal split plane position and axis
     /// - Returns (split axis, split pos, split cost)
-    fn find_best_split_plane(&self, triangles: &[Triangle]) -> (Axis3, f32, f32) {
+    fn find_best_split_plane(&self, bvh: &Bvh) -> (Axis3, f32, f32) {
         const ALL_AXIS: [Axis3; 3] = [Axis3::X, Axis3::Y, Axis3::Z];
 
         let mut best_cost = f32::MAX;
@@ -167,7 +195,7 @@ impl BvhNode {
 
             for i in 1..AREA_COUNT {
                 let candidate_pos = bounds_min + i as f32 * scale;
-                let cost = self.evaluate_sah(triangles, axis, candidate_pos);
+                let cost = self.evaluate_sah(bvh, axis, candidate_pos);
                 if cost < best_cost {
                     best_cost = cost;
                     best_axis = axis;
@@ -180,99 +208,136 @@ impl BvhNode {
     }
 
     fn calculate_cost(&self) -> f32 {
-        self.triangles.count as f32 * self.bounds.area()
+        (self.triangles.count + self.spheres.count) as f32 * self.bounds.area()
     }
 
-    fn set_triangles_recursive(
+    /// Partition-in-place to obtain two groups of triangles on both sides of the split plane
+    fn partition_triangles_in_place(
+        bvh: &mut Bvh,
+        split_axis: Axis3,
+        split_pos: f32,
+        range: BvhRange,
+    ) -> u32 {
+        let mut i = range.offset as usize;
+        let mut j = (range.offset + range.count) as usize;
+
+        while i < j {
+            if bvh.triangles[i].get_centroid(bvh)[split_axis] < split_pos {
+                i += 1;
+            } else {
+                bvh.triangles.swap(i, j - 1);
+                bvh.triangles_ex.swap(i, j - 1);
+                j -= 1;
+            }
+        }
+
+        i as u32
+    }
+
+    /// Partition-in-place to obtain two groups of spheres on both sides of the split plane
+    fn partition_spheres_in_place(
+        bvh: &mut Bvh,
+        split_axis: Axis3,
+        split_pos: f32,
+        range: BvhRange,
+    ) -> u32 {
+        let mut i = range.offset as usize;
+        let mut j = (range.offset + range.count) as usize;
+
+        while i < j {
+            if bvh.spheres[i].get_centroid(bvh)[split_axis] < split_pos {
+                i += 1;
+            } else {
+                bvh.spheres.swap(i, j - 1);
+                bvh.spheres_ex.swap(i, j - 1);
+                j -= 1;
+            }
+        }
+
+        i as u32
+    }
+
+    fn set_primitives_recursive(
         &mut self,
+        bvh: &mut Bvh,
         triangles_range: BvhRange,
-        triangles: &mut [Triangle],
-        triangles_ex: &mut [TriangleEx],
-        nodes: &mut Pack<BvhNode>,
-        max_depth: u8,
+        spheres_range: BvhRange,
         level: u8,
     ) {
-        assert!(!triangles_range.is_empty());
+        assert!(!triangles_range.is_empty() || !spheres_range.is_empty());
         self.triangles = triangles_range;
+        self.spheres = spheres_range;
 
         self.bounds.a = Point3::new(f32::MAX, f32::MAX, f32::MAX);
         self.bounds.b = Point3::new(f32::MIN, f32::MIN, f32::MIN);
 
-        // Visit each vertex of the triangles to find the lowest and highest x, y, and z
-        let a = triangles_range.offset;
-        let b = a + triangles_range.count;
-        for i in a..b {
-            let tri = &triangles[i as usize];
-            self.bounds.a = self.bounds.a.min(&tri.min());
-            self.bounds.b = self.bounds.b.max(&tri.max());
-        }
+        self.bounds.grow_range(bvh, triangles_range, &bvh.triangles);
+        self.bounds.grow_range(bvh, spheres_range, &bvh.spheres);
 
-        if level >= max_depth {
+        if level >= bvh.max_depth {
             return;
         }
 
         // Surface Area Heuristics
-        let (split_axis, split_pos, split_cost) = self.find_best_split_plane(triangles);
+        let (split_axis, split_pos, split_cost) = self.find_best_split_plane(bvh);
 
         let no_split_cost = self.calculate_cost();
         if split_cost > no_split_cost {
             return;
         }
 
-        // Partition-in-place to obtain two groups of triangles on both sides of the split plane
-        let mut i = triangles_range.offset as usize;
-        let mut j = (triangles_range.offset + triangles_range.count) as usize;
-        while i < j {
-            if triangles[i].centroid[split_axis] < split_pos {
-                i += 1;
-            } else {
-                triangles.swap(i, j - 1);
-                triangles_ex.swap(i, j - 1);
-                j -= 1;
-            }
-        }
+        let i_tri = Self::partition_triangles_in_place(bvh, split_axis, split_pos, triangles_range);
+        let i_sph = Self::partition_spheres_in_place(bvh, split_axis, split_pos, spheres_range);
 
         // Create child nodes for each half
-        let left_count = i as u32 - triangles_range.offset;
-        let right_count = triangles_range.count - left_count;
-        if left_count > 0 && right_count > 0 {
+        let tri_left_count = i_tri - triangles_range.offset;
+        let tri_right_count = triangles_range.count - tri_left_count;
+
+        let sph_left_count = i_sph - spheres_range.offset;
+        let sph_right_count = spheres_range.count - sph_left_count;
+
+        if (tri_left_count > 0 && tri_right_count > 0)
+            || (sph_left_count > 0 && sph_right_count > 0)
+        {
             let right_triangles_range =
-                BvhRange::new(triangles_range.offset + left_count, right_count);
-            let left_triangles_range = BvhRange::new(triangles_range.offset, left_count);
+                BvhRange::new(triangles_range.offset + tri_left_count, tri_right_count);
+            let left_triangles_range = BvhRange::new(triangles_range.offset, tri_left_count);
+
+            let right_spheres_range =
+                BvhRange::new(spheres_range.offset + sph_left_count, sph_right_count);
+            let left_spheres_range = BvhRange::new(spheres_range.offset, sph_left_count);
 
             // Create two nodes
             let mut left_child = BvhNode::new();
-            left_child.set_triangles_recursive(
+            left_child.set_primitives_recursive(
+                bvh,
                 left_triangles_range,
-                triangles,
-                triangles_ex,
-                nodes,
-                max_depth,
+                left_spheres_range,
                 level + 1,
             );
 
             let mut right_child = BvhNode::new();
-            right_child.set_triangles_recursive(
+            right_child.set_primitives_recursive(
+                bvh,
                 right_triangles_range,
-                triangles,
-                triangles_ex,
-                nodes,
-                max_depth,
+                right_spheres_range,
                 level + 1,
             );
 
-            self.left = nodes.push(left_child);
-            self.right = nodes.push(right_child);
+            self.left = bvh.nodes.push(left_child);
+            self.right = bvh.nodes.push(right_child);
             self.triangles.count = 0;
         }
     }
 
     fn intersects(
         &self,
+        bvh: &Bvh,
         ray: &Ray,
         nodes: &Pack<BvhNode>,
         triangles: &[Triangle],
-        triangle_count: &mut usize,
+        spheres: &[Sphere],
+        primitive_count: &mut usize,
     ) -> Option<Hit> {
         if self.bounds.intersects(ray) == f32::MAX {
             return None;
@@ -283,13 +348,26 @@ impl BvhNode {
         let mut depth = f32::INFINITY;
 
         if self.is_leaf() {
-            *triangle_count += self.triangles.count as usize;
+            *primitive_count += (self.triangles.count + self.spheres.count) as usize;
 
             let a = self.triangles.offset;
             let b = a + self.triangles.count;
             for i in a..b {
                 let tri = &triangles[i as usize];
-                if let Some(mut hit) = tri.intersects(ray) {
+                if let Some(mut hit) = tri.intersects(bvh, ray) {
+                    if hit.depth < depth {
+                        depth = hit.depth;
+                        hit.primitive = i;
+                        ret = Some(hit);
+                    }
+                }
+            }
+
+            let a = self.spheres.offset;
+            let b = a + self.spheres.count;
+            for i in a..b {
+                let prim = &spheres[i as usize];
+                if let Some(mut hit) = prim.intersects(bvh, ray) {
                     if hit.depth < depth {
                         depth = hit.depth;
                         hit.primitive = i;
@@ -299,7 +377,9 @@ impl BvhNode {
             }
         } else {
             if let Some(left_node) = nodes.get(self.left) {
-                if let Some(hit) = left_node.intersects(ray, nodes, triangles, triangle_count) {
+                if let Some(hit) =
+                    left_node.intersects(bvh, ray, nodes, triangles, spheres, primitive_count)
+                {
                     if hit.depth < depth {
                         depth = hit.depth;
                         ret = Some(hit);
@@ -308,7 +388,9 @@ impl BvhNode {
             }
 
             if let Some(right_node) = nodes.get(self.right) {
-                if let Some(hit) = right_node.intersects(ray, nodes, triangles, triangle_count) {
+                if let Some(hit) =
+                    right_node.intersects(bvh, ray, nodes, triangles, spheres, primitive_count)
+                {
                     if hit.depth < depth {
                         ret = Some(hit);
                     }
@@ -320,23 +402,21 @@ impl BvhNode {
     }
 }
 
-pub struct BvhBuilder {
+pub struct BvhBuilder<'a> {
     max_depth: u8,
-    triangles: Vec<Triangle>,
-    triangles_ex: Vec<TriangleEx>,
+    model: Option<&'a GltfModel>,
 }
 
-impl Default for BvhBuilder {
+impl<'a> Default for BvhBuilder<'a> {
     fn default() -> Self {
         Self {
             max_depth: u8::MAX,
-            triangles: Default::default(),
-            triangles_ex: Default::default(),
+            model: None,
         }
     }
 }
 
-impl BvhBuilder {
+impl<'a> BvhBuilder<'a> {
     pub fn new() -> Self {
         Self::default()
     }
@@ -346,14 +426,13 @@ impl BvhBuilder {
         self
     }
 
-    pub fn triangles(mut self, triangles: Vec<Triangle>, triangles_ex: Vec<TriangleEx>) -> Self {
-        self.triangles = triangles;
-        self.triangles_ex = triangles_ex;
+    pub fn model(mut self, model: &'a GltfModel) -> Self {
+        self.model = Some(model);
         self
     }
 
     pub fn build(self) -> Bvh {
-        Bvh::from_triangles(self.max_depth, self.triangles, self.triangles_ex)
+        Bvh::new(self.max_depth, self.model.unwrap())
     }
 }
 
@@ -381,7 +460,7 @@ impl Bvh {
 
         let mut ret = Self {
             max_depth,
-            trss: model.collect_transforms(),
+            trss: model.collect_trss(),
             ..Default::default()
         };
 
@@ -394,7 +473,7 @@ impl Bvh {
                 let mesh = model.meshes.get(mesh_handle).unwrap();
                 for prim_handle in mesh.primitives.iter() {
                     let prim = model.primitives.get(*prim_handle).unwrap();
-                    let (prim_triangles, prim_triangles_ex) = prim.triangles(&trs.trs);
+                    let (prim_triangles, prim_triangles_ex) = prim.primitives(&trs.trs);
                     ret.triangles.extend(prim_triangles);
                     ret.triangles_ex.extend(prim_triangles_ex);
                 }
@@ -419,19 +498,23 @@ impl Bvh {
         ret
     }
 
-    pub fn builder() -> BvhBuilder {
+    pub fn builder<'a>() -> BvhBuilder<'a> {
         BvhBuilder::new()
     }
 
-    pub fn from_triangles(
+    pub fn from_primitives(
         max_depth: u8,
         triangles: Vec<Triangle>,
         triangles_ex: Vec<TriangleEx>,
+        spheres: Vec<Sphere>,
+        spheres_ex: Vec<SphereEx>,
     ) -> Self {
         let mut ret = Self {
             max_depth,
             triangles,
             triangles_ex,
+            spheres,
+            spheres_ex,
             ..Default::default()
         };
         ret.set_primitives();
@@ -447,14 +530,9 @@ impl Bvh {
             Point3::new(f32::MAX, f32::MAX, f32::MAX),
             Point3::new(f32::MIN, f32::MIN, f32::MIN),
         );
-        let range = BvhRange::new(0, self.triangles.len() as u32);
-        root.set_triangles(
-            range,
-            &mut self.triangles,
-            &mut self.triangles_ex,
-            &mut self.nodes,
-            self.max_depth,
-        );
+        let triangles_range = BvhRange::new(0, self.triangles.len() as u32);
+        let spheres_range = BvhRange::new(0, self.spheres.len() as u32);
+        root.set_primitives(self, triangles_range, spheres_range);
 
         self.root = root;
     }
@@ -485,8 +563,8 @@ impl Bvh {
                 let a = node.triangles.offset;
                 let b = a + node.triangles.count;
                 for i in a..b {
-                    let tri = &self.triangles[i as usize];
-                    if let Some(mut hit) = tri.intersects(ray) {
+                    let prim = &self.triangles[i as usize];
+                    if let Some(mut hit) = prim.intersects(self, ray) {
                         if hit.depth < max_depth {
                             hit.primitive = i;
                             max_depth = hit.depth;
@@ -494,6 +572,20 @@ impl Bvh {
                         }
                     }
                 }
+
+                let a = node.spheres.offset;
+                let b = a + node.spheres.count;
+                for i in a..b {
+                    let prim = &self.spheres[i as usize];
+                    if let Some(mut hit) = prim.intersects(self, ray) {
+                        if hit.depth < max_depth {
+                            hit.primitive = i;
+                            max_depth = hit.depth;
+                            ret_hit = Some(hit);
+                        }
+                    }
+                }
+
                 if stack.is_empty() {
                     break;
                 } else {
@@ -530,14 +622,26 @@ impl Bvh {
     }
 
     pub fn intersects_recursive(&self, ray: &Ray) -> Option<Hit> {
-        let mut triangle_count = 0;
-        self.root
-            .intersects(ray, &self.nodes, &self.triangles, &mut triangle_count)
+        let mut primitive_count = 0;
+        self.root.intersects(
+            self,
+            ray,
+            &self.nodes,
+            &self.triangles,
+            &self.spheres,
+            &mut primitive_count,
+        )
     }
 
-    pub fn intersects_stats(&self, ray: &Ray, triangle_count: &mut usize) -> Option<Hit> {
-        self.root
-            .intersects(ray, &self.nodes, &self.triangles, triangle_count)
+    pub fn intersects_stats(&self, ray: &Ray, primitive_count: &mut usize) -> Option<Hit> {
+        self.root.intersects(
+            self,
+            ray,
+            &self.nodes,
+            &self.triangles,
+            &self.spheres,
+            primitive_count,
+        )
     }
 }
 
@@ -857,14 +961,18 @@ impl Tlas {
 
 #[cfg(test)]
 mod test {
+
     use crate::*;
 
     #[test]
     fn simple() {
-        let triangle_prim = GltfPrimitive::unit_triangle();
-        let (triangles, triangles_ex) = triangle_prim.triangles(&Trs::default());
+        let mut model = GltfModel::default();
+        let primitive = model.primitives.push(GltfPrimitive::unit_triangle());
+        let mesh = model.meshes.push(GltfMesh::new(vec![primitive]));
+        let node = model.nodes.push(Node::builder().mesh(mesh).build());
+        model.root.children.push(node);
 
-        let bvh = Bvh::builder().triangles(triangles, triangles_ex).build();
+        let bvh = Bvh::builder().model(&model).build();
         assert!(bvh.nodes.is_empty());
         assert!(bvh.root.left.is_none());
         assert!(bvh.root.right.is_none());
@@ -873,6 +981,7 @@ mod test {
 
     #[test]
     fn two_children() {
+        let mut model = GltfModel::default();
         let left_triangle_prim = GltfPrimitive::builder()
             .vertices(vec![
                 GltfVertex::from_position(Point3::new(-4.0, 0.0, 0.0)),
@@ -883,16 +992,14 @@ mod test {
             .build();
         let right_triangle_prim = GltfPrimitive::unit_triangle();
 
-        let (mut left_triangles, mut left_triangles_ex) =
-            left_triangle_prim.triangles(&Trs::default());
-        let (mut right_triangles, mut right_triangles_ex) =
-            right_triangle_prim.triangles(&Trs::default());
-        left_triangles.append(&mut right_triangles);
-        left_triangles_ex.append(&mut right_triangles_ex);
+        let left_primitive = model.primitives.push(left_triangle_prim);
+        let right_primitive = model.primitives.push(right_triangle_prim);
+        let mesh = GltfMesh::new(vec![left_primitive, right_primitive]);
+        let mesh = model.meshes.push(mesh);
+        let node = model.nodes.push(Node::builder().mesh(mesh).build());
+        model.root.children.push(node);
 
-        let bvh = Bvh::builder()
-            .triangles(left_triangles, left_triangles_ex)
-            .build();
+        let bvh = Bvh::builder().model(&model).build();
         assert!(!bvh.nodes.is_empty());
         assert!(bvh.root.left.is_some());
         assert!(bvh.root.right.is_some());

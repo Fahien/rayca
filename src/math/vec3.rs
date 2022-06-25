@@ -30,6 +30,14 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
+    pub const ZERO: Self = Self {
+        simd: f32x4::from_array([0.0, 0.0, 0.0, 0.0]),
+    };
+
+    pub const ONE: Self = Self {
+        simd: f32x4::from_array([1.0, 1.0, 1.0, 0.0]),
+    };
+
     pub const X_AXIS: Self = Self {
         simd: f32x4::from_array([1.0, 0.0, 0.0, 0.0]),
     };

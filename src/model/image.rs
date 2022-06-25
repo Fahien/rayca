@@ -13,7 +13,7 @@ use png::Transformations;
 
 use crate::{fail, ColorType, ColorTyped};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Image {
     pub id: usize,
 

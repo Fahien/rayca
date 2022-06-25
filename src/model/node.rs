@@ -108,7 +108,7 @@ impl Default for NodeBuilder {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Node {
     pub id: usize,
     pub name: String,

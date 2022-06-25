@@ -2,13 +2,17 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{ray::Intersect, Color, Dot, Hit, Point3, Ray, Scene, Shade, Vec2, Vec3, RGBA8};
+use crate::{
+    ray::Intersect, Bvh, Color, Dot, Handle, Hit, Inversed, Point3, Ray, Scene, Shade, SolvedTrs,
+    Vec2, Vec3, RGBA8,
+};
 
 #[derive(Debug, Clone)]
 pub struct Sphere {
     center: Point3,
     radius: f32,
     radius2: f32,
+    trs: Handle<SolvedTrs>,
 }
 
 impl Sphere {
@@ -18,28 +22,26 @@ impl Sphere {
             center,
             radius,
             radius2,
+            trs: Handle::NONE,
         }
+    }
+
+    pub fn get_center(&self, bvh: &Bvh) -> Point3 {
+        let solved_trs = bvh.trss.get(self.trs).unwrap_or(&SolvedTrs::IDENTITY);
+        &solved_trs.trs * self.center
     }
 
     pub fn set_radius(&mut self, radius: f32) {
         self.radius = radius;
         self.radius2 = radius * radius;
     }
-}
 
-impl Default for Sphere {
-    fn default() -> Self {
-        Self {
-            center: Default::default(),
-            radius: 1.0,
-            radius2: 1.0,
-        }
+    pub fn get_radius(&self) -> f32 {
+        self.radius
     }
-}
 
-impl Intersect for Sphere {
-    /// [Ray-sphere intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection)
-    fn intersects(&self, ray: &Ray) -> Option<Hit> {
+    /// Ray is expected to be in model space
+    pub fn intersects_impl(&self, ray: &Ray) -> Option<Hit> {
         let l = self.center - ray.origin;
         // angle between sphere-center-to-ray-origin and ray-direction
         let tca = l.dot(&ray.dir);
@@ -74,6 +76,46 @@ impl Intersect for Sphere {
     }
 }
 
+impl Default for Sphere {
+    fn default() -> Self {
+        Self {
+            center: Default::default(),
+            radius: 1.0,
+            radius2: 1.0,
+            trs: Default::default(),
+        }
+    }
+}
+
+impl Intersect for Sphere {
+    /// [Ray-sphere intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection)
+    fn intersects(&self, bvh: &Bvh, ray: &Ray) -> Option<Hit> {
+        let trs = &bvh.trss.get(self.trs).unwrap_or(&SolvedTrs::IDENTITY).trs;
+        let ray = ray.clone();
+        let inverse = Inversed::from(trs);
+        let inverse_ray = &inverse * ray;
+        let mut hit = self.intersects_impl(&inverse_ray)?;
+        let transformed_point = hit.point;
+        hit.point = trs * transformed_point;
+        Some(hit)
+    }
+
+    fn get_centroid(&self, bvh: &Bvh) -> Vec3 {
+        self.get_center(bvh).into()
+    }
+
+    /// This will return a point outside of the sphere, useful for the AABB
+    fn min(&self, bvh: &Bvh) -> Point3 {
+        let rad3 = Vec3::splat(self.radius);
+        self.get_center(bvh) - rad3
+    }
+
+    fn max(&self, bvh: &Bvh) -> Point3 {
+        let rad3 = Vec3::splat(self.radius);
+        self.get_center(bvh) + rad3
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::Vec3;
@@ -82,20 +124,22 @@ mod test {
 
     #[test]
     fn intersect() {
+        let bvh = Bvh::default();
+
         let orig = Point3::new(0.0, 0.0, 0.0);
         let sphere = Sphere::new(orig, 1.0);
 
         let right = Vec3::new(1.0, 0.0, 0.0);
         let ray = Ray::new(orig, right);
-        assert!(sphere.intersects(&ray).is_some());
+        assert!(sphere.intersects(&bvh, &ray).is_some());
 
         let ray = Ray::new(Point3::new(2.0, 0.0, 0.0), right);
-        assert!(sphere.intersects(&ray).is_none());
+        assert!(sphere.intersects(&bvh, &ray).is_none());
 
         let sphere = Sphere::new(Point3::new(4.0, 0.0, 0.0), 1.0);
         let forward = Vec3::new(0.0, 0.0, -1.0);
         let ray = Ray::new(orig, forward);
-        assert!(sphere.intersects(&ray).is_none());
+        assert!(sphere.intersects(&bvh, &ray).is_none());
     }
 }
 
@@ -128,7 +172,7 @@ impl Shade for SphereEx {
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let bvh = scene.tlas.bvhs.get(blas_node.bvh).unwrap();
         let sphere = bvh.get_sphere(hit.primitive);
-        let mut normal = hit.point - sphere.center;
+        let mut normal = hit.point - sphere.get_center(bvh);
         normal.normalize();
         normal
     }

@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Color, Handle, Texture};
+use crate::{Color, GltfModel, Handle, Sampler, Texture, Vec2};
 
 #[derive(Default)]
 pub struct GgxMaterialBuilder {
@@ -28,6 +28,7 @@ impl GgxMaterialBuilder {
     }
 }
 
+#[derive(Debug)]
 pub struct GgxMaterial {
     pub color: Color,
     pub albedo_texture: Handle<Texture>,
@@ -65,6 +66,19 @@ impl GgxMaterial {
             metallic_factor: 1.0,
             roughness_factor: 1.0,
             metallic_roughness_texture: Handle::NONE,
+        }
+    }
+
+    pub fn get_metallic_roughness(&self, uv: &Vec2, model: &GltfModel) -> (f32, f32) {
+        if let Some(texture) = model.textures.get(self.metallic_roughness_texture) {
+            let sampler = Sampler::default();
+            let image = model.images.get(texture.image).unwrap();
+            let color = sampler.sample(image, uv);
+            // Blue channel contains metalness value
+            // Red channel contains roughness value
+            (color.b, color.r)
+        } else {
+            (self.metallic_factor, self.roughness_factor)
         }
     }
 }

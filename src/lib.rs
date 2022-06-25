@@ -28,6 +28,7 @@ pub use material::*;
 pub use math::*;
 pub use model::*;
 pub use scene::*;
+pub use triangles::*;
 pub use util::*;
 #[cfg(target_arch = "wasm32")]
 pub use www::*;

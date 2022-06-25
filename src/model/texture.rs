@@ -4,7 +4,7 @@
 
 use crate::{Handle, Image, Sampler};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Texture {
     pub image: Handle<Image>,
     pub sampler: Handle<Sampler>,

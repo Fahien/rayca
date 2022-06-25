@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Color, Point3, Quat, Scene, Vec2, Vec3};
+use crate::{Bvh, Color, Point3, Quat, Scene, Vec2, Vec3};
 
 #[derive(Debug, Clone)]
 pub struct Ray {
@@ -75,7 +75,10 @@ impl Hit {
 }
 
 pub trait Intersect {
-    fn intersects(&self, ray: &Ray) -> Option<Hit>;
+    fn intersects(&self, bvh: &Bvh, ray: &Ray) -> Option<Hit>;
+    fn get_centroid(&self, bvh: &Bvh) -> Vec3;
+    fn min(&self, bvh: &Bvh) -> Point3;
+    fn max(&self, bvh: &Bvh) -> Point3;
 }
 
 pub trait Shade {

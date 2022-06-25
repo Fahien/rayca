@@ -250,13 +250,19 @@ impl UriBuffers {
     }
 }
 
-#[derive(Default)]
+/// Solved transforms, ready to be used by the renderer
+#[derive(Debug, Default)]
 pub struct SolvedTrs {
     pub trs: Trs,
     pub node: Handle<Node>,
 }
 
 impl SolvedTrs {
+    pub const IDENTITY: Self = Self {
+        trs: Trs::IDENTITY,
+        node: Handle::NONE,
+    };
+
     pub fn new(trs: Trs, node: Handle<Node>) -> Self {
         Self { trs, node }
     }
@@ -584,17 +590,19 @@ impl GltfModel {
         }
     }
 
-    fn traverse(&self, trss: &mut Pack<SolvedTrs>, transform: Trs, node: Handle<Node>) {
+    fn traverse(&self, solved_trs: &mut Pack<SolvedTrs>, transform: Trs, node: Handle<Node>) {
         let current_node = self.nodes.get(node).unwrap();
         let current_transform = &transform * &current_node.trs;
-        trss.push(SolvedTrs::new(current_transform.clone(), node));
+        solved_trs.push(SolvedTrs::new(current_transform.clone(), node));
 
         for child in &current_node.children {
-            self.traverse(trss, current_transform.clone(), *child);
+            self.traverse(solved_trs, current_transform.clone(), *child);
         }
     }
 
-    pub fn collect_transforms(&self) -> Pack<SolvedTrs> {
+    /// Traverses the scene graph solving the transforms of each node,
+    /// returning them in a pack.
+    pub fn collect_trss(&self) -> Pack<SolvedTrs> {
         let mut ret = Pack::new();
         for node in self.root.children.iter() {
             self.traverse(&mut ret, self.root.trs.clone(), *node);

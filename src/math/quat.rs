@@ -16,6 +16,10 @@ pub struct Quat {
 }
 
 impl Quat {
+    pub const IDENTITY: Quat = Quat {
+        simd: f32x4::from_array([0.0, 0.0, 0.0, 1.0]),
+    };
+
     pub fn simd(simd: f32x4) -> Self {
         Self { simd }
     }

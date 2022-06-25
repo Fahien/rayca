@@ -42,7 +42,7 @@ impl GltfPrimitiveBuilder {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct GltfPrimitive {
     pub triangles: GltfTriangles,
     pub material: Handle<GgxMaterial>,
@@ -64,12 +64,12 @@ impl GltfPrimitive {
         }
     }
 
-    pub fn triangles(&self, transform: &Trs) -> (Vec<Triangle>, Vec<TriangleEx>) {
-        self.triangles.primitives(transform, self.material)
+    pub fn primitives(&self, trs: &Trs) -> (Vec<Triangle>, Vec<TriangleEx>) {
+        self.triangles.primitives(trs, self.material)
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct GltfMesh {
     pub primitives: Vec<Handle<GltfPrimitive>>,
 }

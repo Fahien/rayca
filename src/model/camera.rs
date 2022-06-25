@@ -6,7 +6,7 @@ use std::f32::consts::FRAC_PI_4;
 
 use crate::Mat4;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Camera {
     pub projection: Mat4,
     pub yfov_radians: f32,
