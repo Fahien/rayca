@@ -4,6 +4,29 @@
 
 use super::*;
 
+pub struct MaterialBuilder {
+    color: Color,
+}
+
+impl MaterialBuilder {
+    pub fn new() -> Self {
+        Self {
+            color: Color::default(),
+        }
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = color;
+        self
+    }
+
+    pub fn build(self) -> Material {
+        let mut material = Material::new();
+        material.color = self.color;
+        material
+    }
+}
+
 pub struct Material {
     pub color: Color,
     pub albedo_texture: Option<Handle<Texture>>,
@@ -15,6 +38,10 @@ pub struct Material {
 }
 
 impl Material {
+    pub fn builder() -> MaterialBuilder {
+        MaterialBuilder::new()
+    }
+
     pub fn new() -> Self {
         Self {
             color: Color::white(),
