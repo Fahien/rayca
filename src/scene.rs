@@ -9,9 +9,30 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 
 use super::*;
 
+pub struct DefaultCamera {
+    pub camera: Camera,
+    pub trs: Trs,
+}
+
+impl Default for DefaultCamera {
+    fn default() -> Self {
+        Self {
+            camera: Camera::default(),
+            trs: Trs::new(
+                Vec3::new(0.0, 0.0, 4.0),
+                Quat::default(),
+                Vec3::new(1.0, 1.0, 1.0),
+            ),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Scene {
     pub gltf_model: GltfModel,
+
+    /// This can be used for default values which are not defined in any other model in the scene
+    pub default_camera: DefaultCamera,
 }
 
 impl Scene {
@@ -113,22 +134,14 @@ impl Draw for Scene {
         let inv_width = 1.0 / width;
         let inv_height = 1.0 / height;
 
-        let mut fov = 0.7;
-
-        let camera_trs = if !cameras.is_empty() {
-            let (camera, camera_trs) = &cameras[0];
-            fov = camera.yfov_radians;
-            camera_trs.clone()
+        let (camera, camera_trs) = if cameras.is_empty() {
+            (&self.default_camera.camera, self.default_camera.trs.clone())
         } else {
-            Trs::new(
-                Vec3::new(0.0, 0.0, 4.0),
-                Quat::default(),
-                Vec3::new(1.0, 1.0, 1.0),
-            )
+            cameras[0].clone()
         };
 
         let aspectratio = width / height;
-        let angle = (fov * 0.5).tan();
+        let angle = camera.get_angle();
 
         #[cfg(feature = "parallel")]
         let row_iter = image.pixels_mut().into_par_iter();
