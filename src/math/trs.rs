@@ -224,8 +224,8 @@ mod test {
         let world_to_camera_trs = Trs::builder().look_at(origin, eye, y_axis).build();
 
         // This transforms camera coordinates to world transform
-        let camera_to_world_trs = world_to_camera_trs.get_inverse();
-        assert_eq!(camera_to_world_trs.translation, eye);
-        assert_eq!(camera_to_world_trs.rotation, Quat::default());
+        let camera_to_world_trs = world_to_camera_trs.get_inversed();
+        assert_eq!(camera_to_world_trs.get_translation(), eye);
+        assert_eq!(camera_to_world_trs.get_rotation(), Quat::default());
     }
 }
