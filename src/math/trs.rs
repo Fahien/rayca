@@ -206,6 +206,16 @@ pub struct Inversed<T> {
     pub source: T,
 }
 
+impl Inversed<Trs> {
+    pub fn get_rotation(&self) -> Quat {
+        self.source.rotation.get_inverse()
+    }
+
+    pub fn get_scale(&self) -> Vec3 {
+        self.source.scale.get_reciprocal()
+    }
+}
+
 impl Mul<&Mat4> for &Inversed<Trs> {
     type Output = Mat4;
 
@@ -223,6 +233,28 @@ impl From<Trs> for Inversed<Trs> {
 impl<'a> From<&'a Trs> for Inversed<&'a Trs> {
     fn from(source: &'a Trs) -> Self {
         Self { source }
+    }
+}
+
+impl Mul<Vec3> for &Inversed<&Trs> {
+    type Output = Vec3;
+
+    fn mul(self, mut rhs: Vec3) -> Self::Output {
+        rhs.translate(&-self.source.translation);
+        rhs.rotate(&self.source.rotation.get_inverse());
+        rhs.scale(&self.source.scale.get_reciprocal());
+        rhs
+    }
+}
+
+impl Mul<Vec3> for &Inversed<Trs> {
+    type Output = Vec3;
+
+    fn mul(self, mut rhs: Vec3) -> Self::Output {
+        rhs.translate(&-self.source.translation);
+        rhs.rotate(&self.source.rotation.get_inverse());
+        rhs.scale(&self.source.scale.get_reciprocal());
+        rhs
     }
 }
 

@@ -107,7 +107,14 @@ impl<'m> BvhPrimitive<'m> {
                 let material = self.get_material();
                 triangle.get_normal(material, &self.model, hit)
             }
-            BvhGeometry::Sphere(sphere) => (sphere.center - hit.point).get_normalized(),
+            BvhGeometry::Sphere(sphere) => {
+                let inverse = self.trs.get_inversed();
+                let hit_point = &inverse * hit.point;
+                let normal = sphere.get_normal(&hit_point);
+
+                let normal_matrix = Mat3::from(&inverse).get_transpose();
+                (&normal_matrix * normal).get_normalized()
+            }
         }
     }
 

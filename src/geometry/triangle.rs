@@ -41,10 +41,8 @@ impl Triangle {
         let matrix: Mat4 = transform.into();
         let tangent_matrix = Mat3::from(&matrix);
 
-        let mut normal_trs = Inversed::from(transform.clone());
-        normal_trs.source.translation = Vec3::default();
-
-        let normal_matrix = Mat4::from(normal_trs).get_transpose();
+        let normal_trs = Inversed::from(transform.clone());
+        let normal_matrix = Mat3::from(&normal_trs).get_transpose();
 
         for i in 0..(indices.len() / 3) {
             let mut a = self.vertices[indices[i * 3].to_usize().unwrap()].clone();
