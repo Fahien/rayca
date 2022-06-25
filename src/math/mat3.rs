@@ -2,7 +2,10 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::{ops::{Index, IndexMut, Mul}, simd::f32x4};
+use std::{
+    ops::{Index, IndexMut, Mul},
+    simd::f32x4,
+};
 
 use super::*;
 
@@ -136,9 +139,21 @@ impl From<&Quat> for Mat3 {
         let zq = f32x4::splat(q.simd[2]) * q.simd;
 
         Mat3::from([
-            [1.0 - 2.0 * (yq[1] + zq[2]), 2.0 * (xq[1] - zq[3]), 2.0 * (xq[2] + yq[3])],
-            [2.0 * (xq[1] + zq[3]), 1.0 - 2.0 * (xq[0] + zq[2]), 2.0 * (yq[2] - xq[3])],
-            [2.0 * (xq[2] - yq[3]), 2.0 * (yq[2] + xq[3]), 1.0 - 2.0 * (xq[0] + yq[1])],
+            [
+                1.0 - 2.0 * (yq[1] + zq[2]),
+                2.0 * (xq[1] - zq[3]),
+                2.0 * (xq[2] + yq[3]),
+            ],
+            [
+                2.0 * (xq[1] + zq[3]),
+                1.0 - 2.0 * (xq[0] + zq[2]),
+                2.0 * (yq[2] - xq[3]),
+            ],
+            [
+                2.0 * (xq[2] - yq[3]),
+                2.0 * (yq[2] + xq[3]),
+                1.0 - 2.0 * (xq[0] + yq[1]),
+            ],
         ])
     }
 }

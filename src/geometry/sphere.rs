@@ -4,24 +4,27 @@
 
 use crate::ray::Intersect;
 
-use super::*;
+use crate::*;
 
+#[derive(Debug, Clone)]
 pub struct Sphere {
-    center: Vec3,
+    pub center: Vec3,
     _radius: f32,
     radius2: f32,
-    pub color: RGBA8,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, color: RGBA8) -> Self {
+    pub fn new(center: Vec3, radius: f32) -> Self {
         let radius2 = radius * radius;
         Self {
             center,
             _radius: radius,
             radius2,
-            color,
         }
+    }
+    pub fn set_radius(&mut self, radius: f32) {
+        self._radius = radius;
+        self.radius2 = radius * radius;
     }
 }
 
@@ -31,7 +34,6 @@ impl Default for Sphere {
             center: Default::default(),
             _radius: 1.0,
             radius2: 1.0,
-            color: RGBA8::from(0xFFFFFFFFu32),
         }
     }
 }
@@ -95,7 +97,7 @@ mod test {
     #[test]
     fn intersect() {
         let orig = Vec3::new(0.0, 0.0, 0.0);
-        let sphere = Sphere::new(orig, 1.0, RGBA8::from(0xFFFFFFFFu32));
+        let sphere = Sphere::new(orig, 1.0);
 
         let right = Vec3::new(1.0, 0.0, 0.0);
         let ray = Ray::new(orig, right);
@@ -104,7 +106,7 @@ mod test {
         let ray = Ray::new(Vec3::new(2.0, 0.0, 0.0), right);
         assert!(sphere.intersects(&ray).is_none());
 
-        let sphere = Sphere::new(Vec3::new(4.0, 0.0, 0.0), 1.0, RGBA8::from(0xFFFFFFFFu32));
+        let sphere = Sphere::new(Vec3::new(4.0, 0.0, 0.0), 1.0);
         let forward = Vec3::new(0.0, 0.0, -1.0);
         let ray = Ray::new(orig, forward);
         assert!(sphere.intersects(&ray).is_none());
