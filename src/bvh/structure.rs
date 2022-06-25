@@ -266,6 +266,12 @@ pub struct BvhBuilder<'m> {
     max_depth: usize,
 }
 
+impl<'m> Default for BvhBuilder<'m> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'m> BvhBuilder<'m> {
     pub fn new() -> Self {
         Self {

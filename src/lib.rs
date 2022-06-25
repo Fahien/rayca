@@ -6,8 +6,10 @@
 
 pub mod bvh;
 pub mod camera;
+pub mod config;
 pub mod draw;
 pub mod image;
+pub mod integrator;
 pub mod light;
 pub mod log;
 pub mod material;
@@ -26,8 +28,10 @@ pub mod www;
 
 pub use bvh::*;
 pub use camera::*;
+pub use config::*;
 pub use draw::*;
 pub use image::*;
+pub use integrator::*;
 pub use light::*;
 pub use material::*;
 pub use math::*;
