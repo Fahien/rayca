@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Bvh, Color, Dot, Integrator, Intersect, Light, Node, Pack, Ray, Vec3};
+use crate::{Bvh, Color, Dot, Integrator, Light, Node, Pack, Ray, Vec3};
 
 #[derive(Default)]
 pub struct Scratcher {}
@@ -56,10 +56,10 @@ impl Integrator for Scratcher {
             return None;
         }
 
-        let (hit, triangle) = bvh.intersects_iter(&ray)?;
+        let (hit, primitive) = bvh.intersects_iter(&ray)?;
 
-        let n = triangle.get_normal(&hit);
-        let mut color = triangle.get_color(&hit);
+        let n = primitive.get_normal(&hit);
+        let mut color = primitive.get_color(&hit);
 
         let mut pixel_color = Color::black() + color / 8.0;
 
@@ -76,7 +76,7 @@ impl Integrator for Scratcher {
             }
         }
 
-        let (metallic, roughness) = triangle.get_metallic_roughness(&hit);
+        let (metallic, roughness) = primitive.get_metallic_roughness(&hit);
 
         let n_dot_v = n.dot(&ray.dir).abs() + 1e-5;
 
@@ -93,15 +93,15 @@ impl Integrator for Scratcher {
             // Whether this object is light (verb) by a light (noun)
             let is_light = match shadow_result {
                 None => true,
-                Some((shadow_hit, triangle)) => {
+                Some((shadow_hit, primitive)) => {
                     // Distance between current surface and the light source
                     let light_distance = light.get_distance(light_node, &hit.point);
                     // If the obstacle is beyong the light source then the current surface is light
                     if shadow_hit.depth > light_distance {
                         true
                     } else {
-                        // check whether this is a transparent surface
-                        let shadow_color = triangle.get_color(&shadow_hit);
+                        // Check whether the obstacle is a transparent surface
+                        let shadow_color = primitive.get_color(&shadow_hit);
                         shadow_color.a < 1.0
                     }
                 }

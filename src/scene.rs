@@ -114,19 +114,27 @@ impl Scene {
         triangle_count
     }
 
-    fn collect(&self) -> (Vec<BvhTriangle>, Vec<(&Camera, Trs)>) {
+    fn collect_trs(&self) -> Vec<SolvedTrs> {
+        let mut solved_trs = Vec::new();
+        for model in self.models.iter() {
+            solved_trs.extend(model.collect_trs());
+        }
+        solved_trs.extend(self.default_model.collect_trs());
+        solved_trs
+    }
+
+    fn collect<'m>(
+        &'m self,
+        solved_trs: &'m Vec<SolvedTrs<'m>>,
+    ) -> (Vec<BvhPrimitive>, Vec<(&'m Camera, &'m Trs)>) {
         let mut triangles = vec![];
         let mut cameras = vec![];
 
-        for model in self.models.iter() {
-            let (mut curr_triangles, mut curr_cameras) = model.collect();
-            triangles.append(&mut curr_triangles);
-            cameras.append(&mut curr_cameras);
+        for trs in solved_trs {
+            let (curr_triangles, curr_cameras) = trs.collect();
+            triangles.extend(curr_triangles);
+            cameras.extend(curr_cameras);
         }
-
-        let (mut def_triangles, mut def_cameras) = self.default_model.collect();
-        triangles.append(&mut def_triangles);
-        cameras.append(&mut def_cameras);
 
         (triangles, cameras)
     }
@@ -134,9 +142,10 @@ impl Scene {
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
-        let (triangles, cameras) = self.collect();
+        let solved_trs = self.collect_trs();
+        let (primitives, cameras) = self.collect(&solved_trs);
 
-        let mut bvh_builder = Bvh::builder().triangles(triangles);
+        let mut bvh_builder = Bvh::builder().primitives(primitives);
         if !self.config.bvh {
             bvh_builder = bvh_builder.max_depth(0);
         }
@@ -151,7 +160,7 @@ impl Draw for Scene {
         let inv_height = 1.0 / height;
 
         assert!(!cameras.is_empty());
-        let (camera, camera_trs) = &cameras[0];
+        let (camera, camera_trs) = cameras[0];
 
         let aspectratio = width / height;
         let angle = camera.get_angle();

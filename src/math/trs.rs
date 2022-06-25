@@ -280,6 +280,74 @@ impl<'a> From<&'a Trs> for Inversed<&'a Trs> {
     }
 }
 
+impl Mul<Point3> for &Inversed<&Trs> {
+    type Output = Point3;
+
+    fn mul(self, rhs: Point3) -> Self::Output {
+        // (T * R * S)^(-1) = S^(-1) * R^(-1) * T^(-1)
+        // This approach works
+        (Mat4::from_scale(&self.get_scale())
+            * (Mat4::from_rotation(&self.get_rotation())
+                * Mat4::from_translation(&self.get_translation())))
+            * rhs
+    }
+}
+
+impl Mul<Point3> for &Inversed<Trs> {
+    type Output = Point3;
+
+    fn mul(self, rhs: Point3) -> Self::Output {
+        (Mat4::from_scale(&self.get_scale())
+            * (Mat4::from_rotation(&self.get_rotation())
+                * Mat4::from_translation(&self.get_translation())))
+            * rhs
+    }
+}
+
+impl Mul<Vec3> for &Inversed<&Trs> {
+    type Output = Vec3;
+
+    fn mul(self, mut rhs: Vec3) -> Self::Output {
+        rhs.translate(&self.get_translation());
+        rhs.rotate(&self.get_rotation());
+        rhs.scale(&self.get_scale());
+        rhs
+    }
+}
+
+impl Mul<Vec3> for &Inversed<Trs> {
+    type Output = Vec3;
+
+    fn mul(self, mut rhs: Vec3) -> Self::Output {
+        rhs.translate(&self.get_translation());
+        rhs.rotate(&self.get_rotation());
+        rhs.scale(&self.get_scale());
+        rhs
+    }
+}
+
+impl Mul<Ray> for &Inversed<&Trs> {
+    type Output = Ray;
+
+    fn mul(self, mut rhs: Ray) -> Self::Output {
+        rhs.translate(&self.get_translation());
+        rhs.rotate(&self.get_rotation());
+        rhs.scale(&self.get_scale());
+        rhs
+    }
+}
+
+impl Mul<Ray> for &Inversed<Trs> {
+    type Output = Ray;
+
+    fn mul(self, mut rhs: Ray) -> Self::Output {
+        rhs.translate(&self.get_translation());
+        rhs.rotate(&self.get_rotation());
+        rhs.scale(&self.get_scale());
+        rhs
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
