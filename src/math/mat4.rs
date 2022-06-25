@@ -60,6 +60,22 @@ impl Mat4 {
         ret
     }
 
+    pub fn look_at(target: Vec3, eye: Vec3, up: Vec3) -> Self {
+        // Z axis points towards the eye!
+        let z_axis = (eye - target).get_normalized();
+        let x_axis = up.cross(&z_axis).get_normalized();
+        let y_axis = z_axis.cross(&x_axis);
+
+        Self {
+            values: [
+                x_axis.simd + f32x4::from_array([0.0, 0.0, 0.0, x_axis.dot(&-eye)]),
+                y_axis.simd + f32x4::from_array([0.0, 0.0, 0.0, y_axis.dot(&-eye)]),
+                z_axis.simd + f32x4::from_array([0.0, 0.0, 0.0, z_axis.dot(&-eye)]),
+                f32x4::from_array([0.0, 0.0, 0.0, 1.0]),
+            ],
+        }
+    }
+
     pub fn scale(&mut self, scale: &Vec3) {
         self[0][0] *= scale.get_x();
         self[1][1] *= scale.get_y();
@@ -262,5 +278,15 @@ mod test {
         assert!(c.values[0][0] == 2.0);
         assert!(c.values[1][1] == 2.0);
         assert!(c.values[2][2] == 2.0);
+    }
+
+    #[test]
+    fn look_at() {
+        let target = Vec3::default();
+        let eye = Vec3::new(0.0, 0.0, 4.0);
+        let up = Vec3::new(0.0, 1.0, 0.0);
+        let mat = Mat4::look_at(target, eye, up);
+        assert_eq!(-mat.get_translation(), eye);
+        assert_eq!(mat.get_rotation(), Quat::default());
     }
 }
