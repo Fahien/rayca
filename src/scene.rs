@@ -107,13 +107,12 @@ impl Scene {
         // Put model into models
         self.models.push(model);
 
-        rlog!(
-            "{:>12} {} in {:.2}ms",
-            "Loaded".cyan().bold(),
+        print_info!(
+            "Loaded",
+            "{} in {:.2}ms",
             path_str,
             timer.get_delta().as_millis()
         );
-
         Ok(())
     }
 
@@ -237,41 +236,28 @@ impl Scene {
         }
         triangle_count
     }
-}
 
-impl Draw for Scene {
-    fn draw(&self, image: &mut Image) {
+    fn collect(&self) -> (Vec<BvhTriangle>, Vec<(&Camera, Trs)>) {
         let mut triangles = vec![];
         let mut cameras = vec![];
 
         for model in self.models.iter() {
-            let transforms = model.collect_transforms();
-            for (node, trs) in transforms {
-                // Collect triangles
-                if let Some(mesh) = model.meshes.get(node.mesh) {
-                    for prim_handle in mesh.primitives.iter() {
-                        let prim = model.primitives.get(*prim_handle).unwrap();
-                        let mut prim_triangles = prim.triangles(&trs, prim.material, model);
-                        triangles.append(&mut prim_triangles);
-                    }
+            let (mut curr_triangles, mut curr_cameras) = model.collect();
+            triangles.append(&mut curr_triangles);
+            cameras.append(&mut curr_cameras);
                 }
 
-                // Collect cameras
-                if let Some(camera_handle) = node.camera {
-                    let camera = model.cameras.get(camera_handle).unwrap();
-                    cameras.push((camera, trs));
-                }
+        let (mut def_triangles, mut def_cameras) = self.default_model.collect();
+        triangles.append(&mut def_triangles);
+        cameras.append(&mut def_cameras);
+
+        (triangles, cameras)
             }
         }
 
-        let default_transforms = self.default_model.collect_transforms();
-        for (node, trs) in default_transforms {
-            // Collect cameras
-            if let Some(camera_handle) = node.camera {
-                let camera = self.default_model.cameras.get(camera_handle).unwrap();
-                cameras.push((camera, trs));
-            }
-        }
+impl Draw for Scene {
+    fn draw(&self, image: &mut Image) {
+        let (triangles, cameras) = self.collect();
 
         let bvh = Bvh::new(triangles, 1);
 

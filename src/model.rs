@@ -620,6 +620,31 @@ impl Model {
         }
         ret
     }
+
+    pub fn collect(&self) -> (Vec<BvhTriangle>, Vec<(&Camera, Trs)>) {
+        let mut triangles = vec![];
+        let mut cameras = vec![];
+
+        let transforms = self.collect_transforms();
+        for (node, trs) in transforms {
+            // Collect triangles
+            if let Some(mesh) = self.meshes.get(node.mesh) {
+                for prim_handle in mesh.primitives.iter() {
+                    let prim = self.primitives.get(*prim_handle).unwrap();
+                    let mut prim_triangles = prim.triangles(&trs, prim.material, self);
+                    triangles.append(&mut prim_triangles);
+                }
+            }
+
+            // Collect cameras
+            if let Some(camera_handle) = node.camera {
+                let camera = self.cameras.get(camera_handle).unwrap();
+                cameras.push((camera, trs));
+            }
+        }
+
+        (triangles, cameras)
+    }
 }
 
 #[cfg(test)]
