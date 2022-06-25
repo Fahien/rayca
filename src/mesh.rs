@@ -2,40 +2,34 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use num_traits::NumCast;
-
 use super::*;
 
 #[derive(Default)]
 pub struct PrimitiveBuilder {
-    vertices: Vec<Vertex>,
-    indices: Vec<u8>,
-    index_size: usize,
+    triangles: Triangles,
     material: Option<Handle<Material>>,
 }
 
 impl PrimitiveBuilder {
     pub fn new() -> Self {
         Self {
-            vertices: vec![],
-            indices: vec![],
-            index_size: 1,
+            triangles: Triangles::default(),
             material: None,
         }
     }
 
     pub fn vertices(mut self, vertices: Vec<Vertex>) -> Self {
-        self.vertices = vertices;
+        self.triangles.vertices = vertices;
         self
     }
 
     pub fn indices(mut self, indices: Vec<u8>) -> Self {
-        self.indices = indices;
+        self.triangles.indices = indices;
         self
     }
 
-    pub fn index_size(mut self, index_size: usize) -> Self {
-        self.index_size = index_size;
+    pub fn index_size(mut self, index_size_in_bytes: usize) -> Self {
+        self.triangles.index_size_in_bytes = index_size_in_bytes;
         self
     }
 
@@ -45,8 +39,7 @@ impl PrimitiveBuilder {
     }
 
     pub fn build(self) -> Primitive {
-        let mut prim = Primitive::new(self.vertices, self.indices);
-        prim.index_size = self.index_size;
+        let mut prim = Primitive::new(self.triangles);
         prim.material = self.material;
         prim
     }
@@ -54,9 +47,7 @@ impl PrimitiveBuilder {
 
 #[derive(Default, Clone)]
 pub struct Primitive {
-    pub vertices: Vec<Vertex>,
-    pub indices: Vec<u8>,
-    index_size: usize,
+    pub triangles: Triangles,
     pub material: Option<Handle<Material>>,
 }
 
@@ -65,11 +56,9 @@ impl Primitive {
         PrimitiveBuilder::new()
     }
 
-    pub fn new(vertices: Vec<Vertex>, indices: Vec<u8>) -> Self {
+    pub fn new(triangles: Triangles) -> Self {
         Self {
-            vertices,
-            indices,
-            index_size: 1, // byte
+            triangles,
             material: None,
         }
     }
@@ -85,67 +74,8 @@ impl Primitive {
             .build()
     }
 
-    fn triangles_impl<'m, Index: NumCast>(
-        &self,
-        transform: &Trs,
-        model: &'m Model,
-        indices: &[Index],
-    ) -> Vec<BvhTriangle<'m>> {
-        let mut ret = vec![];
-        let matrix: Mat4 = transform.into();
-        let tangent_matrix = Mat3::from(&matrix);
-
-        let mut normal_trs = Inversed::from(transform.clone());
-        normal_trs.source.translation = Vec3::default();
-
-        let normal_matrix = Mat4::from(normal_trs).get_transpose();
-
-        for i in 0..(indices.len() / 3) {
-            let mut a = self.vertices[indices[i * 3].to_usize().unwrap()];
-            a.pos = &matrix * a.pos;
-            a.normal = &normal_matrix * a.normal;
-            a.tangent = &tangent_matrix * a.tangent;
-            a.bitangent = &tangent_matrix * a.bitangent;
-
-            let mut b = self.vertices[indices[i * 3 + 1].to_usize().unwrap()];
-            b.pos = &matrix * b.pos;
-            b.normal = &normal_matrix * b.normal;
-            b.tangent = &tangent_matrix * b.tangent;
-            b.bitangent = &tangent_matrix * b.bitangent;
-
-            let mut c = self.vertices[indices[i * 3 + 2].to_usize().unwrap()];
-            c.pos = &matrix * c.pos;
-            c.normal = &normal_matrix * c.normal;
-            c.tangent = &tangent_matrix * c.tangent;
-            c.bitangent = &tangent_matrix * c.bitangent;
-
-            ret.push(BvhTriangle::new(a, b, c, self.material, model));
-        }
-
-        ret
-    }
-
     pub fn triangles<'m>(&self, transform: &Trs, model: &'m Model) -> Vec<BvhTriangle<'m>> {
-        let indices_len = self.indices.len() / self.index_size;
-
-        match self.index_size {
-            1 => self.triangles_impl(transform, model, &self.indices),
-            2 => {
-                let indices = unsafe {
-                    std::slice::from_raw_parts(self.indices.as_ptr() as *const u16, indices_len)
-                };
-
-                self.triangles_impl(transform, model, indices)
-            }
-            4 => {
-                let indices = unsafe {
-                    std::slice::from_raw_parts(self.indices.as_ptr() as *const u32, indices_len)
-                };
-
-                self.triangles_impl(transform, model, indices)
-            }
-            _ => panic!("Index size not supported"),
-        }
+        self.triangles.triangles(transform, self.material, model)
     }
 }
 

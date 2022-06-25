@@ -11,9 +11,11 @@ fn triangle() {
 
     let mut model = Model::new();
     let mut prim = Primitive::unit_triangle();
-    prim.vertices[0].color = Color::from(0xFF0000FF);
-    prim.vertices[1].color = Color::from(0x00FF00FF);
-    prim.vertices[2].color = Color::from(0x0000FFFF);
+    let triangles = &mut prim.triangles;
+    triangles.vertices[0].color = Color::from(0xFF0000FF);
+    triangles.vertices[1].color = Color::from(0x00FF00FF);
+    triangles.vertices[2].color = Color::from(0x0000FFFF);
+
     let prim_handle = model.primitives.push(prim);
     let mesh = Mesh::new(vec![prim_handle]);
     let mesh_handle = model.meshes.push(mesh);
