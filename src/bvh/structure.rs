@@ -267,6 +267,7 @@ impl<'m> BvhNode<'m> {
     }
 }
 
+#[derive(Default)]
 pub struct BvhBuilder<'m> {
     triangles: Vec<BvhTriangle<'m>>,
     max_depth: usize,
