@@ -108,15 +108,19 @@ impl Primitive {
             .build()
     }
 
-    pub fn triangles<'m>(
+    pub fn unit_sphere() -> Self {
+        Self::builder().sphere(Point3::default(), 1.0).build()
+    }
+
+    pub fn primitives(
         &self,
-        trs: &Trs,
+        node: Handle<Node>,
         material: Handle<Material>,
-        model: &'m Model,
-    ) -> Vec<BvhTriangle<'m>> {
+        model: &Model,
+    ) -> Vec<BvhPrimitive> {
         match &self.geometry {
-            Geometry::Triangles(triangles) => triangles.triangles(trs, material, model),
-            _ => panic!("Can not get triangles from {:?}", self.geometry),
+            Geometry::Triangles(triangles) => triangles.primitives(node, material, model),
+            Geometry::Sphere(sphere) => sphere.primitives(node, material),
         }
     }
 }

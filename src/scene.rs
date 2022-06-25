@@ -12,8 +12,6 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 use super::*;
 
 pub struct Scene {
-    /// This can be used for default values which are not defined in any other model in the scene
-    pub default_model: Model,
     // Single model collecting elements from all loaded models
     pub model: Model,
 
@@ -27,6 +25,7 @@ impl Default for Scene {
 }
 
 impl Scene {
+    /// This can be used for default values which are not defined in any other model in the scene
     fn create_default_model() -> Model {
         let mut model = Model::new();
 
@@ -64,10 +63,7 @@ impl Scene {
     }
 
     pub fn new() -> Self {
-        let default_model = Self::create_default_model();
-
         Self {
-            default_model,
             model: Default::default(),
             config: Default::default(),
         }
@@ -94,47 +90,25 @@ impl Scene {
         self.model.append(model);
     }
 
-    fn draw_pixel(
-        &self,
-        ray: Ray,
-        bvh: &Bvh,
-        light_nodes: &[Node],
-        lights: &Pack<Light>,
-        pixel: &mut RGBA8,
-    ) -> usize {
+    pub fn push_default_model(&mut self) {
+        self.model.append(Self::create_default_model())
+    }
+
+    fn draw_pixel(&self, ray: Ray, bvh: &Bvh, pixel: &mut RGBA8) -> usize {
         let triangle_count = 0;
-        if let Some(pixel_color) = self
-            .config
-            .integrator
-            .trace(ray, bvh, light_nodes, lights, 0)
-        {
+        if let Some(pixel_color) = self.config.integrator.trace(&self.model, ray, bvh, 0) {
             // No over operation here as transparency should be handled by the lighting model
             *pixel = pixel_color.into();
         }
         triangle_count
     }
-
-    fn collect(&self) -> (Vec<BvhTriangle>, Vec<(&Camera, Trs)>) {
-        let mut triangles = vec![];
-        let mut cameras = vec![];
-
-        let (mut curr_triangles, mut curr_cameras) = self.model.collect();
-        triangles.append(&mut curr_triangles);
-        cameras.append(&mut curr_cameras);
-
-        let (mut def_triangles, mut def_cameras) = self.default_model.collect();
-        triangles.append(&mut def_triangles);
-        cameras.append(&mut def_cameras);
-
-        (triangles, cameras)
-    }
 }
 
 impl Draw for Scene {
-    fn draw(&self, image: &mut Image) {
-        let (triangles, cameras) = self.collect();
+    fn draw(&mut self, image: &mut Image) {
+        let primitives = self.model.collect();
 
-        let mut bvh_builder = Bvh::builder().triangles(triangles);
+        let mut bvh_builder = Bvh::builder().primitives(primitives);
         if !self.config.bvh {
             bvh_builder = bvh_builder.max_depth(0);
         }
@@ -148,15 +122,14 @@ impl Draw for Scene {
         let inv_width = 1.0 / width;
         let inv_height = 1.0 / height;
 
-        assert!(!cameras.is_empty());
-        let (camera, camera_trs) = &cameras[0];
+        assert!(!self.model.camera_nodes.is_empty());
+        let camera_node_handle = self.model.camera_nodes[0];
+        let camera_node = self.model.nodes.get(self.model.camera_nodes[0]).unwrap();
+        let camera = self.model.cameras.get(camera_node.camera).unwrap();
+        let camera_trs = self.model.solved_trs.get(&camera_node_handle).unwrap();
 
         let aspectratio = width / height;
         let angle = camera.get_angle();
-
-        // TODO collect lights from models
-        let light_nodes = &self.default_model.nodes[1..];
-        let lights = &self.default_model.lights;
 
         #[cfg(feature = "parallel")]
         let row_iter = image.pixels_mut().into_par_iter();
@@ -176,9 +149,9 @@ impl Draw for Scene {
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
                 let origin = Point3::new(0.0, 0.0, 0.0);
-                let ray = camera_trs * Ray::new(origin, dir);
+                let ray = &camera_trs.trs * Ray::new(origin, dir);
 
-                self.draw_pixel(ray, &bvh, light_nodes, lights, pixel);
+                self.draw_pixel(ray, &bvh, pixel);
             });
         });
 

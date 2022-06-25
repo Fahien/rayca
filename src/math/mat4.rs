@@ -253,7 +253,7 @@ macro_rules! impl_mul3 {
                 for i in 0..4 {
                     let row = self[i];
                     // Use last element
-                    let column = rhs.simd + f32x4::from_array([0.0, 0.0, 0.0, 1.0]);
+                    let column = rhs.simd;
                     ret[i] = (row * column).reduce_sum();
                 }
 

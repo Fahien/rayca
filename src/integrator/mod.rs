@@ -1,19 +1,12 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
 pub mod scratcher;
 pub use scratcher::*;
 
-use crate::{Bvh, Color, Light, Node, Pack, Ray};
+use crate::*;
 
 pub trait Integrator: Sync {
-    fn trace(
-        &self,
-        ray: Ray,
-        bvh: &Bvh,
-        light_nodes: &[Node],
-        lights: &Pack<Light>,
-        depth: u32,
-    ) -> Option<Color>;
+    fn trace(&self, model: &Model, ray: Ray, bvh: &Bvh, depth: u32) -> Option<Color>;
 }

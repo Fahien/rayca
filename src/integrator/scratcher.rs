@@ -1,8 +1,8 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Bvh, Color, Dot, Integrator, Intersect, Light, Node, Pack, Ray, Vec3};
+use crate::*;
 
 #[derive(Default)]
 pub struct Scratcher {}
@@ -44,22 +44,15 @@ fn geometry_smith_ggx(n_dot_v: f32, n_dot_l: f32, roughness: f32) -> f32 {
 }
 
 impl Integrator for Scratcher {
-    fn trace(
-        &self,
-        ray: Ray,
-        bvh: &Bvh,
-        light_nodes: &[Node],
-        lights: &Pack<Light>,
-        depth: u32,
-    ) -> Option<Color> {
+    fn trace(&self, model: &Model, ray: Ray, bvh: &Bvh, depth: u32) -> Option<Color> {
         if depth > 1 {
             return None;
         }
 
-        let (hit, triangle) = bvh.intersects_iter(&ray)?;
+        let (hit, primitive) = bvh.intersects_iter(model, &ray)?;
 
-        let n = triangle.get_normal(&hit);
-        let mut color = triangle.get_color(&hit);
+        let n = primitive.get_normal(model, &hit);
+        let mut color = primitive.get_color(model, &hit);
 
         let mut pixel_color = Color::black() + color / 8.0;
 
@@ -67,7 +60,7 @@ impl Integrator for Scratcher {
         if color.a < 1.0 {
             let transmit_origin = hit.point + -n * RAY_BIAS;
             let transmit_ray = Ray::new(transmit_origin, ray.dir);
-            let transmit_result = self.trace(transmit_ray, bvh, light_nodes, lights, depth + 1);
+            let transmit_result = self.trace(model, transmit_ray, bvh, depth + 1);
 
             if let Some(mut transmit_color) = transmit_result {
                 // continue with the rest of the shading?
@@ -76,32 +69,33 @@ impl Integrator for Scratcher {
             }
         }
 
-        let (metallic, roughness) = triangle.get_metallic_roughness(&hit);
+        let (metallic, roughness) = primitive.get_metallic_roughness(model, &hit);
 
         let n_dot_v = n.dot(&ray.dir).abs() + 1e-5;
 
         // Before getting color, we should check whether it is visible from the sun
         let shadow_origin = hit.point + n * RAY_BIAS;
 
-        for light_node in light_nodes {
-            let light = lights.get(light_node.light).unwrap();
+        for light_node_handle in &model.light_nodes {
+            let light_node = model.nodes.get(*light_node_handle).unwrap();
+            let light = model.lights.get(light_node.light).unwrap();
             let light_dir = light.get_direction(light_node, &hit.point);
 
             let shadow_ray = Ray::new(shadow_origin, light_dir);
-            let shadow_result = bvh.intersects_iter(&shadow_ray);
+            let shadow_result = bvh.intersects_iter(model, &shadow_ray);
 
             // Whether this object is light (verb) by a light (noun)
             let is_light = match shadow_result {
                 None => true,
-                Some((shadow_hit, triangle)) => {
+                Some((shadow_hit, primitive)) => {
                     // Distance between current surface and the light source
                     let light_distance = light.get_distance(light_node, &hit.point);
                     // If the obstacle is beyong the light source then the current surface is light
                     if shadow_hit.depth > light_distance {
                         true
                     } else {
-                        // check whether this is a transparent surface
-                        let shadow_color = triangle.get_color(&shadow_hit);
+                        // Check whether the obstacle is a transparent surface
+                        let shadow_color = primitive.get_color(model, &shadow_hit);
                         shadow_color.a < 1.0
                     }
                 }
@@ -136,9 +130,7 @@ impl Integrator for Scratcher {
 
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
         let reflection_ray = Ray::new(hit.point, reflection_dir);
-        if let Some(reflection_color) =
-            self.trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
-        {
+        if let Some(reflection_color) = self.trace(model, reflection_ray, bvh, depth + 1) {
             // Cosine-law applies here as well
             let n_dot_r = n.dot(&reflection_dir);
             pixel_color += reflection_color * (metallic + 0.125) * n_dot_r;

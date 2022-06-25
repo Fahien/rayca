@@ -2,9 +2,11 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use crate::{Material, Model};
+
 use super::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ray {
     pub origin: Point3,
     pub dir: Vec3,
@@ -64,9 +66,9 @@ impl Hit {
 
 pub trait Intersect {
     fn intersects(&self, ray: &Ray) -> Option<Hit>;
-    fn get_color(&self, hit: &Hit) -> Color;
-    fn get_normal(&self, hit: &Hit) -> Vec3;
-    fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32);
+    fn get_color(&self, material: &Material, model: &Model, hit: &Hit) -> Color;
+    fn get_normal(&self, material: &Material, model: &Model, hit: &Hit) -> Vec3;
+    fn get_metallic_roughness(&self, material: &Material, model: &Model, hit: &Hit) -> (f32, f32);
 }
 
 #[cfg(test)]

@@ -9,7 +9,7 @@ use crate::*;
 #[derive(Debug, Clone)]
 pub struct Sphere {
     pub center: Point3,
-    _radius: f32,
+    radius: f32,
     radius2: f32,
 }
 
@@ -18,14 +18,28 @@ impl Sphere {
         let radius2 = radius * radius;
         Self {
             center,
-            _radius: radius,
+            radius,
             radius2,
         }
     }
 
     pub fn set_radius(&mut self, radius: f32) {
-        self._radius = radius;
+        self.radius = radius;
         self.radius2 = radius * radius;
+    }
+
+    pub fn get_radius(&self) -> f32 {
+        self.radius
+    }
+
+    pub fn primitives(&self, node: Handle<Node>, material: Handle<Material>) -> Vec<BvhPrimitive> {
+        // Transforming a sphere is complicated. The trick is to store transform with sphere,
+        // then pre-transform the ray, and post-transform the intersection point.
+        let sphere = BvhSphere::new(self.center, self.radius);
+        let geometry = BvhGeometry::Sphere(sphere);
+        let primitive = BvhPrimitive::new(geometry, node, material);
+
+        vec![primitive]
     }
 }
 
@@ -33,7 +47,7 @@ impl Default for Sphere {
     fn default() -> Self {
         Self {
             center: Default::default(),
-            _radius: 1.0,
+            radius: 1.0,
             radius2: 1.0,
         }
     }
@@ -75,18 +89,23 @@ impl Intersect for Sphere {
         Some(hit)
     }
 
-    fn get_color(&self, hit: &Hit) -> Color {
-        let normal = self.get_normal(hit);
+    fn get_color(&self, material: &Material, model: &Model, hit: &Hit) -> Color {
+        let normal = self.get_normal(material, model, hit);
         Color::from(normal)
     }
 
-    fn get_normal(&self, hit: &Hit) -> Vec3 {
+    fn get_normal(&self, _material: &Material, _model: &Model, hit: &Hit) -> Vec3 {
         let mut normal = hit.point - self.center;
         normal.normalize();
         normal
     }
 
-    fn get_metallic_roughness(&self, _hit: &Hit) -> (f32, f32) {
+    fn get_metallic_roughness(
+        &self,
+        _material: &Material,
+        _model: &Model,
+        _hit: &Hit,
+    ) -> (f32, f32) {
         (1.0, 1.0) // glTF default values
     }
 }

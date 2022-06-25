@@ -51,11 +51,11 @@ impl Point3 {
         *self += translation;
     }
 
-    pub fn min(&self, other: &Self) -> Self {
+    pub fn min(self, other: &Point3) -> Point3 {
         Self::simd(self.simd.simd_min(other.simd))
     }
 
-    pub fn max(&self, other: &Self) -> Self {
+    pub fn max(self, other: &Point3) -> Point3 {
         Self::simd(self.simd.simd_max(other.simd))
     }
 }
@@ -89,12 +89,28 @@ impl Add<Vec3> for Point3 {
     }
 }
 
+impl Sub<&Point3> for Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Point3) -> Self::Output {
+        (&self).sub(rhs)
+    }
+}
+
+impl Sub<&Point3> for &Point3 {
+    type Output = Vec3;
+
+    fn sub(self, rhs: &Point3) -> Self::Output {
+        // `point.w - point.w = 0.0` hence a vector
+        Self::Output::simd(self.simd - rhs.simd)
+    }
+}
+
 impl Sub for Point3 {
     type Output = Vec3;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        // `point.w - point.w = 0.0` hence a vector
-        Self::Output::simd(self.simd - rhs.simd)
+        self.sub(&rhs)
     }
 }
 
@@ -127,14 +143,6 @@ impl Sub<&Vec3> for &Point3 {
 
     fn sub(self, rhs: &Vec3) -> Self::Output {
         *self + (-rhs)
-    }
-}
-
-impl Sub<&Point3> for &Point3 {
-    type Output = Vec3;
-
-    fn sub(self, rhs: &Point3) -> Self::Output {
-        Self::Output::simd(self.simd - rhs.simd)
     }
 }
 

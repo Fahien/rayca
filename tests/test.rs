@@ -27,6 +27,7 @@ fn triangle() {
     let node_handle = model.nodes.push(node);
     model.root.children.push(node_handle);
     scene.push(model);
+    scene.push_default_model();
 
     scene.draw(&mut image);
     image.dump_png("target/triangle.png");
@@ -41,6 +42,7 @@ fn cube_over_plane() {
     scene.load("tests/model/box/box.gltf").unwrap();
     scene.load("tests/model/box/box.gltf").unwrap();
     scene.load("tests/model/box/box.gltf").unwrap();
+    scene.push_default_model();
 
     let root0 = scene.model.nodes.get_mut(1.into()).unwrap();
     root0.trs.scale = Vec3::new(16.0, 16.0, 0.125);
@@ -90,6 +92,7 @@ mod gltf {
         let mut scene = Scene::new();
 
         scene.load("tests/model/box/box.gltf").unwrap();
+        scene.push_default_model();
 
         scene.draw(&mut image);
         image.dump_png("target/gltf-cube.png");
@@ -100,6 +103,7 @@ mod gltf {
         let mut image = Image::new(128, 128, ColorType::RGBA8);
         let mut scene = Scene::new();
         scene.load("tests/model/triangle/triangle.gltf").unwrap();
+        scene.push_default_model();
 
         scene.draw(&mut image);
         image.dump_png("target/gltf-triangle.png");
@@ -111,6 +115,7 @@ mod gltf {
         let mut scene = Scene::new();
 
         scene.load("tests/model/suzanne/suzanne.gltf").unwrap();
+        scene.push_default_model();
 
         scene.draw(&mut image);
         image.dump_png("target/suzanne.png");
@@ -158,8 +163,7 @@ mod gltf {
         scene
             .load("tests/model/orientation/OrientationTest.gltf")
             .unwrap();
-
-        scene.model.root.trs.scale = Vec3::new(1.0 / 8.0, 1.0 / 8.0, 1.0 / 8.0);
+        add_camera(&mut scene.model, Vec3::new(0.0, 0.0, 20.0));
 
         scene.draw(&mut image);
         image.dump_png("target/orientation.png");

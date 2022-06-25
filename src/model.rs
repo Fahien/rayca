@@ -5,6 +5,7 @@
 use std::{
     collections::HashMap,
     error::Error,
+    ops::Deref,
     path::{Path, PathBuf},
 };
 
@@ -566,9 +567,31 @@ impl ModelBuilder {
     }
 }
 
+/// Solved transforms in world space, ready to be used by the renderer
+#[repr(transparent)]
+pub struct SolvedTrs {
+    pub trs: Trs,
+}
+
+impl SolvedTrs {
+    pub fn new(trs: Trs) -> Self {
+        Self { trs }
+    }
+}
+
+impl Deref for SolvedTrs {
+    type Target = Trs;
+
+    fn deref(&self) -> &Self::Target {
+        &self.trs
+    }
+}
+
 #[derive(Default)]
 pub struct Model {
     pub id: usize,
+    pub width: u32,
+    pub height: u32,
     pub samplers: Pack<Sampler>,
     pub images: Pack<Image>,
     pub textures: Pack<Texture>,
@@ -579,6 +602,11 @@ pub struct Model {
     pub lights: Pack<Light>,
     pub nodes: Pack<Node>,
     pub root: Node,
+
+    // Cleared every frame
+    pub solved_trs: HashMap<Handle<Node>, SolvedTrs>,
+    pub camera_nodes: Vec<Handle<Node>>,
+    pub light_nodes: Vec<Handle<Node>>,
 }
 
 impl Model {
@@ -648,47 +676,59 @@ impl Model {
         }
     }
 
-    fn traverse(&self, trss: &mut HashMap<Handle<Node>, Trs>, trs: Trs, node: Handle<Node>) {
+    fn traverse(
+        &self,
+        solved_trs: &mut HashMap<Handle<Node>, SolvedTrs>,
+        transform: Trs,
+        node: Handle<Node>,
+    ) {
         let current_node = self.nodes.get(node).unwrap();
-        let current_trs = &trs * &current_node.trs;
-        trss.insert(node, current_trs.clone());
+        let current_transform = &transform * &current_node.trs;
+        solved_trs.insert(node, SolvedTrs::new(current_transform.clone()));
 
         for child in &current_node.children {
-            self.traverse(trss, current_trs.clone(), *child);
+            self.traverse(solved_trs, current_transform.clone(), *child);
         }
     }
 
-    pub fn collect_transforms(&self) -> HashMap<Handle<Node>, Trs> {
+    fn collect_trs(&mut self) {
         let mut ret = HashMap::new();
         for node in self.root.children.iter() {
             self.traverse(&mut ret, self.root.trs.clone(), *node);
         }
-        ret
+        self.solved_trs = ret;
     }
 
-    pub fn collect(&self) -> (Vec<BvhTriangle>, Vec<(&Camera, Trs)>) {
-        let mut triangles = vec![];
-        let mut cameras = vec![];
+    pub fn collect(&mut self) -> Vec<BvhPrimitive> {
+        self.collect_trs();
 
-        let transforms = self.collect_transforms();
-        for (node, trs) in transforms {
-            // Collect triangles
-            let node = self.nodes.get(node).unwrap();
+        let mut primitives = vec![];
+        self.camera_nodes.clear();
+        self.light_nodes.clear();
+
+        for (node_handle, _) in &self.solved_trs {
+            // Collect primitives
+            let node = self.nodes.get(*node_handle).unwrap();
             if let Some(mesh) = self.meshes.get(node.mesh) {
                 for prim_handle in mesh.primitives.iter() {
                     let prim = self.primitives.get(*prim_handle).unwrap();
-                    let mut prim_triangles = prim.triangles(&trs, prim.material, self);
-                    triangles.append(&mut prim_triangles);
+                    let prims = prim.primitives(*node_handle, prim.material, self);
+                    primitives.extend(prims);
                 }
             }
 
             // Collect cameras
-            if let Some(camera) = self.cameras.get(node.camera) {
-                cameras.push((camera, trs));
+            if node.camera.valid() {
+                self.camera_nodes.push(*node_handle);
+            }
+
+            // Collect light nodes
+            if node.light.valid() {
+                self.light_nodes.push(*node_handle);
             }
         }
 
-        (triangles, cameras)
+        primitives
     }
 }
 
