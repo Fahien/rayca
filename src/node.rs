@@ -9,9 +9,7 @@ use super::*;
 pub struct NodeBuilder {
     pub id: usize,
     pub name: String,
-    pub translation: Vec3,
-    pub rotation: Quat,
-    pub scale: Vec3,
+    pub trs: Trs,
     pub children: Vec<Handle<Node>>,
     pub mesh: Handle<Mesh>,
     pub camera: Handle<Camera>,
@@ -23,9 +21,7 @@ impl NodeBuilder {
         Self {
             id: 0,
             name: "Unknown".to_string(),
-            translation: Vec3::new(0.0, 0.0, 0.0),
-            rotation: Quat::default(),
-            scale: Vec3::new(1.0, 1.0, 1.0),
+            trs: Trs::default(),
             children: vec![],
             mesh: Handle::NONE,
             camera: Handle::NONE,
@@ -43,25 +39,30 @@ impl NodeBuilder {
         self
     }
 
+    pub fn trs(mut self, trs: Trs) -> Self {
+        self.trs = trs;
+        self
+    }
+
     pub fn translation(mut self, translation: Vec3) -> Self {
-        self.translation = translation;
+        self.trs.translation = translation;
         self
     }
 
     pub fn rotation(mut self, rotation: Quat) -> Self {
-        self.rotation = rotation;
+        self.trs.rotation = rotation;
         self
     }
 
     pub fn scale(mut self, scale: Vec3) -> Self {
-        self.scale = scale;
+        self.trs.scale = scale;
         self
     }
 
     pub fn matrix(mut self, matrix: Mat4) -> Self {
-        self.scale = matrix.get_scale();
-        self.rotation = matrix.get_rotation();
-        self.translation = matrix.get_translation();
+        self.trs.scale = matrix.get_scale();
+        self.trs.rotation = matrix.get_rotation();
+        self.trs.translation = matrix.get_translation();
         self
     }
 
@@ -90,9 +91,7 @@ impl NodeBuilder {
         node.id = self.id;
         node.name = self.name;
 
-        node.trs.scale = self.scale;
-        node.trs.rotation = self.rotation;
-        node.trs.translation = self.translation;
+        node.trs = self.trs;
 
         node.children = self.children;
         node.mesh = self.mesh;

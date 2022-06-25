@@ -2,7 +2,10 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::{ops::Mul, simd::f32x4};
+use std::{
+    ops::{Div, Mul},
+    simd::f32x4,
+};
 
 use crate::Ray;
 
@@ -86,6 +89,24 @@ impl Trs {
 
     pub fn get_inversed(&self) -> Inversed<Self> {
         Inversed::from(self.clone())
+    }
+
+    pub fn left_mul(&mut self, rhs: &Trs) {
+        let translation = self.translation + self.rotation * (self.scale * rhs.translation);
+        let rotation = self.rotation * rhs.rotation;
+        let scale = rhs.rotation.get_inverse() * (self.scale * (rhs.rotation * rhs.scale));
+        self.translation = translation;
+        self.rotation = rotation;
+        self.scale = scale;
+    }
+}
+
+impl From<Mat4> for Trs {
+    fn from(mat: Mat4) -> Self {
+        let translation = mat.get_translation();
+        let rotation = mat.get_rotation();
+        let scale = Vec3::new(1.0, 1.0, 1.0);
+        Self::new(translation, rotation, scale)
     }
 }
 
@@ -192,6 +213,17 @@ impl Mul<Ray> for &Trs {
         rhs.scale(&self.scale);
         rhs.rotate(&self.rotation);
         rhs.translate(&self.translation);
+        rhs
+    }
+}
+
+impl Div<Ray> for &Trs {
+    type Output = Ray;
+
+    fn div(self, mut rhs: Ray) -> Self::Output {
+        rhs.translate(&self.translation);
+        rhs.rotate(&self.rotation);
+        rhs.scale(&self.scale);
         rhs
     }
 }
