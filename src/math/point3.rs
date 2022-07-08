@@ -71,6 +71,12 @@ impl Add<Vec3> for Point3 {
     }
 }
 
+impl AddAssign<Vec3> for Point3 {
+    fn add_assign(&mut self, rhs: Vec3) {
+        *self += &rhs;
+    }
+}
+
 impl AddAssign<&Vec3> for Point3 {
     fn add_assign(&mut self, rhs: &Vec3) {
         self.x += rhs.x;

@@ -73,19 +73,21 @@ impl<'a> Draw for Scene<'a> {
 
         let mut timer = Timer::new();
 
-        for node in self.model.nodes.iter() {
+        let transforms = self.model.collect_transforms();
+        for (node, trs) in transforms {
             // Collect triangles
+            let node = self.model.nodes.get(node).unwrap();
             if let Some(mesh) = self.model.meshes.get(node.mesh) {
                 for prim_handle in mesh.primitives.iter() {
                     let prim = self.model.primitives.get(*prim_handle).unwrap();
-                    let mut prim_triangles = prim.triangles(&node.trs, prim.material, &self.model);
+                    let mut prim_triangles = prim.triangles(&trs, prim.material, &self.model);
                     triangles.append(&mut prim_triangles);
                 }
             }
 
             // Collect cameras
             if let Some(camera) = self.model.cameras.get(node.camera) {
-                cameras.push(camera);
+                cameras.push((camera, trs));
             }
         }
 
@@ -95,13 +97,21 @@ impl<'a> Draw for Scene<'a> {
         let inv_width = 1.0 / width;
         let inv_height = 1.0 / height;
 
-        let mut fov = 0.7; // 0.7 rads == 40 degrees
+        let mut fov = 0.7;
+
+        let camera_trs = if !cameras.is_empty() {
+            let (camera, camera_trs) = &cameras[0];
+            fov = camera.yfov_radians;
+            camera_trs.clone()
+        } else {
+            Trs::new(
+                Vec3::new(0.0, 0.0, 4.0),
+                Quat::default(),
+                Vec3::new(1.0, 1.0, 1.0),
+            )
+        };
+
         let aspectratio = width / height;
-
-        if !cameras.is_empty() {
-            fov = cameras[0].yfov_radians;
-        }
-
         let angle = (fov * 0.5).tan();
 
         #[cfg(feature = "parallel")]
@@ -121,8 +131,8 @@ impl<'a> Draw for Scene<'a> {
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
-                let origin = Point3::new(0.0, 0.0, 4.5);
-                let ray = Ray::new(origin, dir);
+                let origin = Point3::new(0.0, 0.0, 0.0);
+                let ray = &camera_trs * Ray::new(origin, dir);
 
                 self.draw_pixel(ray, &triangles, pixel);
             });

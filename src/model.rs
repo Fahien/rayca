@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use std::{
+    collections::HashMap,
     error::Error,
     path::{Path, PathBuf},
 };
@@ -478,6 +479,7 @@ impl Model {
     pub fn append(&mut self, mut model: Model) {
         // Create a new root node for the new model
         let new_model_root = self.nodes.push(model.root);
+        self.root.children.push(new_model_root);
 
         let sampler_offset = self.samplers.append(&mut model.samplers);
         let image_offset = self.images.append(&mut model.images);
@@ -524,6 +526,24 @@ impl Model {
         for children in &mut new_model_root.children {
             children.offset(node_offset);
         }
+    }
+
+    fn traverse(&self, trss: &mut HashMap<Handle<Node>, Trs>, trs: Trs, node: Handle<Node>) {
+        let current_node = self.nodes.get(node).unwrap();
+        let current_trs = &trs * &current_node.trs;
+        trss.insert(node, current_trs.clone());
+
+        for child in &current_node.children {
+            self.traverse(trss, current_trs.clone(), *child);
+        }
+    }
+
+    pub fn collect_transforms(&self) -> HashMap<Handle<Node>, Trs> {
+        let mut ret = HashMap::new();
+        for node in self.root.children.iter() {
+            self.traverse(&mut ret, Trs::default(), *node);
+        }
+        ret
     }
 }
 

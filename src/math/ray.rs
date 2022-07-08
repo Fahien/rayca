@@ -1,4 +1,4 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -13,6 +13,20 @@ pub struct Ray {
 impl Ray {
     pub fn new(origin: Point3, dir: Vec3) -> Self {
         Self { origin, dir }
+    }
+
+    pub fn scale(&mut self, scale: &Vec3) {
+        self.dir.scale(scale);
+        self.origin.scale(scale);
+    }
+
+    pub fn translate(&mut self, translation: &Vec3) {
+        self.origin += translation;
+    }
+
+    pub fn rotate(&mut self, rotation: &Quat) {
+        self.origin.rotate(rotation);
+        self.dir.rotate(rotation);
     }
 }
 
