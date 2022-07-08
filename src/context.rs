@@ -2,7 +2,6 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-
 use wasm_bindgen::{prelude::*, Clamped, JsCast};
 use web_sys::{window, CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
