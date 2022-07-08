@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use std::{
+    collections::HashMap,
     error::Error,
     path::{Path, PathBuf},
 };
@@ -473,6 +474,29 @@ impl Model {
         Self {
             ..Default::default()
         }
+    }
+
+    fn traverse<'a>(
+        &'a self,
+        trss: &mut HashMap<&'a Node, Trs>,
+        transform: Trs,
+        node: Handle<Node>,
+    ) {
+        let current_node = self.nodes.get(node).unwrap();
+        let current_transform = &transform * &current_node.trs;
+        trss.insert(current_node, current_transform.clone());
+
+        for child in &current_node.children {
+            self.traverse(trss, current_transform.clone(), *child);
+        }
+    }
+
+    pub fn collect_transforms(&self) -> HashMap<&Node, Trs> {
+        let mut ret = HashMap::new();
+        for node in self.root.children.iter() {
+            self.traverse(&mut ret, Trs::default(), *node);
+        }
+        ret
     }
 }
 
