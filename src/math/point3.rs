@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, Index, Sub};
+use std::ops::{Add, AddAssign, Index, Sub};
 
 use crate::{Dot, Vec3};
 
@@ -66,5 +66,21 @@ impl Index<usize> for Point3 {
             2 => &self.z,
             _ => panic!("Index out of bounds"),
         }
+    }
+}
+
+impl AddAssign<Vec3> for Point3 {
+    fn add_assign(&mut self, rhs: Vec3) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
+    }
+}
+
+impl AddAssign<&Vec3> for Point3 {
+    fn add_assign(&mut self, rhs: &Vec3) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
     }
 }

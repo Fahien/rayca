@@ -7,7 +7,7 @@ pub mod vertex;
 pub use mesh::*;
 pub use vertex::*;
 
-use std::{error::Error, path::Path};
+use std::{collections::HashMap, error::Error, path::Path};
 
 use gltf::Gltf;
 use owo_colors::OwoColorize;
@@ -17,7 +17,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::{
     rlog, Camera, Color, GgxMaterial, Handle, Image, Node, Pack, Quat, Sampler, Texture, Timer,
-    Vec3,
+    Trs, Vec3,
 };
 
 fn data_type_as_size(data_type: gltf::accessor::DataType) -> usize {
@@ -471,6 +471,29 @@ impl GltfModel {
             let node = Self::create_node(&gnode);
             self.nodes.push(node);
         }
+    }
+
+    fn traverse<'a>(
+        &'a self,
+        trss: &mut HashMap<&'a Node, Trs>,
+        transform: Trs,
+        node: Handle<Node>,
+    ) {
+        let current_node = self.nodes.get(node).unwrap();
+        let current_transform = &transform * &current_node.trs;
+        trss.insert(current_node, current_transform.clone());
+
+        for child in &current_node.children {
+            self.traverse(trss, current_transform.clone(), *child);
+        }
+    }
+
+    pub fn collect_transforms(&self) -> HashMap<&Node, Trs> {
+        let mut ret = HashMap::new();
+        for node in self.root.children.iter() {
+            self.traverse(&mut ret, Trs::default(), *node);
+        }
+        ret
     }
 }
 

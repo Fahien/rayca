@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::hash::Hash;
+
 use crate::{Camera, GltfMesh, Handle, Mat4, Quat, Trs, Vec3};
 
 pub struct NodeBuilder {
@@ -122,3 +124,17 @@ impl Node {
         }
     }
 }
+
+impl Hash for Node {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl PartialEq for Node {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Node {}

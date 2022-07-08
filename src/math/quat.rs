@@ -2,7 +2,9 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::Mat4;
+use std::ops::Mul;
+
+use super::*;
 
 /// Quaternion structure
 #[derive(Copy, Clone)]
@@ -97,6 +99,28 @@ impl From<&Mat4> for Quat {
 impl From<Mat4> for Quat {
     fn from(matrix: Mat4) -> Self {
         Quat::from(&matrix)
+    }
+}
+
+impl Mul<Quat> for Quat {
+    type Output = Quat;
+
+    fn mul(self, rhs: Quat) -> Self::Output {
+        Self::new(
+            self.x * rhs.w + self.y * rhs.z - self.z * rhs.y + self.w * rhs.x,
+            -self.x * rhs.z + self.y * rhs.w + self.z * rhs.x + self.w * rhs.y,
+            self.x * rhs.y - self.y * rhs.x + self.z * rhs.w + self.w * rhs.z,
+            -self.x * rhs.x - self.y * rhs.y - self.z * rhs.z + self.w * rhs.w,
+        )
+    }
+}
+
+impl Mul<Vec3> for Quat {
+    type Output = Vec3;
+
+    fn mul(self, mut rhs: Vec3) -> Self::Output {
+        rhs.rotate(&self);
+        rhs
     }
 }
 

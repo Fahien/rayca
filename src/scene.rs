@@ -75,20 +75,21 @@ impl Scene {
         }
     }
 
-    fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>, Vec<&Camera>) {
+    fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>, Vec<(&Camera, Trs)>) {
         let mut triangles = vec![];
         let mut triangles_ex = vec![];
         let mut cameras = vec![];
 
         let mut timer = Timer::new();
 
-        for node in self.gltf_model.nodes.iter() {
+        let transforms = self.gltf_model.collect_transforms();
+        for (node, trs) in transforms {
             // Collect triangles
             if let Some(mesh_handle) = node.mesh {
                 let mesh = self.gltf_model.meshes.get(mesh_handle).unwrap();
                 for prim_handle in mesh.primitives.iter() {
                     let prim = self.gltf_model.primitives.get(*prim_handle).unwrap();
-                    let (mut prim_triangles, mut prim_triangles_ex) = prim.triangles(&node.trs);
+                    let (mut prim_triangles, mut prim_triangles_ex) = prim.triangles(&trs);
                     triangles.append(&mut prim_triangles);
                     triangles_ex.append(&mut prim_triangles_ex);
                 }
@@ -97,7 +98,7 @@ impl Scene {
             // Collect cameras
             if let Some(camera_handle) = node.camera {
                 let camera = self.gltf_model.cameras.get(camera_handle).unwrap();
-                cameras.push(camera);
+                cameras.push((camera, trs));
             }
         }
 
@@ -121,13 +122,21 @@ impl Draw for Scene {
         let inv_width = 1.0 / width;
         let inv_height = 1.0 / height;
 
-        let mut fov = 0.7; // 0.7 rads == 40 degrees
+        let mut fov = 0.7;
+
+        let camera_trs = if !cameras.is_empty() {
+            let (camera, camera_trs) = &cameras[0];
+            fov = camera.yfov_radians;
+            camera_trs.clone()
+        } else {
+            Trs::new(
+                Vec3::new(0.0, 0.0, 4.0),
+                Quat::default(),
+                Vec3::new(1.0, 1.0, 1.0),
+            )
+        };
+
         let aspectratio = width / height;
-
-        if !cameras.is_empty() {
-            fov = cameras[0].yfov_radians;
-        }
-
         let angle = (fov * 0.5).tan();
 
         #[cfg(feature = "parallel")]
@@ -149,8 +158,8 @@ impl Draw for Scene {
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
                 let mut dir = Vec3::new(xx, yy, -1.0);
                 dir.normalize();
-                let origin = Point3::new(0.0, 0.0, 4.5);
-                let ray = Ray::new(origin, dir);
+                let origin = Point3::new(0.0, 0.0, 0.0);
+                let ray = &camera_trs * Ray::new(origin, dir);
 
                 let mut depth = f32::INFINITY;
                 self.draw_pixel_triangles(

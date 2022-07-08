@@ -2,7 +2,9 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, Index, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Index, Mul, Neg, Sub};
+
+use crate::Quat;
 
 use crate::{Dot, Point3};
 
@@ -57,6 +59,18 @@ impl Vec3 {
     pub fn get_reciprocal(&self) -> Self {
         Self::new(1.0 / self.x, 1.0 / self.y, 1.0 / self.z)
     }
+
+    pub fn rotate(&mut self, rotation: &Quat) {
+        // Extract the vector part of the quaternion
+        let u = Vec3::new(rotation.x, rotation.y, rotation.z);
+        let v = *self;
+
+        // Extract the scalar part of the quaternion
+        let s = rotation.w;
+
+        // Do the math
+        *self = 2.0 * u.dot(&v) * u + (s * s - u.dot(&u)) * v + 2.0 * s * u.cross(&v);
+    }
 }
 
 impl Dot<Vec3> for Vec3 {
@@ -109,6 +123,14 @@ impl Add<&Vec3> for Vec3 {
 
     fn add(self, rhs: &Vec3) -> Self::Output {
         Self::Output::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+impl AddAssign<&Vec3> for Vec3 {
+    fn add_assign(&mut self, rhs: &Vec3) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+        self.z += rhs.z;
     }
 }
 
@@ -180,6 +202,22 @@ impl Mul<f32> for &Vec3 {
 impl From<Point3> for Vec3 {
     fn from(p: Point3) -> Self {
         Self::new(p.x, p.y, p.z)
+    }
+}
+
+impl Mul<Vec3> for f32 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl Mul<Vec3> for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        Self::new(self.x * rhs.x, self.y * rhs.y, self.z * rhs.z)
     }
 }
 
