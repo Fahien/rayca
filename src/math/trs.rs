@@ -4,6 +4,8 @@
 
 use std::ops::Mul;
 
+use crate::Ray;
+
 use super::*;
 
 /// TRanSform, or Translation-Rotation-Scale
@@ -57,6 +59,27 @@ impl Mul<Mat4> for &Trs {
         rhs.scale(&self.scale);
         rhs.rotate(&self.rotation);
         rhs.translate(&self.translation);
+        rhs
+    }
+}
+
+impl Mul<&Trs> for &Trs {
+    type Output = Trs;
+
+    fn mul(self, rhs: &Trs) -> Self::Output {
+        let translation = self.translation + rhs.translation;
+        let rotation = self.rotation * rhs.rotation;
+        let scale = self.scale * rhs.scale;
+        Trs::new(translation, rotation, scale)
+    }
+}
+
+impl Mul<Ray> for &Trs {
+    type Output = Ray;
+
+    fn mul(self, mut rhs: Ray) -> Self::Output {
+        rhs.rotate(&self.rotation);
+        rhs.translate(&(self.rotation * self.translation));
         rhs
     }
 }
