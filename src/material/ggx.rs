@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Color, GltfModel, Handle, Sampler, Texture, Vec2};
+use crate::{Color, GltfModel, Handle, Mat3, Sampler, Texture, Vec2, Vec3};
 
 #[derive(Default)]
 pub struct GgxMaterialBuilder {
@@ -66,6 +66,36 @@ impl GgxMaterial {
             metallic_factor: 1.0,
             roughness_factor: 1.0,
             metallic_roughness_texture: Handle::NONE,
+        }
+    }
+
+    pub fn get_color(&self, uv: &Vec2, model: &GltfModel) -> Color {
+        if let Some(texture) = model.textures.get(self.albedo_texture) {
+            let sampler = Sampler::default();
+            let image = model.images.get(texture.image).unwrap();
+            self.color * sampler.sample(image, uv)
+        } else {
+            self.color
+        }
+    }
+
+    pub fn get_normal(
+        &self,
+        uv: &Vec2,
+        normal: Vec3,
+        tangent: Vec3,
+        bitangent: Vec3,
+        model: &GltfModel,
+    ) -> Vec3 {
+        if let Some(texture) = model.textures.get(self.normal_texture) {
+            let sampler = Sampler::default();
+            let image = model.images.get(texture.image).unwrap();
+            let mut sampled_normal = Vec3::from(sampler.sample(image, uv));
+            sampled_normal = sampled_normal * 2.0 - 1.0;
+            let tbn = Mat3::tbn(&tangent, &bitangent, &normal);
+            (&tbn * sampled_normal).get_normalized()
+        } else {
+            normal
         }
     }
 
