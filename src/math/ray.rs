@@ -2,8 +2,6 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Material, Model};
-
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -64,13 +62,6 @@ impl Hit {
     pub fn new(depth: f32, point: Point3, uv: Vec2) -> Self {
         Self { depth, point, uv }
     }
-}
-
-pub trait Intersect {
-    fn intersects(&self, ray: &Ray) -> Option<Hit>;
-    fn get_color(&self, material: &Material, model: &Model, hit: &Hit) -> Color;
-    fn get_normal(&self, material: &Material, model: &Model, hit: &Hit) -> Vec3;
-    fn get_metallic_roughness(&self, material: &Material, model: &Model, hit: &Hit) -> (f32, f32);
 }
 
 #[cfg(test)]
