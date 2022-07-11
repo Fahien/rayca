@@ -72,11 +72,9 @@ impl BvhTriangle {
         b.normalize();
         b
     }
-}
 
-impl Intersect for BvhTriangle {
     /// [Ray-triangle intersection](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/ray-triangle-intersection-geometric-solution)
-    fn intersects(&self, ray: &Ray) -> Option<Hit> {
+    pub fn intersects(&self, ray: &Ray) -> Option<Hit> {
         let v0 = &self.vertices[0].pos;
         let v1 = &self.vertices[1].pos;
         let v2 = &self.vertices[2].pos;
@@ -148,51 +146,6 @@ impl Intersect for BvhTriangle {
         let uv = Vec2::new(u / denom, v / denom);
         let hit = Hit::new(t, p, uv);
         Some(hit) // This ray hits the triangle
-    }
-
-    fn get_color(&self, material: &Material, model: &Model, hit: &Hit) -> Color {
-        let mut color = self.interpolate_colors(hit) * material.color;
-        if let Some(albedo_handle) = material.albedo_texture {
-            let texture = model.textures.get(albedo_handle).unwrap();
-            let sampler = Sampler::default();
-            let image = model.images.get(texture.image).unwrap();
-            color *= sampler.sample(image, &self.interpolate_uvs(hit));
-        }
-        color
-    }
-
-    fn get_normal(&self, material: &Material, model: &Model, hit: &Hit) -> Vec3 {
-        let normal = self.interpolate_normals(hit);
-
-        if let Some(normal_handle) = material.normal_texture {
-            let texture = model.textures.get(normal_handle).unwrap();
-            let sampler = Sampler::default();
-            let image = model.images.get(texture.image).unwrap();
-            let mut sampled_normal = Vec3::from(sampler.sample(image, &self.interpolate_uvs(hit)));
-            sampled_normal = sampled_normal * 2.0 - 1.0;
-
-            let tangent = self.interpolate_tangents(hit);
-            let bitangent = self.interpolate_bitangents(hit);
-
-            let tbn = Mat3::tbn(&tangent, &bitangent, &normal);
-            return (&tbn * sampled_normal).get_normalized();
-        } else {
-            normal
-        }
-    }
-
-    fn get_metallic_roughness(&self, material: &Material, model: &Model, hit: &Hit) -> (f32, f32) {
-        if let Some(mr_handle) = material.metallic_roughness_texture {
-            let mr_texture = model.textures.get(mr_handle).unwrap();
-            let sampler = Sampler::default();
-            let image = model.images.get(mr_texture.image).unwrap();
-            let color = sampler.sample(image, &self.interpolate_uvs(hit));
-            // Blue channel contains metalness value
-            // Red channel contains roughness value
-            (color.b, color.r)
-        } else {
-            (material.metallic_factor, material.roughness_factor)
-        }
     }
 }
 

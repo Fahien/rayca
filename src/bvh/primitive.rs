@@ -9,9 +9,50 @@ pub enum BvhGeometry {
     Sphere(BvhSphere),
 }
 
+impl BvhGeometry {
+    pub fn get_color(&self, hit: &Hit) -> Color {
+        match self {
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_colors(hit),
+            BvhGeometry::Sphere(_) => Color::white(),
+        }
+    }
+
+    pub fn get_uv(&self, hit: &Hit) -> Vec2 {
+        match self {
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_uvs(hit),
+            // TODO spherical coordinates?
+            BvhGeometry::Sphere(_) => Vec2::default(),
+        }
+    }
+
+    pub fn get_normal(&self, hit: &Hit) -> Vec3 {
+        match self {
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_normals(hit),
+            BvhGeometry::Sphere(sphere) => sphere.get_normal(&hit.point),
+        }
+    }
+
+    pub fn get_tangent(&self, hit: &Hit) -> Vec3 {
+        match self {
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_tangents(hit),
+            BvhGeometry::Sphere(_) => Vec3::default(),
+        }
+    }
+
+    pub fn get_bitangent(&self, hit: &Hit) -> Vec3 {
+        match &self {
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_bitangents(hit),
+            BvhGeometry::Sphere(_) => Vec3::default(),
+        }
+    }
+}
+
 pub struct BvhPrimitive<'m> {
     pub geometry: BvhGeometry,
     pub trs: &'m Trs,
+
+    /// We store handle and model here as we will anyway need to use the model
+    /// when quering material properties such as textures.
     pub material: Handle<Material>,
     pub model: &'m Model,
 }
@@ -93,25 +134,26 @@ impl<'m> BvhPrimitive<'m> {
     }
 
     pub fn get_color(&self, hit: &Hit) -> Color {
-        let material = self.get_material();
-
-        match &self.geometry {
-            BvhGeometry::Triangle(triangle) => triangle.get_color(material, &self.model, hit),
-            BvhGeometry::Sphere(_) => material.color,
-        }
+        let geometry_color = self.geometry.get_color(hit);
+        let uv = self.geometry.get_uv(hit);
+        let material_color = self.get_material().get_color(&uv, self.model);
+        geometry_color * material_color
     }
 
     pub fn get_normal(&self, hit: &Hit) -> Vec3 {
         match &self.geometry {
-            BvhGeometry::Triangle(triangle) => {
+            BvhGeometry::Triangle(_) => {
+                let uv = self.geometry.get_uv(hit);
+                let normal = self.geometry.get_normal(hit);
+                let tangent = self.geometry.get_tangent(hit);
+                let bitangent = self.geometry.get_bitangent(hit);
                 let material = self.get_material();
-                triangle.get_normal(material, &self.model, hit)
+                material.get_normal(&uv, normal, tangent, bitangent, self.model)
             }
             BvhGeometry::Sphere(sphere) => {
                 let inverse = self.trs.get_inversed();
                 let hit_point = &inverse * hit.point;
                 let normal = sphere.get_normal(&hit_point);
-
                 let normal_matrix = Mat3::from(&inverse).get_transpose();
                 (&normal_matrix * normal).get_normalized()
             }
@@ -120,10 +162,12 @@ impl<'m> BvhPrimitive<'m> {
 
     pub fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32) {
         match &self.geometry {
-            BvhGeometry::Triangle(triangle) => {
+            BvhGeometry::Triangle(_) => {
                 let material = self.get_material();
-                triangle.get_metallic_roughness(material, &self.model, hit)
+                let uv = self.geometry.get_uv(hit);
+                material.get_metallic_roughness(&uv, &self.model)
             }
+            // TODO remember to transform hit point into model sphere
             BvhGeometry::Sphere(_) => (1.0, 1.0),
         }
     }
