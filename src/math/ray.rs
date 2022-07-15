@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use crate::Irradiance;
+
 use super::*;
 
 #[derive(Debug, Clone)]
@@ -76,6 +78,8 @@ pub trait Intersect<'m> {
     fn get_color(&self, hit: &Hit) -> Color;
     fn get_normal(&self, hit: &Hit) -> Vec3;
     fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32);
+    fn get_uv(&self, hit: &Hit) -> Vec2;
+    fn get_radiance(&self, irradiance: &Irradiance) -> Color;
 }
 
 #[cfg(test)]

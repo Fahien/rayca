@@ -136,6 +136,15 @@ impl<'m> Intersect<'m> for BvhSphere<'m> {
         let normal_matrix = Mat3::from(&inverse).get_transpose();
         (&normal_matrix * normal).get_normalized()
     }
+
+    fn get_uv(&self, _hit: &Hit) -> Vec2 {
+        // TODO: Sphere uvs?
+        Vec2::default()
+    }
+
+    fn get_radiance(&self, irradiance: &Irradiance) -> Color {
+        self.get_material().get_radiance(irradiance, self.model)
+    }
 }
 
 #[cfg(test)]

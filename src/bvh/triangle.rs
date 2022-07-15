@@ -48,17 +48,17 @@ impl<'m> BvhTriangle<'m> {
     }
 
     /// Returns the interpolation of the vertices colors
-    pub fn interpolate_colors(&self, hit: &Hit) -> Color {
-        self.vertices[2].color * (1.0 - hit.uv.x - hit.uv.y)
-            + self.vertices[0].color * hit.uv.x
-            + self.vertices[1].color * hit.uv.y
+    pub fn interpolate_colors(&self, hit_uv: &Vec2) -> Color {
+        self.vertices[2].color * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].color * hit_uv.x
+            + self.vertices[1].color * hit_uv.y
     }
 
     /// Returns the interpolation of the vertices uvs
-    pub fn interpolate_uvs(&self, hit: &Hit) -> Vec2 {
-        self.vertices[2].uv * (1.0 - hit.uv.x - hit.uv.y)
-            + self.vertices[0].uv * hit.uv.x
-            + self.vertices[1].uv * hit.uv.y
+    pub fn interpolate_uvs(&self, hit_uv: &Vec2) -> Vec2 {
+        self.vertices[2].uv * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].uv * hit_uv.x
+            + self.vertices[1].uv * hit_uv.y
     }
 
     /// Returns the interpolation of the vertices normals
@@ -70,19 +70,19 @@ impl<'m> BvhTriangle<'m> {
     }
 
     /// Returns the interpolation of the vertices tangents
-    pub fn interpolate_tangents(&self, hit: &Hit) -> Vec3 {
-        let mut t = self.vertices[2].tangent * (1.0 - hit.uv.x - hit.uv.y)
-            + self.vertices[0].tangent * hit.uv.x
-            + self.vertices[1].tangent * hit.uv.y;
+    pub fn interpolate_tangents(&self, hit_uv: &Vec2) -> Vec3 {
+        let mut t = self.vertices[2].tangent * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].tangent * hit_uv.x
+            + self.vertices[1].tangent * hit_uv.y;
         t.normalize();
         t
     }
 
     /// Returns the interpolation of the vertices bitangents
-    pub fn interpolate_bitangents(&self, hit: &Hit) -> Vec3 {
-        let mut b = self.vertices[2].bitangent * (1.0 - hit.uv.x - hit.uv.y)
-            + self.vertices[0].bitangent * hit.uv.x
-            + self.vertices[1].bitangent * hit.uv.y;
+    pub fn interpolate_bitangents(&self, hit_uv: &Vec2) -> Vec3 {
+        let mut b = self.vertices[2].bitangent * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].bitangent * hit_uv.x
+            + self.vertices[1].bitangent * hit_uv.y;
         b.normalize();
         b
     }
@@ -175,12 +175,12 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
     fn get_color(&self, hit: &Hit) -> Color {
         let material = self.get_material();
 
-        let mut color = self.interpolate_colors(hit) * material.color;
+        let mut color = self.interpolate_colors(&hit.uv) * material.color;
         if let Some(albedo_handle) = material.albedo_texture {
             let texture = self.model.textures.get(albedo_handle).unwrap();
             let sampler = Sampler::default();
             let image = self.model.images.get(texture.image).unwrap();
-            color *= sampler.sample(image, &self.interpolate_uvs(hit));
+            color *= sampler.sample(image, &self.interpolate_uvs(&hit.uv));
         }
         color
     }
@@ -193,11 +193,12 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
             let texture = self.model.textures.get(normal_handle).unwrap();
             let sampler = Sampler::default();
             let image = self.model.images.get(texture.image).unwrap();
-            let mut sampled_normal = Vec3::from(sampler.sample(image, &self.interpolate_uvs(hit)));
+            let mut sampled_normal =
+                Vec3::from(sampler.sample(image, &self.interpolate_uvs(&hit.uv)));
             sampled_normal = sampled_normal * 2.0 - 1.0;
 
-            let tangent = self.interpolate_tangents(hit);
-            let bitangent = self.interpolate_bitangents(hit);
+            let tangent = self.interpolate_tangents(&hit.uv);
+            let bitangent = self.interpolate_bitangents(&hit.uv);
 
             let tbn = Mat3::tbn(&tangent, &bitangent, &normal);
             (&tbn * sampled_normal).get_normalized()
@@ -213,13 +214,21 @@ impl<'m> Intersect<'m> for BvhTriangle<'m> {
             let mr_texture = self.model.textures.get(mr_handle).unwrap();
             let sampler = Sampler::default();
             let image = self.model.images.get(mr_texture.image).unwrap();
-            let color = sampler.sample(image, &self.interpolate_uvs(hit));
+            let color = sampler.sample(image, &self.interpolate_uvs(&hit.uv));
             // Blue channel contains metalness value
             // Red channel contains roughness value
             (color.b, color.r)
         } else {
             (material.metallic_factor, material.roughness_factor)
         }
+    }
+
+    fn get_uv(&self, hit: &Hit) -> Vec2 {
+        self.interpolate_uvs(&hit.uv)
+    }
+
+    fn get_radiance(&self, irradiance: &Irradiance) -> Color {
+        self.get_material().get_radiance(irradiance, self.model)
     }
 }
 

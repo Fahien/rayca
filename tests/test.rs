@@ -58,7 +58,7 @@ fn triangle() {
 
 #[test]
 fn cube_over_plane() {
-    let mut image = Image::new(1024, 1024, ColorType::RGBA8);
+    let mut image = Image::new(512, 512, ColorType::RGBA8);
     let mut scene = Scene::new();
 
     scene.load("tests/model/box/box.gltf").unwrap();
@@ -171,7 +171,8 @@ mod gltf {
             .load("tests/model/orientation/OrientationTest.gltf")
             .unwrap();
 
-        scene.models[0].root.trs.scale = Vec3::new(1.0 / 8.0, 1.0 / 8.0, 1.0 / 8.0);
+        scene.models[0].root.trs.scale = Vec3::new(1.0 / 6.0, 1.0 / 6.0, 1.0 / 6.0);
+        scene.models[0].root.trs.translation.set_z(-1.0);
 
         scene.draw(&mut image);
         image.dump_png("target/orientation.png");
