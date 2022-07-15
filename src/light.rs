@@ -25,10 +25,10 @@ impl Light {
         }
     }
 
-    pub fn get_distance(&self, light_node: &Node, frag_pos: &Point3) -> f32 {
+    pub fn get_distance(&self, light_trs: &Trs, frag_pos: &Point3) -> f32 {
         match self {
-            Light::Directional(light) => light.get_distance(light_node, frag_pos),
-            Light::Point(light) => light.get_distance(light_node, frag_pos),
+            Light::Directional(light) => light.get_distance(light_trs, frag_pos),
+            Light::Point(light) => light.get_distance(light_trs, frag_pos),
         }
     }
 
@@ -46,10 +46,10 @@ impl Light {
         }
     }
 
-    pub fn get_direction(&self, light_node: &Node, frag_pos: &Point3) -> Vec3 {
+    pub fn get_direction(&self, light_trs: &Trs, frag_pos: &Point3) -> Vec3 {
         match self {
-            Light::Directional(light) => light.get_direction(light_node),
-            Light::Point(light) => light.get_direction(light_node, frag_pos),
+            Light::Directional(light) => light.get_direction(light_trs),
+            Light::Point(light) => light.get_direction(light_trs, frag_pos),
         }
     }
 }
@@ -71,8 +71,8 @@ impl DirectionalLight {
         self.intensity = intensity;
     }
 
-    pub fn get_distance(&self, light_node: &Node, frag_pos: &Point3) -> f32 {
-        let dist = Vec3::from(frag_pos) - light_node.trs.translation;
+    pub fn get_distance(&self, light_trs: &Trs, frag_pos: &Point3) -> f32 {
+        let dist = Vec3::from(frag_pos) - light_trs.get_translation();
         dist.len()
     }
 
@@ -84,9 +84,9 @@ impl DirectionalLight {
         1.0
     }
 
-    pub fn get_direction(&self, light_node: &Node) -> Vec3 {
+    pub fn get_direction(&self, light_trs: &Trs) -> Vec3 {
         let mut light_dir = Vec3::new(1.0, 0.0, 0.0);
-        light_dir.rotate(&light_node.trs.rotation);
+        light_dir.rotate(&light_trs.rotation);
         -light_dir
     }
 }
@@ -114,8 +114,8 @@ impl PointLight {
         self.intensity = intensity;
     }
 
-    pub fn get_distance(&self, light_node: &Node, frag_pos: &Point3) -> f32 {
-        let dist = frag_pos - light_node.trs.translation;
+    pub fn get_distance(&self, light_trs: &Trs, frag_pos: &Point3) -> f32 {
+        let dist = frag_pos - light_trs.get_translation();
         Vec3::from(dist).len()
     }
 
@@ -124,14 +124,14 @@ impl PointLight {
     }
 
     pub fn get_fallof(&self, light_trs: &Trs, frag_pos: &Point3) -> f32 {
-        let dist = Vec3::from(frag_pos) - light_trs.translation;
+        let dist = Vec3::from(frag_pos) - light_trs.get_translation();
         let r2 = dist.norm();
         // Square fallof
         1.0 * std::f32::consts::PI * r2
     }
 
-    pub fn get_direction(&self, light_node: &Node, frag_pos: &Point3) -> Vec3 {
-        let mut dist = Vec3::from(frag_pos) - light_node.trs.translation;
+    pub fn get_direction(&self, light_trs: &Trs, frag_pos: &Point3) -> Vec3 {
+        let mut dist = Vec3::from(frag_pos) - light_trs.get_translation();
         dist.normalize();
         -dist
     }

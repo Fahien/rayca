@@ -5,15 +5,8 @@
 pub mod scratcher;
 pub use scratcher::*;
 
-use crate::{Bvh, Color, Light, Node, Pack, Ray};
+use crate::{Bvh, Color, Light, Ray, Trs};
 
 pub trait Integrator: Sync {
-    fn trace(
-        &self,
-        ray: Ray,
-        bvh: &Bvh,
-        light_nodes: &[Node],
-        lights: &Pack<Light>,
-        depth: u32,
-    ) -> Option<Color>;
+    fn trace(&self, ray: Ray, bvh: &Bvh, lights: &[(&Light, &Trs)], depth: u32) -> Option<Color>;
 }

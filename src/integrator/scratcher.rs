@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{Bvh, Color, Dot, Integrator, Light, Node, Pack, Ray, Vec3};
+use crate::{Bvh, Color, Dot, Integrator, Light, Ray, Trs, Vec3};
 
 #[derive(Default)]
 pub struct Scratcher {}
@@ -44,14 +44,7 @@ fn geometry_smith_ggx(n_dot_v: f32, n_dot_l: f32, roughness: f32) -> f32 {
 }
 
 impl Integrator for Scratcher {
-    fn trace(
-        &self,
-        ray: Ray,
-        bvh: &Bvh,
-        light_nodes: &[Node],
-        lights: &Pack<Light>,
-        depth: u32,
-    ) -> Option<Color> {
+    fn trace(&self, ray: Ray, bvh: &Bvh, lights: &[(&Light, &Trs)], depth: u32) -> Option<Color> {
         if depth > 1 {
             return None;
         }
@@ -71,7 +64,7 @@ impl Integrator for Scratcher {
         if color.a < 1.0 {
             let transmit_origin = hit.point + -n * RAY_BIAS;
             let transmit_ray = Ray::new(transmit_origin, ray.dir);
-            let transmit_result = self.trace(transmit_ray, bvh, light_nodes, lights, depth + 1);
+            let transmit_result = self.trace(transmit_ray, bvh, lights, depth + 1);
 
             if let Some(mut transmit_color) = transmit_result {
                 // continue with the rest of the shading?
@@ -85,9 +78,8 @@ impl Integrator for Scratcher {
         // Before getting color, we should check whether it is visible from the sun
         let next_origin = hit.point + n * RAY_BIAS;
 
-        for light_node in light_nodes {
-            let light = lights.get(light_node.light.unwrap()).unwrap();
-            let light_dir = light.get_direction(light_node, &hit.point);
+        for (light, light_trs) in lights {
+            let light_dir = light.get_direction(light_trs, &hit.point);
 
             let shadow_ray = Ray::new(next_origin, light_dir);
             let shadow_result = bvh.intersects_iter(&shadow_ray);
@@ -97,7 +89,7 @@ impl Integrator for Scratcher {
                 None => true,
                 Some((shadow_hit, primitive)) => {
                     // Distance between current surface and the light source
-                    let light_distance = light.get_distance(light_node, &hit.point);
+                    let light_distance = light.get_distance(light_trs, &hit.point);
                     // If the obstacle is beyong the light source then the current surface is light
                     if shadow_hit.depth > light_distance {
                         true
@@ -131,16 +123,14 @@ impl Integrator for Scratcher {
                 let fd = color * std::f32::consts::FRAC_1_PI;
 
                 let light_color = light.get_intensity();
-                let fallof = light.get_fallof(&light_node.trs, &hit.point);
+                let fallof = light.get_fallof(light_trs, &hit.point);
                 pixel_color += ((fd + fr) * light_color * n_dot_l) / fallof;
             }
         } // end iterate light
 
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
         let reflection_ray = Ray::new(next_origin, reflection_dir);
-        if let Some(reflection_color) =
-            self.trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
-        {
+        if let Some(reflection_color) = self.trace(reflection_ray, bvh, lights, depth + 1) {
             // Cosine-law applies here as well
             let n_dot_r = n.dot(&reflection_dir);
             pixel_color += reflection_color * (metallic + 0.125) * n_dot_r;
