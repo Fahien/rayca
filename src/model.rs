@@ -581,9 +581,10 @@ impl<'m> SolvedTrs<'m> {
         Self { trs, node, model }
     }
 
-    pub fn collect(&self) -> (Vec<BvhPrimitive>, Vec<(&Camera, &Trs)>) {
+    pub fn collect(&self) -> (Vec<BvhPrimitive>, Vec<(&Camera, &Trs)>, Vec<(&Light, &Trs)>) {
         let mut primitives = vec![];
         let mut cameras = vec![];
+        let mut lights = vec![];
 
         // Collect primitives
         if let Some(mesh) = self.model.meshes.get(self.node.mesh) {
@@ -600,7 +601,13 @@ impl<'m> SolvedTrs<'m> {
             cameras.push((camera, &self.trs));
         }
 
-        (primitives, cameras)
+        // Collect lights
+        if let Some(light_handle) = self.node.light {
+            let light = self.model.lights.get(light_handle).unwrap();
+            lights.push((light, &self.trs));
+        }
+
+        (primitives, cameras, lights)
     }
 }
 
