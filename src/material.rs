@@ -4,6 +4,36 @@
 
 use super::*;
 
+fn saturate_mediump(x: f32) -> f32 {
+    const MEDIUMP_FLT_MAX: f32 = 65504.0;
+    x.min(MEDIUMP_FLT_MAX)
+}
+
+/// Models the distribution of the microfacet
+/// Surfaces are not smooth at the micro level, but made of a
+/// large number of randomly aligned planar surface fragments.
+/// This implementation is good for half-precision floats.
+fn distribution_ggx(n_dot_h: f32, n: &Vec3, h: &Vec3, roughness: f32) -> f32 {
+    let n_x_h = n.cross(h);
+    let a = n_dot_h * roughness;
+    let k = roughness / (n_x_h.dot(&n_x_h) + a * a);
+    let d = k * k * (1.0 / std::f32::consts::PI);
+    saturate_mediump(d)
+}
+
+fn fresnel_schlick(cos_theta: f32, f0: Vec3) -> Vec3 {
+    let f = (1.0 - cos_theta).powf(5.0);
+    f + f0 * (Vec3::splat(1.0) - f0)
+}
+
+/// Models the visibility of the microfacets, or occlusion or shadow-masking
+fn geometry_smith_ggx(n_dot_v: f32, n_dot_l: f32, roughness: f32) -> f32 {
+    let a = roughness;
+    let ggxv = n_dot_l * (n_dot_v * (1.0 - a) + a);
+    let ggxl = n_dot_v * (n_dot_l * (1.0 - a) + a);
+    return 0.5 / (ggxv + ggxl);
+}
+
 pub struct MaterialBuilder {
     color: Color,
 }
@@ -101,6 +131,28 @@ impl Material {
             }
             None => (self.metallic_factor, self.roughness_factor),
         }
+    }
+
+    pub fn get_radiance(&self, li: &LightIntersection, model: &Model) -> Color {
+        let (metallic, roughness) = self.get_metallic_roughness(&li.uv, model);
+
+        // Cook-Torrance approximation of the microfacet model integration
+        let d = distribution_ggx(li.n_dot_h, &li.n, &li.h, roughness);
+
+        let reflectance = 0.5;
+        let f0_value = 0.16 * reflectance * reflectance * (1.0 - metallic);
+        let f0 = Vec3::splat(f0_value) + Vec3::from(&li.albedo) * metallic;
+        let f = fresnel_schlick(li.l_dot_h, f0);
+
+        let g = geometry_smith_ggx(li.n_dot_v, li.n_dot_l, roughness);
+
+        let fr = (d * g) * Color::from(f);
+
+        // Lambertian diffuse (1/PI)
+        let fd = li.albedo * std::f32::consts::FRAC_1_PI;
+
+        let light_color = li.light.get_intensity(li.light_trs, &li.hit.point);
+        (fd + fr) * light_color * li.n_dot_l
     }
 }
 

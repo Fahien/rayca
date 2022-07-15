@@ -48,36 +48,6 @@ pub struct Scene {
     pub config: Config,
 }
 
-fn saturate_mediump(x: f32) -> f32 {
-    const MEDIUMP_FLT_MAX: f32 = 65504.0;
-    x.min(MEDIUMP_FLT_MAX)
-}
-
-/// Models the distribution of the microfacet
-/// Surfaces are not smooth at the micro level, but made of a
-/// large number of randomly aligned planar surface fragments.
-/// This implementation is good for half-precision floats.
-fn distribution_ggx(n_dot_h: f32, n: &Vec3, h: &Vec3, roughness: f32) -> f32 {
-    let n_x_h = n.cross(h);
-    let a = n_dot_h * roughness;
-    let k = roughness / (n_x_h.dot(&n_x_h) + a * a);
-    let d = k * k * (1.0 / std::f32::consts::PI);
-    saturate_mediump(d)
-}
-
-fn fresnel_schlick(cos_theta: f32, f0: Vec3) -> Vec3 {
-    let f = (1.0 - cos_theta).powf(5.0);
-    f + f0 * (Vec3::splat(1.0) - f0)
-}
-
-/// Models the visibility of the microfacets, or occlusion or shadow-masking
-fn geometry_smith_ggx(n_dot_v: f32, n_dot_l: f32, roughness: f32) -> f32 {
-    let a = roughness;
-    let ggxv = n_dot_l * (n_dot_v * (1.0 - a) + a);
-    let ggxl = n_dot_v * (n_dot_l * (1.0 - a) + a);
-    return 0.5 / (ggxv + ggxl);
-}
-
 impl Scene {
     fn create_default_model() -> Model {
         let mut model = Model::new();
@@ -168,36 +138,38 @@ impl Scene {
                 return Some(n.into());
             }
 
-            const RAY_BIAS: f32 = 1e-4;
+            const SMALL_BIAS: f32 = 1e-6;
+            let n_dot_v = n.dot(&-ray.dir).abs() + SMALL_BIAS;
 
-            let n_dot_v = n.dot(&ray.dir).abs() + RAY_BIAS;
             if self.config.lighting == Lighting::Facing {
                 return Some(Color::new(n_dot_v, n_dot_v, n_dot_v, 1.0));
             }
 
-            let mut color = primitive.get_color(&hit);
+            let albedo_color = primitive.get_color(&hit);
             if self.config.lighting == Lighting::Flat {
-                return Some(color);
+                return Some(albedo_color);
             }
 
-            let mut pixel_color = Color::black() + color / 8.0;
+            // Ambient?
+            let mut pixel_color = Color::black() + albedo_color / 8.0;
+            const RAY_BIAS: f32 = 1e-3;
 
-            if color.a < 1.0 {
+            if albedo_color.a < 1.0 {
                 let transmit_origin = hit.point + -n * RAY_BIAS;
                 let transmit_ray = Ray::new(transmit_origin, ray.dir);
                 let transmit_result = self.trace(transmit_ray, bvh, lights, depth + 1);
 
                 if let Some(mut transmit_color) = transmit_result {
                     // continue with the rest of the shading?
-                    transmit_color.over(color);
-                    color = transmit_color;
+                    transmit_color.over(albedo_color);
+                    pixel_color += transmit_color;
                 }
             }
 
-            let (metallic, roughness) = primitive.get_metallic_roughness(&hit);
-
             // Before getting color, we should check whether it is visible from the sun
             let next_origin = hit.point + n * RAY_BIAS;
+
+            let uv = primitive.geometry.get_uv(&hit);
 
             for (light, light_trs) in lights {
                 let light_dir = light.get_direction(light_trs, &hit.point);
@@ -223,37 +195,32 @@ impl Scene {
                 };
 
                 if is_light {
-                    let n_dot_l = n.dot(&light_dir).clamp(0.0, 1.0);
+                    let incident_light = LightIntersection::new(
+                        light_trs,
+                        light,
+                        &hit,
+                        light_dir,
+                        n,
+                        -ray.dir,
+                        n_dot_v,
+                        albedo_color,
+                        uv,
+                    );
 
-                    // Cook-Torrance approximation of the microfacet model integration
-                    let h = (-ray.dir + light_dir).get_normalized();
-                    let n_dot_h = n.dot(&h).clamp(0.0, 1.0);
-                    let d = distribution_ggx(n_dot_h, &n, &h, roughness);
-
-                    let l_dot_h = light_dir.dot(&h).clamp(0.0, 1.0);
-                    let reflectance = 0.5;
-                    let f0_value = 0.16 * reflectance * reflectance * (1.0 - metallic);
-                    let f0 = Vec3::splat(f0_value) + Vec3::from(&color) * metallic;
-                    let f = fresnel_schlick(l_dot_h, f0);
-
-                    let g = geometry_smith_ggx(n_dot_v, n_dot_l, roughness);
-
-                    let fr = (d * g) * Color::from(f);
-
-                    // Lambertian diffuse (1/PI)
-                    let fd = color * std::f32::consts::FRAC_1_PI;
-
-                    let light_color = light.get_intensity(light_trs, &hit.point);
-                    pixel_color += (fd + fr) * light_color * n_dot_l;
+                    pixel_color += primitive.get_radiance(&incident_light);
                 }
             } // end iterate light
 
+            let n = primitive.geometry.get_normal(&hit);
             let reflection_dir = ray.dir.reflect(&n).get_normalized();
             let reflection_ray = Ray::new(next_origin, reflection_dir);
             if let Some(reflection_color) = self.trace(reflection_ray, bvh, lights, depth + 1) {
                 // Cosine-law applies here as well
-                let n_dot_r = n.dot(&reflection_dir);
-                pixel_color += reflection_color * (metallic + 0.125) * n_dot_r;
+                let n_dot_r = 1.0; // How about fresnel reflecting more at grazing angles? n.dot(&reflection_dir);
+                let (metallic, roughness) = primitive
+                    .get_material()
+                    .get_metallic_roughness(&uv, primitive.model);
+                pixel_color += reflection_color * n_dot_r * metallic * (1.0 - roughness).clamp(0.25, 1.0);
             }
 
             return Some(pixel_color);
