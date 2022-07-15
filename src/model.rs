@@ -610,11 +610,11 @@ impl<'m> SolvedTrs<'m> {
 
     /// Returns lights associated to this solved transform, together with their
     /// transforms already in world space.
-    pub fn collect_lights(&self) -> Vec<(&Light, &Trs)> {
+    pub fn collect_lights(&self) -> Vec<BvhLight> {
         let mut lights = vec![];
         if let Some(light_handle) = self.node.light {
             let light = self.model.lights.get(light_handle).unwrap();
-            lights.push((light, &self.trs));
+            lights.push(BvhLight::new(light, &self.trs));
         }
         lights
     }

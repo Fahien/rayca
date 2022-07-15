@@ -77,3 +77,59 @@ impl Default for Light {
         Self::distant()
     }
 }
+
+/// Helper structure which should simplify drawing function interfaces
+pub struct LightIntersection<'m> {
+    pub light: &'m BvhLight<'m>,
+
+    /// Hit
+    pub hit: &'m Hit,
+
+    /// Surface normal
+    pub n: Vec3,
+    pub n_dot_v: f32,
+    pub n_dot_l: f32,
+
+    /// Half-angle (direction between ray and light)
+    pub h: Vec3,
+    pub n_dot_h: f32,
+    pub l_dot_h: f32,
+
+    /// Albedo color
+    pub albedo: Color,
+    pub uv: Vec2,
+}
+
+impl<'m> LightIntersection<'m> {
+    /// - l: light direction
+    /// - n: normal to the surface
+    /// - v: view direction
+    pub fn new(
+        light: &'m BvhLight,
+        hit: &'m Hit,
+        l: Vec3,
+        n: Vec3,
+        v: Vec3,
+        albedo: Color,
+        uv: Vec2,
+    ) -> Self {
+        let n_dot_v = n.dot(&v).clamp(0.0, 1.0);
+        let n_dot_l = n.dot(&l).clamp(0.0, 1.0);
+        let h = (v + l).get_normalized();
+        let n_dot_h = n.dot(&h).clamp(0.0, 1.0);
+        let l_dot_h = l.dot(&h).clamp(0.0, 1.0);
+
+        Self {
+            light,
+            hit,
+            n,
+            n_dot_v,
+            n_dot_l,
+            h,
+            n_dot_h,
+            l_dot_h,
+            albedo,
+            uv,
+        }
+    }
+}

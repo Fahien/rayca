@@ -12,14 +12,14 @@ pub enum BvhGeometry {
 impl BvhGeometry {
     pub fn get_color(&self, hit: &Hit) -> Color {
         match self {
-            BvhGeometry::Triangle(triangle) => triangle.interpolate_colors(hit),
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_colors(&hit.uv),
             BvhGeometry::Sphere(_) => Color::white(),
         }
     }
 
     pub fn get_uv(&self, hit: &Hit) -> Vec2 {
         match self {
-            BvhGeometry::Triangle(triangle) => triangle.interpolate_uvs(hit),
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_uvs(&hit.uv),
             // TODO spherical coordinates?
             BvhGeometry::Sphere(_) => Vec2::default(),
         }
@@ -34,14 +34,14 @@ impl BvhGeometry {
 
     pub fn get_tangent(&self, hit: &Hit) -> Vec3 {
         match self {
-            BvhGeometry::Triangle(triangle) => triangle.interpolate_tangents(hit),
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_tangents(&hit.uv),
             BvhGeometry::Sphere(_) => Vec3::default(),
         }
     }
 
     pub fn get_bitangent(&self, hit: &Hit) -> Vec3 {
         match &self {
-            BvhGeometry::Triangle(triangle) => triangle.interpolate_bitangents(hit),
+            BvhGeometry::Triangle(triangle) => triangle.interpolate_bitangents(&hit.uv),
             BvhGeometry::Sphere(_) => Vec3::default(),
         }
     }
@@ -160,15 +160,9 @@ impl<'m> BvhPrimitive<'m> {
         }
     }
 
-    pub fn get_metallic_roughness(&self, hit: &Hit) -> (f32, f32) {
-        match &self.geometry {
-            BvhGeometry::Triangle(_) => {
-                let material = self.get_material();
-                let uv = self.geometry.get_uv(hit);
-                material.get_metallic_roughness(&uv, self.model)
-            }
-            // TODO remember to transform hit point into model sphere
-            BvhGeometry::Sphere(_) => (1.0, 1.0),
-        }
+    /// Calculates the light coming out towards the viewer at a certain intersection
+    pub fn get_radiance(&self, light_intersection: &LightIntersection) -> Color {
+        self.get_material()
+            .get_radiance(light_intersection, self.model)
     }
 }
