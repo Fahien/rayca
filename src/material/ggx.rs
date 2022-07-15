@@ -69,7 +69,7 @@ impl GgxMaterial {
         }
     }
 
-    pub fn get_color(&self, uv: &Vec2, model: &GltfModel) -> Color {
+    pub fn get_color(&self, uv: Vec2, model: &GltfModel) -> Color {
         if let Some(texture) = model.textures.get(self.albedo_texture) {
             let sampler = Sampler::default();
             let image = model.images.get(texture.image).unwrap();
@@ -81,7 +81,7 @@ impl GgxMaterial {
 
     pub fn get_normal(
         &self,
-        uv: &Vec2,
+        uv: Vec2,
         normal: Vec3,
         tangent: Vec3,
         bitangent: Vec3,
@@ -99,7 +99,7 @@ impl GgxMaterial {
         }
     }
 
-    pub fn get_metallic_roughness(&self, uv: &Vec2, model: &GltfModel) -> (f32, f32) {
+    pub fn get_metallic_roughness(&self, uv: Vec2, model: &GltfModel) -> (f32, f32) {
         if let Some(texture) = model.textures.get(self.metallic_roughness_texture) {
             let sampler = Sampler::default();
             let image = model.images.get(texture.image).unwrap();

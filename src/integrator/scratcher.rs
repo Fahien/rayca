@@ -4,26 +4,21 @@
 
 use crate::{Color, Dot, Integrator, Ray, Scene, Vec3};
 
-fn saturate_mediump(x: f32) -> f32 {
-    const MEDIUMP_FLT_MAX: f32 = 65504.0;
-    x.min(MEDIUMP_FLT_MAX)
-}
-
 /// Models the distribution of the microfacet
 /// Surfaces are not smooth at the micro level, but made of a
 /// large number of randomly aligned planar surface fragments.
 /// This implementation is good for half-precision floats.
-fn distribution_ggx(n_dot_h: f32, n: &Vec3, h: &Vec3, roughness: f32) -> f32 {
-    let n_x_h = n.cross(h);
+fn distribution_ggx(n_dot_h: f32, roughness: f32) -> f32 {
     let a = n_dot_h * roughness;
-    let k = roughness / (n_x_h.dot(&n_x_h) + a * a);
-    let d = k * k * (1.0 / std::f32::consts::PI);
-    saturate_mediump(d)
+    let k = roughness / (1.0 - n_dot_h * n_dot_h + a * a);
+    k * k * std::f32::consts::FRAC_1_PI
 }
 
+/// The amount of light the viewer sees reflected from a surface depends on the
+/// viewing angle, in fact at grazing angles specular reflections become more intense
 fn fresnel_schlick(cos_theta: f32, f0: Vec3) -> Vec3 {
     let f = (1.0 - cos_theta).powf(5.0);
-    f + f0 * (Vec3::splat(1.0) - f0)
+    f0 + (Vec3::splat(1.0) - f0) * f
 }
 
 /// Models the visibility of the microfacets, or occlusion or shadow-masking
@@ -100,31 +95,26 @@ impl Integrator for Scratcher {
             };
 
             if is_lit {
-                let n_dot_l = n.dot(&light_dir).clamp(0.0, 1.0);
-
                 // Cook-Torrance approximation of the microfacet model integration
+                let n_dot_l = n.dot(&light_dir).clamp(0.0, 1.0);
                 let h = (-ray.dir + light_dir).get_normalized();
                 let n_dot_h = n.dot(&h).clamp(0.0, 1.0);
-                let d = distribution_ggx(n_dot_h, &n, &h, roughness);
-
                 let l_dot_h = light_dir.dot(&h).clamp(0.0, 1.0);
-                let reflectance = 0.5;
-                let f0_value = 0.16 * reflectance * reflectance * (1.0 - metallic);
-                let f0 = Vec3::splat(f0_value) + Vec3::from(&color) * metallic;
+                let d = distribution_ggx(n_dot_h, roughness);
+                let f0 = Vec3::splat(0.04) * (1.0 - metallic) + Vec3::from(&color) * metallic;
                 let f = fresnel_schlick(l_dot_h, f0);
-
+                let ks = f;
+                let kd = (Vec3::splat(1.0) - ks) * (1.0 - metallic);
                 let g = geometry_smith_ggx(n_dot_v, n_dot_l, roughness);
-
                 let fr = (d * g) * Color::from(f);
-
                 // Lambertian diffuse (1/PI)
-                let fd = color * std::f32::consts::FRAC_1_PI;
-
+                let fd = Color::from(kd) * color * std::f32::consts::FRAC_1_PI;
                 let fallof = light.get_fallof(&solved_light.trs, &hit.point);
                 pixel_color += ((fd + fr) * light.color * n_dot_l) / fallof;
             }
         } // end iterate light
 
+        // Reflection component
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
         let reflection_ray = Ray::new(next_origin, reflection_dir);
         let reflection_color = self.trace(scene, reflection_ray, depth + 1);

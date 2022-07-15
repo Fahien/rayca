@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{
-    Bvh, Color, Dot, GgxMaterial, GltfModel, Handle, Hit, Intersect, Mat3, Point3, Ray, Sampler,
-    Scene, Shade, Vec2, Vec3, Vertex,
+    Bvh, Color, Dot, GgxMaterial, GltfModel, Handle, Hit, Intersect, Point3, Ray, Scene, Shade,
+    Vec2, Vec3, Vertex,
 };
 
 pub struct Triangle {
@@ -160,17 +160,17 @@ impl TriangleEx {
     }
 
     /// Returns the interpolation of the vertices colors
-    pub fn interpolate_colors(&self, hit: &Hit) -> Color {
-        self.vertices[2].color * (1.0 - hit.uv.x - hit.uv.y)
-            + self.vertices[0].color * hit.uv.x
-            + self.vertices[1].color * hit.uv.y
+    pub fn interpolate_colors(&self, hit_uv: &Vec2) -> Color {
+        self.vertices[2].color * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].color * hit_uv.x
+            + self.vertices[1].color * hit_uv.y
     }
 
     /// Returns the interpolation of the vertices uvs
-    pub fn interpolate_uvs(&self, hit: &Hit) -> Vec2 {
-        self.vertices[2].uv * (1.0 - hit.uv.x - hit.uv.y)
-            + self.vertices[0].uv * hit.uv.x
-            + self.vertices[1].uv * hit.uv.y
+    pub fn interpolate_uvs(&self, hit_uv: &Vec2) -> Vec2 {
+        self.vertices[2].uv * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].uv * hit_uv.x
+            + self.vertices[1].uv * hit_uv.y
     }
 
     /// Returns the interpolation of the vertices normals
@@ -182,19 +182,19 @@ impl TriangleEx {
     }
 
     /// Returns the interpolation of the vertices tangents
-    pub fn interpolate_tangents(&self, hit: &Hit) -> Vec3 {
-        let mut t = self.vertices[2].tangent * (1.0 - hit.uv.x - hit.uv.y)
-            + self.vertices[0].tangent * hit.uv.x
-            + self.vertices[1].tangent * hit.uv.y;
+    pub fn interpolate_tangents(&self, hit_uv: &Vec2) -> Vec3 {
+        let mut t = self.vertices[2].tangent * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].tangent * hit_uv.x
+            + self.vertices[1].tangent * hit_uv.y;
         t.normalize();
         t
     }
 
     /// Returns the interpolation of the vertices bitangents
-    pub fn interpolate_bitangents(&self, hit: &Hit) -> Vec3 {
-        let mut b = self.vertices[2].bitangent * (1.0 - hit.uv.x - hit.uv.y)
-            + self.vertices[0].bitangent * hit.uv.x
-            + self.vertices[1].bitangent * hit.uv.y;
+    pub fn interpolate_bitangents(&self, hit_uv: &Vec2) -> Vec3 {
+        let mut b = self.vertices[2].bitangent * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].bitangent * hit_uv.x
+            + self.vertices[1].bitangent * hit_uv.y;
         b.normalize();
         b
     }
@@ -213,38 +213,23 @@ impl Shade for TriangleEx {
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let model = scene.gltf_models.get(blas_node.model).unwrap();
         let material = self.get_material(model);
-        let mut color = self.interpolate_colors(hit) * material.color;
-
-        if let Some(texture) = model.textures.get(material.albedo_texture) {
-            let sampler = Sampler::default();
-            let image = model.images.get(texture.image).unwrap();
-            color *= sampler.sample(image, &self.interpolate_uvs(hit));
-        }
-        color
+        let color = self.interpolate_colors(&hit.uv);
+        let uv = self.get_uv(hit);
+        color * material.get_color(uv, model)
     }
 
     fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3 {
+        let uv = self.get_uv(hit);
         let normal = self.interpolate_normals(&hit.uv);
+        let tangent = self.interpolate_tangents(&hit.uv);
+        let bitangent = self.interpolate_bitangents(&hit.uv);
 
         // TODO make it oneliner
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let model = scene.gltf_models.get(blas_node.model).unwrap();
 
         let material = self.get_material(model);
-        if let Some(texture) = model.textures.get(material.normal_texture) {
-            let sampler = Sampler::default();
-            let image = model.images.get(texture.image).unwrap();
-            let mut sampled_normal = Vec3::from(sampler.sample(image, &self.interpolate_uvs(hit)));
-            sampled_normal = sampled_normal * 2.0 - 1.0;
-
-            let tangent = self.interpolate_tangents(hit);
-            let bitangent = self.interpolate_bitangents(hit);
-
-            let tbn = Mat3::tbn(&tangent, &bitangent, &normal);
-            (&tbn * sampled_normal).get_normalized()
-        } else {
-            normal
-        }
+        material.get_normal(uv, normal, tangent, bitangent, model)
     }
 
     fn get_metallic_roughness(&self, scene: &Scene, hit: &Hit) -> (f32, f32) {
@@ -252,15 +237,11 @@ impl Shade for TriangleEx {
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let model = scene.gltf_models.get(blas_node.model).unwrap();
         let material = self.get_material(model);
-        if let Some(texture) = model.textures.get(material.metallic_roughness_texture) {
-            let sampler = Sampler::default();
-            let image = model.images.get(texture.image).unwrap();
-            let color = sampler.sample(image, &self.interpolate_uvs(hit));
-            // Blue channel contains metalness value
-            // Red channel contains roughness value
-            (color.b, color.r)
-        } else {
-            (material.metallic_factor, material.roughness_factor)
-        }
+        let uv = self.get_uv(hit);
+        material.get_metallic_roughness(uv, model)
+    }
+
+    fn get_uv(&self, hit: &Hit) -> Vec2 {
+        self.interpolate_uvs(&hit.uv)
     }
 }

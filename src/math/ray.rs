@@ -87,6 +87,7 @@ pub trait Shade {
     fn get_color(&self, scene: &Scene, hit: &Hit) -> Color;
     fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3;
     fn get_metallic_roughness(&self, model: &Scene, hit: &Hit) -> (f32, f32);
+    fn get_uv(&self, hit: &Hit) -> Vec2;
 }
 
 #[cfg(test)]

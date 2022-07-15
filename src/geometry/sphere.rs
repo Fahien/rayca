@@ -187,7 +187,7 @@ impl Shade for SphereEx {
     fn get_color(&self, scene: &Scene, hit: &Hit) -> Color {
         let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
         let model = scene.gltf_models.get(blas_node.model).unwrap();
-        self.get_material(model).color
+        self.get_material(model).get_color(self.get_uv(hit), model)
     }
 
     fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3 {
@@ -202,7 +202,14 @@ impl Shade for SphereEx {
         (&normal_matrix * normal).get_normalized()
     }
 
-    fn get_metallic_roughness(&self, _scene: &Scene, _hit: &Hit) -> (f32, f32) {
-        (1.0, 1.0)
+    fn get_metallic_roughness(&self, scene: &Scene, hit: &Hit) -> (f32, f32) {
+        let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
+        let model = scene.gltf_models.get(blas_node.model).unwrap();
+        self.get_material(model)
+            .get_metallic_roughness(self.get_uv(hit), model)
+    }
+
+    fn get_uv(&self, hit: &Hit) -> Vec2 {
+        hit.uv
     }
 }
