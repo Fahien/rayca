@@ -81,7 +81,7 @@ impl Integrator for Scratcher {
         for light_node_handle in &model.light_nodes {
             let light_node = model.nodes.get(*light_node_handle).unwrap();
             let light = model.lights.get(light_node.light).unwrap();
-            let light_dir = light.get_direction(light_node, &hit.point);
+            let light_dir = light.get_direction(&light_node.trs, &hit.point);
 
             let shadow_ray = Ray::new(next_origin, light_dir);
             let shadow_result = bvh.intersects_iter(model, &shadow_ray);
@@ -91,7 +91,7 @@ impl Integrator for Scratcher {
                 None => true,
                 Some((shadow_hit, primitive)) => {
                     // Distance between current surface and the light source
-                    let light_distance = light.get_distance(light_node, &hit.point);
+                    let light_distance = light.get_distance(&light_node.trs, &hit.point);
                     // If the obstacle is beyong the light source then the current surface is light
                     if shadow_hit.depth > light_distance {
                         true

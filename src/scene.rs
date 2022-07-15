@@ -114,6 +114,7 @@ impl Draw for Scene {
     fn draw(&mut self, image: &mut Image) {
         let primitives = self.model.collect();
 
+        // Build BVH
         let mut bvh_builder = Bvh::builder().primitives(primitives);
         if !self.config.bvh {
             bvh_builder = bvh_builder.max_depth(0);
