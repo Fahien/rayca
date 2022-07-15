@@ -32,10 +32,10 @@ impl Light {
         }
     }
 
-    pub fn get_intensity(&self) -> Color {
+    pub fn get_intensity(&self, light_trs: &Trs, frag_pos: &Point3) -> Color {
         match self {
             Light::Directional(light) => light.get_intensity(),
-            Light::Point(light) => light.get_intensity(),
+            Light::Point(light) => light.get_intensity(light_trs, frag_pos),
         }
     }
 
@@ -46,6 +46,7 @@ impl Light {
         }
     }
 
+    /// Returns the direction vector from the fragment position to the light world position
     pub fn get_direction(&self, light_trs: &Trs, frag_pos: &Point3) -> Vec3 {
         match self {
             Light::Directional(light) => light.get_direction(light_trs),
@@ -119,8 +120,8 @@ impl PointLight {
         Vec3::from(dist).len()
     }
 
-    pub fn get_intensity(&self) -> Color {
-        self.intensity * self.color
+    pub fn get_intensity(&self, light_trs: &Trs, frag_pos: &Point3) -> Color {
+        (self.intensity * self.color) / self.get_fallof(light_trs, frag_pos)
     }
 
     pub fn get_fallof(&self, light_trs: &Trs, frag_pos: &Point3) -> f32 {
@@ -146,5 +147,62 @@ impl Default for PointLight {
 impl Default for Light {
     fn default() -> Self {
         Self::Directional(DirectionalLight::new())
+    }
+}
+
+/// Helper structure which should simplify drawing function interfaces
+pub struct Irradiance<'m> {
+    // Intensity of incoming light
+    pub intensity: Color,
+
+    /// Hit
+    pub hit: &'m Hit,
+
+    /// Surface normal
+    pub n: Vec3,
+    pub n_dot_v: f32,
+    pub n_dot_l: f32,
+
+    /// Half-angle (direction between ray and light)
+    pub h: Vec3,
+    pub n_dot_h: f32,
+    pub l_dot_h: f32,
+
+    /// Albedo color
+    pub albedo: Color,
+    pub uv: Vec2,
+}
+
+impl<'m> Irradiance<'m> {
+    /// - l: light direction
+    /// - n: normal to the surface
+    /// - v: view direction
+    pub fn new(
+        intensity: Color,
+        hit: &'m Hit,
+        l: Vec3,
+        n: Vec3,
+        v: Vec3,
+        albedo: Color,
+        uv: Vec2,
+    ) -> Self {
+        let n_dot_v = n.dot(&v).clamp(0.0, 1.0) + 1e-5;
+        let n_dot_l = n.dot(&l).clamp(0.0, 1.0);
+        let h = (v + l).get_normalized();
+        let n_dot_h = n.dot(&h).clamp(0.0, 1.0);
+        let l_dot_h = l.dot(&h).clamp(0.0, 1.0);
+
+        Self {
+            intensity,
+            hit,
+            n,
+            n_dot_v,
+            n_dot_l,
+            h,
+            n_dot_h,
+            l_dot_h,
+            albedo,
+            uv,
+        }
     }
 }

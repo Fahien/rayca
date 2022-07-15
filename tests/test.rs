@@ -59,7 +59,7 @@ fn triangle() {
 
 #[test]
 fn cube_over_plane() {
-    let mut image = Image::new(1024, 1024, ColorType::RGBA8);
+    let mut image = Image::new(512, 512, ColorType::RGBA8);
     let mut scene = Scene::new();
 
     scene.load("tests/model/box/box.gltf").unwrap();
