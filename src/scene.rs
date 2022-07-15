@@ -104,16 +104,11 @@ impl Scene {
         &self,
         ray: Ray,
         bvh: &Bvh,
-        light_nodes: &[Node],
-        lights: &Pack<Light>,
+        lights: &[(&Light, &Trs)],
         pixel: &mut RGBA8,
     ) -> usize {
         let triangle_count = 0;
-        if let Some(pixel_color) = self
-            .config
-            .integrator
-            .trace(ray, bvh, light_nodes, lights, 0)
-        {
+        if let Some(pixel_color) = self.config.integrator.trace(ray, bvh, lights, 0) {
             // No over operation here as transparency should be handled by the lighting model
             *pixel = pixel_color.into();
         }
@@ -129,31 +124,66 @@ impl Scene {
         solved_trs
     }
 
-    fn collect<'m>(
+    fn collect_primitives<'m>(
         &'m self,
         solved_trs: &'m Vec<SolvedTrs<'m>>,
-    ) -> (Vec<BvhTriangle>, Vec<BvhSphere>, Vec<(&'m Camera, &'m Trs)>) {
+    ) -> (Vec<BvhTriangle>, Vec<BvhSphere>) {
         let mut triangles = vec![];
         let mut spheres = vec![];
-        let mut cameras = vec![];
-
         for trs in solved_trs {
-            let (curr_triangles, curr_spheres, curr_cameras) = trs.collect();
-            triangles.extend(curr_triangles);
-            spheres.extend(curr_spheres);
-            cameras.extend(curr_cameras);
+            let (tris, sphs) = trs.collect_primitives();
+            triangles.extend(tris);
+            spheres.extend(sphs);
         }
 
-        (triangles, spheres, cameras)
+        (triangles, spheres)
+    }
+
+    fn collect_cameras<'m>(
+        &'m self,
+        solved_trs: &'m Vec<SolvedTrs<'m>>,
+    ) -> Vec<(&'m Camera, &'m Trs)> {
+        let mut cameras = vec![];
+        for trs in solved_trs {
+            cameras.extend(trs.collect_cameras());
+        }
+        cameras
+    }
+
+    fn collect_lights<'m>(
+        &'m self,
+        solved_trs: &'m Vec<SolvedTrs<'m>>,
+    ) -> Vec<(&'m Light, &'m Trs)> {
+        let mut lights = vec![];
+        for trs in solved_trs {
+            lights.extend(trs.collect_lights())
+        }
+        lights
     }
 }
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
+        // Collect transforms, triangles, cameras, and lights from our models
         let solved_trs = self.collect_trs();
-        let (primitives, spheres, cameras) = self.collect(&solved_trs);
+        let (triangles, spheres) = self.collect_primitives(&solved_trs);
+        let mut cameras = self.collect_cameras(&solved_trs);
+        let mut lights = self.collect_lights(&solved_trs);
 
-        let mut bvh_builder = Bvh::builder().triangles(primitives).spheres(spheres);
+        // Collect defaults
+        let default_solved_trs = self.default_model.collect_trs();
+        let default_cameras = self.collect_cameras(&default_solved_trs);
+        let default_lights = self.collect_lights(&default_solved_trs);
+        if cameras.is_empty() {
+            cameras.extend(default_cameras);
+        }
+        if lights.is_empty() {
+            lights.extend(default_lights);
+        }
+        print_info!("Lights:", "{}", lights.len());
+
+        // Build BVH
+        let mut bvh_builder = Bvh::builder().triangles(triangles).spheres(spheres);
         if !self.config.bvh {
             bvh_builder = bvh_builder.max_depth(0);
         }
@@ -172,10 +202,6 @@ impl Draw for Scene {
 
         let aspectratio = width / height;
         let angle = camera.get_angle();
-
-        // TODO collect lights from models
-        let light_nodes = &self.default_model.nodes[1..];
-        let lights = &self.default_model.lights;
 
         #[cfg(feature = "parallel")]
         let row_iter = image.pixels_mut().into_par_iter();
@@ -197,7 +223,7 @@ impl Draw for Scene {
                 let origin = Point3::new(0.0, 0.0, 0.0);
                 let ray = camera_trs * Ray::new(origin, dir);
 
-                self.draw_pixel(ray, &bvh, light_nodes, lights, pixel);
+                self.draw_pixel(ray, &bvh, &lights, pixel);
             });
         });
 

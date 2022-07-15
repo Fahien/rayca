@@ -580,10 +580,11 @@ impl<'m> SolvedTrs<'m> {
         Self { trs, node, model }
     }
 
-    pub fn collect(&self) -> (Vec<BvhTriangle>, Vec<BvhSphere>, Vec<(&Camera, &Trs)>) {
+    /// Returns primitives associated to this solved transform,
+    /// transformed in world space.
+    pub fn collect_primitives(&self) -> (Vec<BvhTriangle>, Vec<BvhSphere>) {
         let mut triangles = vec![];
         let mut spheres = vec![];
-        let mut cameras = vec![];
 
         // Collect primitives
         if let Some(mesh_handle) = self.node.mesh {
@@ -596,13 +597,29 @@ impl<'m> SolvedTrs<'m> {
             }
         }
 
-        // Collect cameras
+        (triangles, spheres)
+    }
+
+    /// Returns cameras associated to this solved transform, together with their
+    /// transforms already in world space.
+    pub fn collect_cameras(&self) -> Vec<(&Camera, &Trs)> {
+        let mut cameras = vec![];
         if let Some(camera_handle) = self.node.camera {
             let camera = self.model.cameras.get(camera_handle).unwrap();
             cameras.push((camera, &self.trs));
         }
+        cameras
+    }
 
-        (triangles, spheres, cameras)
+    /// Returns lights associated to this solved transform, together with their
+    /// transforms already in world space.
+    pub fn collect_lights(&self) -> Vec<(&Light, &Trs)> {
+        let mut lights = vec![];
+        if let Some(light_handle) = self.node.light {
+            let light = self.model.lights.get(light_handle).unwrap();
+            lights.push((light, &self.trs));
+        }
+        lights
     }
 }
 
