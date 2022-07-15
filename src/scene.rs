@@ -100,13 +100,7 @@ impl Scene {
         Ok(())
     }
 
-    fn draw_pixel(
-        &self,
-        ray: Ray,
-        bvh: &Bvh,
-        lights: &[(&Light, &Trs)],
-        pixel: &mut RGBA8,
-    ) -> usize {
+    fn draw_pixel(&self, ray: Ray, bvh: &Bvh, lights: &[BvhLight], pixel: &mut RGBA8) -> usize {
         let triangle_count = 0;
         if let Some(pixel_color) = self.config.integrator.trace(ray, bvh, lights, 0) {
             // No over operation here as transparency should be handled by the lighting model
@@ -143,10 +137,7 @@ impl Scene {
         cameras
     }
 
-    fn collect_lights<'m>(
-        &'m self,
-        solved_trs: &'m Vec<SolvedTrs<'m>>,
-    ) -> Vec<(&'m Light, &'m Trs)> {
+    fn collect_lights<'m>(&'m self, solved_trs: &'m Vec<SolvedTrs<'m>>) -> Vec<BvhLight> {
         let mut lights = vec![];
         for trs in solved_trs {
             lights.extend(trs.collect_lights())
