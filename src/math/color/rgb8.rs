@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::{ColorType, ColorTyped, Vec3, Point3};
+use crate::{ColorType, ColorTyped, Point3, Vec3};
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]

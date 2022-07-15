@@ -159,15 +159,7 @@ impl Scene {
         Ok(())
     }
 
-    fn trace(
-        &self,
-        ray: Ray,
-        bvh: &Bvh,
-
-        light_nodes: &[Node],
-        lights: &Pack<Light>,
-        depth: u32,
-    ) -> Option<Color> {
+    fn trace(&self, ray: Ray, bvh: &Bvh, lights: &[(&Light, &Trs)], depth: u32) -> Option<Color> {
         if depth > 1 {
             return None;
         }
@@ -199,7 +191,7 @@ impl Scene {
             if color.a < 1.0 {
                 let transmit_origin = hit.point + -n * RAY_BIAS;
                 let transmit_ray = Ray::new(transmit_origin, ray.dir);
-                let transmit_result = self.trace(transmit_ray, bvh, light_nodes, lights, depth + 1);
+                let transmit_result = self.trace(transmit_ray, bvh, lights, depth + 1);
 
                 if let Some(mut transmit_color) = transmit_result {
                     // continue with the rest of the shading?
@@ -213,9 +205,8 @@ impl Scene {
             // Before getting color, we should check whether it is visible from the sun
             let next_origin = hit.point + n * RAY_BIAS;
 
-            for light_node in light_nodes {
-                let light = lights.get(light_node.light.unwrap()).unwrap();
-                let light_dir = light.get_direction(light_node, &hit.point);
+            for (light, light_trs) in lights {
+                let light_dir = light.get_direction(light_trs, &hit.point);
 
                 let shadow_ray = Ray::new(next_origin, light_dir);
                 let shadow_result = bvh.intersects_iter(&shadow_ray);
@@ -225,7 +216,7 @@ impl Scene {
                     None => true,
                     Some((shadow_hit, primitive)) => {
                         // Distance between current surface and the light source
-                        let light_distance = light.get_distance(light_node, &hit.point);
+                        let light_distance = light.get_distance(light_trs, &hit.point);
                         // If the obstacle is beyong the light source then the current surface is light
                         if shadow_hit.depth > light_distance {
                             true
@@ -259,16 +250,14 @@ impl Scene {
                     let fd = color * std::f32::consts::FRAC_1_PI;
 
                     let light_color = light.get_intensity();
-                    let fallof = light.get_fallof(&light_node.trs, &hit.point);
+                    let fallof = light.get_fallof(light_trs, &hit.point);
                     pixel_color += ((fd + fr) * light_color * n_dot_l) / fallof;
                 }
             } // end iterate light
 
             let reflection_dir = ray.dir.reflect(&n).get_normalized();
             let reflection_ray = Ray::new(next_origin, reflection_dir);
-            if let Some(reflection_color) =
-                self.trace(reflection_ray, bvh, light_nodes, lights, depth + 1)
-            {
+            if let Some(reflection_color) = self.trace(reflection_ray, bvh, lights, depth + 1) {
                 // Cosine-law applies here as well
                 let n_dot_r = n.dot(&reflection_dir);
                 pixel_color += reflection_color * (metallic + 0.125) * n_dot_r;
@@ -284,12 +273,11 @@ impl Scene {
         &self,
         ray: Ray,
         bvh: &Bvh,
-        light_nodes: &[Node],
-        lights: &Pack<Light>,
+        lights: &[(&Light, &Trs)],
         pixel: &mut RGBA8,
     ) -> usize {
         let triangle_count = 0;
-        if let Some(pixel_color) = self.trace(ray, bvh, light_nodes, lights, 0) {
+        if let Some(pixel_color) = self.trace(ray, bvh, lights, 0) {
             // No over operation here as transparency should be handled by the lighting model
             *pixel = pixel_color.into();
         }
@@ -305,28 +293,58 @@ impl Scene {
         solved_trs
     }
 
-    fn collect<'m>(
+    fn collect_primitives<'m>(&'m self, solved_trs: &'m Vec<SolvedTrs<'m>>) -> Vec<BvhPrimitive> {
+        let mut primitives = vec![];
+        for trs in solved_trs {
+            primitives.extend(trs.collect_primitives());
+        }
+        primitives
+    }
+
+    fn collect_cameras<'m>(
         &'m self,
         solved_trs: &'m Vec<SolvedTrs<'m>>,
-    ) -> (Vec<BvhPrimitive>, Vec<(&'m Camera, &'m Trs)>) {
-        let mut triangles = vec![];
+    ) -> Vec<(&'m Camera, &'m Trs)> {
         let mut cameras = vec![];
-
         for trs in solved_trs {
-            let (curr_triangles, curr_cameras) = trs.collect();
-            triangles.extend(curr_triangles);
-            cameras.extend(curr_cameras);
+            cameras.extend(trs.collect_cameras());
         }
+        cameras
+    }
 
-        (triangles, cameras)
+    fn collect_lights<'m>(
+        &'m self,
+        solved_trs: &'m Vec<SolvedTrs<'m>>,
+    ) -> Vec<(&'m Light, &'m Trs)> {
+        let mut lights = vec![];
+        for trs in solved_trs {
+            lights.extend(trs.collect_lights())
+        }
+        lights
     }
 }
 
 impl Draw for Scene {
     fn draw(&self, image: &mut Image) {
+        // Collect transforms, triangles, cameras, and lights from our models
         let solved_trs = self.collect_trs();
-        let (primitives, cameras) = self.collect(&solved_trs);
+        let primitives = self.collect_primitives(&solved_trs);
+        let mut cameras = self.collect_cameras(&solved_trs);
+        let mut lights = self.collect_lights(&solved_trs);
 
+        // Collect defaults
+        let default_solved_trs = self.default_model.collect_trs();
+        let default_cameras = self.collect_cameras(&default_solved_trs);
+        let default_lights = self.collect_lights(&default_solved_trs);
+        if cameras.is_empty() {
+            cameras.extend(default_cameras);
+        }
+        if lights.is_empty() {
+            lights.extend(default_lights);
+        }
+        print_info!("Lights:", "{}", lights.len());
+
+        // Build BVH
         let mut bvh_builder = Bvh::builder().primitives(primitives);
         if !self.config.bvh {
             bvh_builder = bvh_builder.max_depth(0);
@@ -346,10 +364,6 @@ impl Draw for Scene {
 
         let aspectratio = width / height;
         let angle = camera.get_angle();
-
-        // TODO collect lights from models
-        let light_nodes = &self.default_model.nodes[1..];
-        let lights = &self.default_model.lights;
 
         #[cfg(feature = "parallel")]
         let row_iter = image.pixels_mut().into_par_iter();
@@ -371,7 +385,7 @@ impl Draw for Scene {
                 let origin = Point3::new(0.0, 0.0, 0.0);
                 let ray = camera_trs * Ray::new(origin, dir);
 
-                self.draw_pixel(ray, &bvh, light_nodes, lights, pixel);
+                self.draw_pixel(ray, &bvh, &lights, pixel);
             });
         });
 

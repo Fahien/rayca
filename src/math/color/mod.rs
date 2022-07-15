@@ -8,7 +8,7 @@ pub mod rgba8;
 pub use rgb8::*;
 pub use rgba8::*;
 
-use crate::{Vec3, Point3};
+use crate::{Point3, Vec3};
 
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
