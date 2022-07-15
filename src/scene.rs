@@ -34,35 +34,40 @@ impl SolvedCamera {
     }
 }
 
+#[derive(Clone)]
+pub struct SolvedLight {
+    pub light: Light,
+    pub trs: Trs,
+}
+
+impl SolvedLight {
+    pub fn new(light: Light, trs: Trs) -> Self {
+        Self { light, trs }
+    }
+}
+
 pub struct DefaultLights {
-    pub lights: Pack<Light>,
-    pub nodes: Pack<Node>,
+    pub lights: Vec<SolvedLight>,
 }
 
 impl Default for DefaultLights {
     fn default() -> Self {
-        let mut lights = Pack::new();
-        let mut nodes = Pack::new();
+        let mut lights = Vec::new();
 
         // Add 2 point lights
         let mut light = Light::point();
         light.scale_intensity(64.0);
-        let light_handle = lights.push(light);
 
-        let mut light_node = Node::builder()
-            .translation(Vec3::new(-1.0, 2.0, 1.0))
-            .light(light_handle)
-            .build();
-        light_node.light = Some(light_handle);
-        nodes.push(light_node);
+        let mut trs = Trs {
+            translation: Vec3::new(-1.0, 2.0, 1.0),
+            ..Default::default()
+        };
+        lights.push(SolvedLight::new(light.clone(), trs.clone()));
 
-        let point_light_node = Node::builder()
-            .light(light_handle)
-            .translation(Vec3::new(1.0, 2.0, 1.0))
-            .build();
-        nodes.push(point_light_node);
+        trs.translation = Vec3::new(1.0, 2.0, 1.0);
+        lights.push(SolvedLight::new(light, trs));
 
-        Self { lights, nodes }
+        Self { lights }
     }
 }
 
@@ -100,6 +105,11 @@ impl Scene {
         let solved_cameras = &self.tlas.bvhs[0].cameras;
         if !solved_cameras.is_empty() {
             self.default_camera = solved_cameras.last().unwrap().clone();
+        }
+
+        let solved_lights = &self.tlas.bvhs[0].lights;
+        if !solved_lights.is_empty() {
+            self.default_lights.lights = solved_lights.clone();
         }
     }
 }

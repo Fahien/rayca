@@ -282,8 +282,7 @@ pub struct GltfModel {
     pub lights: Pack<Light>,
     pub nodes: Pack<Node>,
     pub root: Node,
-
-    pub trs: Pack<SolvedTrs>,
+    // TODO: remove trs from history
 }
 
 impl GltfModel {

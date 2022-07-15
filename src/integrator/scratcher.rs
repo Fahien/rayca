@@ -73,13 +73,9 @@ impl Integrator for Scratcher {
         // Before getting color, we should check whether it is visible from the sun
         let next_origin = hit.point + n * RAY_BIAS;
 
-        for light_node in scene.default_lights.nodes.iter() {
-            let light = scene
-                .default_lights
-                .lights
-                .get(light_node.light.unwrap())
-                .unwrap();
-            let light_dir = light.get_direction(light_node, &hit.point);
+        for solved_light in scene.default_lights.lights.iter() {
+            let light = &solved_light.light;
+            let light_dir = light.get_direction(&solved_light.trs, &hit.point);
 
             let shadow_ray = Ray::new(next_origin, light_dir);
             let shadow_result = scene.tlas.intersects(&shadow_ray);
@@ -88,7 +84,7 @@ impl Integrator for Scratcher {
                 None => true,
                 Some(shadow_hit) => {
                     // Distance between current surface and the light source
-                    let light_distance = light.get_distance(light_node, &hit.point);
+                    let light_distance = light.get_distance(&solved_light.trs, &hit.point);
                     // If the obstacle is beyong the light source then the current surface is light
                     if shadow_hit.depth > light_distance {
                         true
@@ -124,7 +120,7 @@ impl Integrator for Scratcher {
                 // Lambertian diffuse (1/PI)
                 let fd = color * std::f32::consts::FRAC_1_PI;
 
-                let fallof = light.get_fallof(&light_node.trs, &hit.point);
+                let fallof = light.get_fallof(&solved_light.trs, &hit.point);
                 pixel_color += ((fd + fr) * light.color * n_dot_l) / fallof;
             }
         } // end iterate light

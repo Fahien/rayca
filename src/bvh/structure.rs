@@ -446,6 +446,7 @@ pub struct Bvh {
     /// the ray to model space and then transform the result back to world space.
     pub trss: Pack<SolvedTrs>,
     pub cameras: Vec<SolvedCamera>,
+    pub lights: Vec<SolvedLight>,
 
     pub triangles: Vec<Triangle>,
     pub triangles_ex: Vec<TriangleEx>,
@@ -455,6 +456,52 @@ pub struct Bvh {
 }
 
 impl Bvh {
+    /// Collects primitives associated to these solved transforms
+    pub fn collect_primitives(&mut self, model: &GltfModel) {
+        for i in 0..self.trss.len() {
+            let trs = &self.trss[i];
+            let node = model.nodes.get(trs.node).unwrap();
+            if let Some(mesh_handle) = node.mesh {
+                let mesh = model.meshes.get(mesh_handle).unwrap();
+                for prim_handle in mesh.primitives.iter() {
+                    let prim = model.primitives.get(*prim_handle).unwrap();
+                    let (prim_triangles, prim_triangles_ex, prim_spheres, prim_spheres_ex) =
+                        prim.primitives(self, Handle::new(i));
+                    self.triangles.extend(prim_triangles);
+                    self.triangles_ex.extend(prim_triangles_ex);
+                    self.spheres.extend(prim_spheres);
+                    self.spheres_ex.extend(prim_spheres_ex);
+                }
+            }
+        }
+    }
+
+    /// Collects cameras associated to these solved transforms, together with their
+    /// transforms already in world space.
+    pub fn collect_cameras(&mut self, model: &GltfModel) {
+        for solved_trs in self.trss.iter() {
+            let node = model.nodes.get(solved_trs.node).unwrap();
+            if let Some(camera_handle) = node.camera {
+                let camera = model.cameras.get(camera_handle).unwrap();
+                self.cameras
+                    .push(SolvedCamera::new(camera.clone(), solved_trs.trs.clone()));
+            }
+        }
+    }
+
+    /// Collects lights associated to these solved transforms, together with their
+    /// transforms already in world space.
+    pub fn collect_lights(&mut self, model: &GltfModel) {
+        for solved_trs in self.trss.iter() {
+            let node = model.nodes.get(solved_trs.node).unwrap();
+            if let Some(light_handle) = node.light {
+                let light = model.lights.get(light_handle).unwrap();
+                self.lights
+                    .push(SolvedLight::new(light.clone(), solved_trs.trs.clone()));
+            }
+        }
+    }
+
     fn new(max_depth: u8, model: &GltfModel) -> Self {
         let mut timer = Timer::new();
 
@@ -464,31 +511,9 @@ impl Bvh {
             ..Default::default()
         };
 
-        for i in 0..ret.trss.len() {
-            let trs = &ret.trss[i];
-
-            // Collect triangles
-            let node = model.nodes.get(trs.node).unwrap();
-            if let Some(mesh_handle) = node.mesh {
-                let mesh = model.meshes.get(mesh_handle).unwrap();
-                for prim_handle in mesh.primitives.iter() {
-                    let prim = model.primitives.get(*prim_handle).unwrap();
-                    let (prim_triangles, prim_triangles_ex, prim_spheres, prim_spheres_ex) =
-                        prim.primitives(&ret, Handle::new(i));
-                    ret.triangles.extend(prim_triangles);
-                    ret.triangles_ex.extend(prim_triangles_ex);
-                    ret.spheres.extend(prim_spheres);
-                    ret.spheres_ex.extend(prim_spheres_ex);
-                }
-            }
-
-            // Collect cameras
-            if let Some(camera_handle) = node.camera {
-                let camera = model.cameras.get(camera_handle).unwrap().clone();
-                ret.cameras.push(SolvedCamera::new(camera, trs.trs.clone()));
-            }
-        }
-
+        ret.collect_primitives(model);
+        ret.collect_cameras(model);
+        ret.collect_lights(model);
         ret.set_primitives();
 
         print_success!(

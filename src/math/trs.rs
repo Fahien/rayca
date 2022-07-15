@@ -105,6 +105,11 @@ impl Trs {
         self.rotation = rotation;
         self.scale = scale;
     }
+
+    /// Returns the translation after rotation, meaning the actual translation
+    pub fn get_translation(&self) -> Vec3 {
+        self.rotation * self.translation
+    }
 }
 
 impl From<Mat4> for Trs {
