@@ -9,3 +9,10 @@ macro_rules! rlog {
         println!($( $t )*)
     }
 }
+
+#[macro_export]
+macro_rules! fail {
+    ( $( $t:tt )* ) => {
+        format!("{:>12} {}", owo_colors::OwoColorize::red(&owo_colors::OwoColorize::bold(&"Failed")), $( $t )*)
+    }
+}

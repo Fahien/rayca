@@ -26,6 +26,13 @@ extern "C" {
     pub fn log(s: &str);
 }
 
+#[macro_export]
+macro_rules! rfmt {
+    ( $( $t:tt )* ) => {
+        format!($( $t )*)
+    }
+}
+
 // Wrap web-sys console log function in a println! style macro
 #[cfg(target_arch = "wasm32")]
 #[macro_export]
@@ -66,7 +73,7 @@ impl Context {
         let canvas = get_canvas("area")?;
 
         let width = 256;
-        let mut image = Image::new(width, width);
+        let mut image = Image::new(width, width, ColorType::RGBA8);
         let mut scene = Scene::new();
         let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 1.0);
         scene.spheres.push(sphere);

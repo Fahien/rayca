@@ -6,7 +6,7 @@ use rayca::*;
 
 #[test]
 fn circle() {
-    let mut image = Image::new(128, 128);
+    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
     let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 1.0);
     let sphere_ex = SphereEx::new(RGBA8::from(0xFF0000FFu32));
@@ -18,7 +18,7 @@ fn circle() {
 
 #[test]
 fn triangle() {
-    let mut image = Image::new(128, 128);
+    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
     let triangle = Triangle::new(
         Point3::new(-1.0, -1.0, -1.0),
@@ -40,7 +40,7 @@ fn triangle() {
 
 #[test]
 fn gltf_box() {
-    let mut image = Image::new(128, 128);
+    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load("tests/model/box/box.gltf").unwrap();
     scene.draw(&mut image);
@@ -49,7 +49,7 @@ fn gltf_box() {
 
 #[test]
 fn gltf_triangle() {
-    let mut image = Image::new(128, 128);
+    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load("tests/model/triangle/triangle.gltf").unwrap();
     scene.draw(&mut image);
@@ -58,7 +58,7 @@ fn gltf_triangle() {
 
 #[test]
 fn gltf_suzanne() {
-    let mut image = Image::new(128, 128);
+    let mut image = Image::new(128, 128, ColorType::RGBA8);
     let mut scene = Scene::new();
 
     let mut timer = Timer::new();
@@ -73,7 +73,7 @@ fn gltf_suzanne() {
 
 #[test]
 fn gltf_cameras() {
-    let mut image = Image::new(256, 256);
+    let mut image = Image::new(256, 256, ColorType::RGBA8);
     let mut scene = Scene::new();
     scene.gltf_model = GltfModel::load("tests/model/cameras/cameras.gltf").unwrap();
     scene.draw(&mut image);
