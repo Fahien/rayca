@@ -24,6 +24,12 @@ impl Ray {
     }
 }
 
+impl Default for Ray {
+    fn default() -> Self {
+        Self::new(Default::default(), Vec3::new(0.0, 0.0, -1.0))
+    }
+}
+
 pub struct Hit {
     pub depth: f32,
     pub point: Vec3,
@@ -43,4 +49,16 @@ pub trait Intersect {
     fn intersects(&self, ray: &Ray) -> Option<Hit>;
 }
 
-pub trait IntersectEx {}
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn rotate() {
+        let mut ray = Ray::default();
+        let rot = Quat::new(-0.383, 0.0, 0.0, 0.924);
+        ray.rotate(&rot);
+        println!("{} {} {}", ray.dir.x, ray.dir.y, ray.dir.z);
+        assert!(ray.dir.close(&Vec3::new(0.0, -0.707, -0.707)));
+    }
+}

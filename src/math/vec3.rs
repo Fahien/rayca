@@ -16,6 +16,8 @@ pub struct Vec3 {
     pub z: f32,
 }
 
+const EPS: f32 = f32::EPSILON * 8192.0;
+
 impl Vec3 {
     pub const X_AXIS: Self = Self {
         x: 1.0,
@@ -35,6 +37,10 @@ impl Vec3 {
 
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
+    }
+
+    pub fn close(&self, b: &Vec3) -> bool {
+        ((self.x - b.x).abs() < EPS) && ((self.y - b.y).abs() < EPS) && ((self.z - b.z).abs() < EPS)
     }
 
     pub fn cross(&self, rhs: &Self) -> Self {
@@ -257,10 +263,43 @@ impl Index<usize> for Vec3 {
 mod test {
     use super::*;
 
-    #[test]
-    fn normalize() {
-        let mut v = Vec3::new(2.0, 0.0, 0.0);
-        v.normalize();
-        assert!(v == Vec3::new(1.0, 0.0, 0.0));
+    mod vec3 {
+        use super::*;
+
+        #[test]
+        fn normalize() {
+            let mut v = Vec3::new(2.0, 0.0, 0.0);
+            v.normalize();
+            assert!(v.close(&Vec3::new(1.0, 0.0, 0.0)));
+        }
+
+        #[test]
+        fn rotate() {
+            let mut v = Vec3::new(1.0, 0.0, 0.0);
+            let y180 = Quat::new(0.0, 1.0, 0.0, 0.0);
+            v.rotate(&y180);
+            assert!(v.close(&Vec3::new(-1.0, 0.0, 0.0)));
+
+            let mut v = Vec3::new(1.0, 0.0, 0.0);
+            let y90 = Quat::new(0.0, 0.707, 0.0, 0.707);
+            v.rotate(&y90);
+            assert!(v.close(&Vec3::new(0.0, 0.0, -1.0)));
+
+            let mut v = Vec3::new(1.0, 0.0, 0.0);
+            let z180 = Quat::new(0.0, 0.0, 1.0, 0.0);
+            v.rotate(&z180);
+            assert!(v.close(&Vec3::new(-1.0, 0.0, 0.0)));
+
+            let mut v = Vec3::new(1.0, 0.0, 0.0);
+            let z90 = Quat::new(0.0, 0.0, 0.707, 0.707);
+            v.rotate(&z90);
+            assert!(v.close(&Vec3::new(0.0, 1.0, 0.0)));
+
+            let mut v = Vec3::new(0.0, 0.0, 1.0);
+            // x: -45 degrees
+            let rot = Quat::new(-0.383, 0.0, 0.0, 0.924);
+            v.rotate(&rot);
+            assert!(v.close(&Vec3::new(0.0, 0.707, 0.707)));
+        }
     }
 }
