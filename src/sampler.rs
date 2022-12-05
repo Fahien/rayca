@@ -22,7 +22,13 @@ impl Sampler {
         let x = (x as u32) % image.width();
         let y = (y as u32) % image.height();
 
-        image.get(x, y).into()
+        match image.color_type {
+            ColorType::RGBA8 => image.get::<RGBA8>(x, y).into(),
+            ColorType::RGB8 => {
+                let rgb8 = image.get::<RGB8>(x, y);
+                RGBA8::from(rgb8).into()
+            }
+        }
     }
 }
 
@@ -33,9 +39,9 @@ mod test {
     #[test]
     fn sampler() {
         let sampler = Sampler::default();
-        let mut image = Image::new(1, 1);
+        let mut image = Image::new(1, 1, ColorType::RGBA8);
         let color = Color::white();
-        image.clear(color.into());
+        image.clear::<RGBA8>(color.into());
 
         let uv = Vec2::default();
         let pixel = sampler.sample(&image, &uv);
