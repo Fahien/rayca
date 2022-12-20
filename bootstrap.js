@@ -190,8 +190,8 @@
 /******/ 					"__wbindgen_memory": function() {
 /******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_memory"]();
 /******/ 					},
-/******/ 					"__wbindgen_closure_wrapper549": function(p0i32,p1i32,p2i32) {
-/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_closure_wrapper549"](p0i32,p1i32,p2i32);
+/******/ 					"__wbindgen_closure_wrapper552": function(p0i32,p1i32,p2i32) {
+/******/ 						return installedModules["../pkg/rayca_bg.js"].exports["__wbindgen_closure_wrapper552"](p0i32,p1i32,p2i32);
 /******/ 					}
 /******/ 				}
 /******/ 			};
@@ -294,7 +294,7 @@
 /******/ 				promises.push(installedWasmModuleData);
 /******/ 			else {
 /******/ 				var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/rayca_bg.wasm":"c63aa587644eecb1bbc0"}[wasmModuleId] + ".module.wasm");
+/******/ 				var req = fetch(__webpack_require__.p + "" + {"../pkg/rayca_bg.wasm":"b9f60ddbe51cca7e8b4e"}[wasmModuleId] + ".module.wasm");
 /******/ 				var promise;
 /******/ 				if(importObject instanceof Promise && typeof WebAssembly.compileStreaming === 'function') {
 /******/ 					promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
