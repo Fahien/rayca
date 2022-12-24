@@ -4,10 +4,16 @@
 
 use crate::*;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct GltfSpheres {
     spheres: Vec<Sphere>,
     spheres_ex: Vec<SphereEx>,
+}
+
+impl Default for GltfSpheres {
+    fn default() -> Self {
+        Self::unit_sphere()
+    }
 }
 
 impl GltfSpheres {

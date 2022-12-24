@@ -64,7 +64,6 @@ fn triangle() {
 fn boxes_over_plane() {
     let mut scene = Scene::default();
 
-    let mut timer = Timer::new();
     let mut model = GltfModel::load_path("tests/model/box/box.gltf").unwrap();
     model.root.trs.scale = Vec3::new(4.0, 0.125, 8.0);
     model.root.trs.translation += Vec3::new(0.0, -1.0, -2.0);
@@ -88,7 +87,19 @@ fn boxes_over_plane() {
     model.root.trs.translation += Vec3::new(-1.5, 0.0, -4.0);
     scene.gltf_models.push(model);
 
-    rlog!("Scene loaded in {}ms", timer.get_delta().as_millis());
+    let mut model = GltfModel::default();
+    let sphere_prim = GltfPrimitive::sphere(GltfSpheres::default());
+    let prim_handle = model.primitives.push(sphere_prim);
+    let sphere_mesh = model.meshes.push(GltfMesh::new(vec![prim_handle]));
+    let sphere_node = model.nodes.push(
+        Node::builder()
+            .translation(Vec3::new(-0.5, 2.0, -3.0))
+            .mesh(sphere_mesh)
+            .build(),
+    );
+    model.root.children.push(sphere_node);
+    scene.gltf_models.push(model);
+
     run(scene, "target/boxes-over-plane.png", 1024, 1024);
 }
 
