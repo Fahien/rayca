@@ -83,13 +83,8 @@ impl Scene {
         let path_str = path.as_ref().to_string_lossy().to_string();
 
         // Open glTF model
-        let mut model = Model::builder().path(path)?.build()?;
-
-        // Generate id for model
-        model.id = self.models.len();
-
-        // Put model into models
-        self.models.push(model);
+        let model = Model::builder().path(path)?.build()?;
+        self.push_model(model);
 
         print_info!(
             "Loaded",
@@ -98,6 +93,12 @@ impl Scene {
             timer.get_delta().as_millis()
         );
         Ok(())
+    }
+
+    pub fn push_model(&mut self, mut model: Model) {
+        // Generate id for model
+        model.id = self.models.len();
+        self.models.push(model);
     }
 
     fn draw_pixel(&self, ray: Ray, bvh: &Bvh, lights: &[BvhLight], pixel: &mut RGBA8) -> usize {
@@ -158,6 +159,8 @@ impl Draw for Scene {
         // Collect transforms, triangles, cameras, and lights from our models
         let solved_trs = self.collect_trs();
         let (triangles, spheres) = self.collect_primitives(&solved_trs);
+        print_info!("Triangles:", "{}", triangles.len());
+        print_info!("Spheres:", "{}", spheres.len());
         let mut cameras = self.collect_cameras(&solved_trs);
         let mut lights = self.collect_lights(&solved_trs);
 

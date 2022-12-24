@@ -89,6 +89,16 @@ fn cube_over_plane() {
     let shift = Vec3::new(-1.5, 0.0, -4.0);
     scene.models[3].root.trs.translation += shift;
 
+    let mut sphere_model = Model::new();
+    let sphere_prim = Primitive::sphere(Sphere::default());
+    let prim_handle = sphere_model.primitives.push(sphere_prim);
+    let sphere_mesh = sphere_model.meshes.push(Mesh::new(vec![prim_handle]));
+    let sphere_node = sphere_model
+        .nodes
+        .push(Node::builder().translation(Vec3::new(-0.5, 2.0, -3.0)).mesh(sphere_mesh).build());
+    sphere_model.root.children.push(sphere_node);
+    scene.push_model(sphere_model);
+
     scene.draw(&mut image);
     image.dump_png("target/cube-over-plane.png");
 }
