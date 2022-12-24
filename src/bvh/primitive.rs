@@ -79,24 +79,33 @@ impl BvhPrimitive {
         }
     }
 
-    pub fn centroid(&self) -> &Point3 {
+    pub fn centroid(&self, model: &Model) -> Point3 {
         match &self.geometry {
-            BvhGeometry::Triangle(triangle) => &triangle.centroid,
-            BvhGeometry::Sphere(sphere) => &sphere.center,
+            BvhGeometry::Triangle(triangle) => triangle.centroid,
+            BvhGeometry::Sphere(sphere) => {
+                let trs = model.solved_trs.get(&self.node).unwrap();
+                &trs.trs * sphere.center
+            }
         }
     }
 
-    pub fn min(&self) -> Point3 {
+    pub fn min(&self, model: &Model) -> Point3 {
         match &self.geometry {
             BvhGeometry::Triangle(triangle) => triangle.min(),
-            BvhGeometry::Sphere(sphere) => sphere.min(),
+            BvhGeometry::Sphere(sphere) => {
+                let trs = model.solved_trs.get(&self.node).unwrap();
+                &trs.trs * sphere.min()
+            }
         }
     }
 
-    pub fn max(&self) -> Point3 {
+    pub fn max(&self, model: &Model) -> Point3 {
         match &self.geometry {
             BvhGeometry::Triangle(triangle) => triangle.max(),
-            BvhGeometry::Sphere(sphere) => sphere.max(),
+            BvhGeometry::Sphere(sphere) => {
+                let trs = model.solved_trs.get(&self.node).unwrap();
+                &trs.trs * sphere.max()
+            }
         }
     }
 

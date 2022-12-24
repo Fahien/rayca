@@ -31,23 +31,25 @@ impl AABB {
         self.grow(&triangle.vertices[2].pos);
     }
 
-    fn grow_sphere(&mut self, sphere: &BvhSphere) {
+    fn grow_sphere(&mut self, sphere: &BvhSphere, trs: &Trs) {
         let radius = sphere.get_radius();
-        self.grow(&(sphere.center + Vec3::new(-radius, 0.0, 0.0)));
-        self.grow(&(sphere.center + Vec3::new(radius, 0.0, 0.0)));
-        self.grow(&(sphere.center + Vec3::new(0.0, -radius, 0.0)));
-        self.grow(&(sphere.center + Vec3::new(0.0, radius, 0.0)));
-        self.grow(&(sphere.center + Vec3::new(0.0, 0.0, -radius)));
-        self.grow(&(sphere.center + Vec3::new(0.0, 0.0, radius)));
+        let center = trs * sphere.center;
+        self.grow(&(center + Vec3::new(-radius, 0.0, 0.0)));
+        self.grow(&(center + Vec3::new(radius, 0.0, 0.0)));
+        self.grow(&(center + Vec3::new(0.0, -radius, 0.0)));
+        self.grow(&(center + Vec3::new(0.0, radius, 0.0)));
+        self.grow(&(center + Vec3::new(0.0, 0.0, -radius)));
+        self.grow(&(center + Vec3::new(0.0, 0.0, radius)));
     }
 
-    fn grow_primitive(&mut self, primitive: &BvhPrimitive) {
+    fn grow_primitive(&mut self, model: &Model, primitive: &BvhPrimitive) {
         match &primitive.geometry {
             BvhGeometry::Triangle(triangle) => {
                 self.grow_triangle(triangle);
             }
             BvhGeometry::Sphere(sphere) => {
-                self.grow_sphere(sphere);
+                let trs = model.solved_trs.get(&primitive.node).unwrap();
+                self.grow_sphere(sphere, &trs.trs);
             }
         }
     }
@@ -98,19 +100,20 @@ impl BvhNode {
 
     pub fn set_primitives(
         &mut self,
+        model: &Model,
         primitives: Vec<BvhPrimitive>,
         max_depth: usize,
         nodes: &mut Pack<BvhNode>,
     ) {
         let mut timer = Timer::new();
-        self.set_primitives_recursive(primitives, max_depth, 0, nodes);
+        self.set_primitives_recursive(model, primitives, max_depth, 0, nodes);
         print_success!("BVH", "built in {:.2}ms", timer.get_delta().as_millis());
     }
 
     /// Surface Area Heuristics:
     /// The cost of a split is proportional to the summed cost of intersecting the two
     /// resulting boxes, including the triangles they store.
-    fn evaluate_sah(&self, axis: Axis3, pos: f32) -> f32 {
+    fn evaluate_sah(&self, model: &Model, axis: Axis3, pos: f32) -> f32 {
         // determine triangle counts and bounds for this split candidate
         let mut left_box = AABB::default();
         let mut right_box = AABB::default();
@@ -118,13 +121,13 @@ impl BvhNode {
         let mut right_count = 0;
 
         for pri in &self.primitives {
-            let centroid = pri.centroid();
+            let centroid = pri.centroid(model);
             if centroid[axis] < pos {
                 left_count += 1;
-                left_box.grow_primitive(pri);
+                left_box.grow_primitive(model, pri);
             } else {
                 right_count += 1;
-                right_box.grow_primitive(pri);
+                right_box.grow_primitive(model, pri);
             }
         }
 
@@ -138,7 +141,7 @@ impl BvhNode {
 
     /// Finds the optimal split plane position and axis
     /// - Returns (split axis, split pos, split cost)
-    fn find_best_split_plane(&self) -> (Axis3, f32, f32) {
+    fn find_best_split_plane(&self, model: &Model) -> (Axis3, f32, f32) {
         const ALL_AXIS: [Axis3; 3] = [Axis3::X, Axis3::Y, Axis3::Z];
 
         let mut best_cost = f32::MAX;
@@ -158,7 +161,7 @@ impl BvhNode {
 
             for i in 1..AREA_COUNT {
                 let candidate_pos = bounds_min + i as f32 * scale;
-                let cost = self.evaluate_sah(axis, candidate_pos);
+                let cost = self.evaluate_sah(model, axis, candidate_pos);
                 if cost < best_cost {
                     best_cost = cost;
                     best_axis = axis;
@@ -176,6 +179,7 @@ impl BvhNode {
 
     fn set_primitives_recursive(
         &mut self,
+        model: &Model,
         primitives: Vec<BvhPrimitive>,
         max_depth: usize,
         level: usize,
@@ -189,8 +193,8 @@ impl BvhNode {
 
         // Visit each vertex of the primitives to find the lowest and highest x, y, and z
         for pri in self.primitives.iter() {
-            self.bounds.a = self.bounds.a.min(&pri.min());
-            self.bounds.b = self.bounds.b.max(&pri.max());
+            self.bounds.a = self.bounds.a.min(&pri.min(model));
+            self.bounds.b = self.bounds.b.max(&pri.max(model));
         }
 
         if level >= max_depth {
@@ -198,7 +202,7 @@ impl BvhNode {
         }
 
         // Surface Area Heuristics
-        let (split_axis, split_pos, split_cost) = self.find_best_split_plane();
+        let (split_axis, split_pos, split_cost) = self.find_best_split_plane(model);
 
         let no_split_cost = self.calculate_cost();
         if split_cost > no_split_cost {
@@ -209,7 +213,7 @@ impl BvhNode {
         let mut i = 0;
         let mut j = self.primitives.len();
         while i < j {
-            let centroid = self.primitives[i].centroid();
+            let centroid = self.primitives[i].centroid(model);
             if centroid[split_axis] < split_pos {
                 i += 1;
             } else {
@@ -227,10 +231,16 @@ impl BvhNode {
 
             // Create two nodes
             let mut left_child = BvhNode::new();
-            left_child.set_primitives_recursive(left_triangles, max_depth, level + 1, nodes);
+            left_child.set_primitives_recursive(model, left_triangles, max_depth, level + 1, nodes);
 
             let mut right_child = BvhNode::new();
-            right_child.set_primitives_recursive(right_triangles, max_depth, level + 1, nodes);
+            right_child.set_primitives_recursive(
+                model,
+                right_triangles,
+                max_depth,
+                level + 1,
+                nodes,
+            );
 
             self.left = nodes.push(left_child);
             self.right = nodes.push(right_child);
@@ -316,8 +326,8 @@ impl BvhBuilder {
         self
     }
 
-    pub fn build(self) -> Bvh {
-        Bvh::new(self.primitives, self.max_depth)
+    pub fn build(self, model: &Model) -> Bvh {
+        Bvh::new(model, self.primitives, self.max_depth)
     }
 }
 
@@ -332,7 +342,7 @@ impl Bvh {
         BvhBuilder::new()
     }
 
-    pub fn new(primitives: Vec<BvhPrimitive>, max_depth: usize) -> Self {
+    pub fn new(model: &Model, primitives: Vec<BvhPrimitive>, max_depth: usize) -> Self {
         let mut nodes = Pack::new();
 
         let mut root = BvhNode::new();
@@ -340,7 +350,7 @@ impl Bvh {
             Point3::new(f32::MAX, f32::MAX, f32::MAX),
             Point3::new(f32::MIN, f32::MIN, f32::MIN),
         );
-        root.set_primitives(primitives, max_depth, &mut nodes);
+        root.set_primitives(model, primitives, max_depth, &mut nodes);
 
         Self {
             root,
@@ -429,7 +439,7 @@ mod test {
         let node = model.nodes.push(Node::default());
         let triangles = triangle_prim.primitives(node, Handle::none(), &model);
 
-        let bvh = Bvh::builder().primitives(triangles).build();
+        let bvh = Bvh::builder().primitives(triangles).build(&model);
         assert!(bvh.nodes.is_empty());
         assert!(!bvh.root.left.valid());
         assert!(!bvh.root.right.valid());
@@ -456,7 +466,7 @@ mod test {
         left_primitives.append(&mut right_primitives);
         let primitives = left_primitives;
 
-        let bvh = Bvh::builder().primitives(primitives).build();
+        let bvh = Bvh::builder().primitives(primitives).build(&model);
         assert!(!bvh.nodes.is_empty());
         assert!(bvh.root.left.valid());
         assert!(bvh.root.right.valid());

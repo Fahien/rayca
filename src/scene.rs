@@ -119,7 +119,7 @@ impl Draw for Scene {
         if !self.config.bvh {
             bvh_builder = bvh_builder.max_depth(0);
         }
-        let bvh = bvh_builder.build();
+        let bvh = bvh_builder.build(&self.model);
 
         let mut timer = Timer::new();
 

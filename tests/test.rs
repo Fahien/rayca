@@ -68,6 +68,19 @@ fn cube_over_plane() {
     scene.load("tests/model/box/box.gltf").unwrap();
     scene.push_default_model();
 
+    let mut model = Model::default();
+    let sphere_prim = Primitive::unit_sphere();
+    let prim_handle = model.primitives.push(sphere_prim);
+    let sphere_mesh = model.meshes.push(Mesh::new(vec![prim_handle]));
+    let sphere_node = model.nodes.push(
+        Node::builder()
+            .translation(Vec3::new(-0.5, 2.0, -3.0))
+            .mesh(sphere_mesh)
+            .build(),
+    );
+    model.root.children.push(sphere_node);
+    scene.push(model);
+
     let root0 = scene.model.nodes.get_mut(1.into()).unwrap();
     root0.trs.scale = Vec3::new(16.0, 16.0, 0.125);
     root0.trs.translation.translate(&Vec3::new(0.0, -1.0, 0.0));
