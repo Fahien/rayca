@@ -125,7 +125,7 @@ impl Intersect for Triangle {
 
         // A triangle does not know its primitive index
         // Setting the primitive index is responsiblity of the caller
-        let hit = Hit::new(u32::MAX, t, p, uv);
+        let hit = Hit::new(u32::MAX, u32::MAX, t, p, uv);
         Some(hit) // This ray hits the triangle
     }
 }
@@ -167,16 +167,20 @@ impl Shade for TriangleEx {
         let c2 = &self.vertices[2].color;
         let vertex_color = (1.0 - hit.uv.x - hit.uv.y) * c2 + hit.uv.x * c0 + hit.uv.y * c1;
 
+        // TODO: Make onliner?
+        let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
+        let model = scene.gltf_models.get(blas_node.model).unwrap();
+
         let material = if self.material.valid() {
-            scene.gltf_model.materials.get(self.material).unwrap()
+            model.materials.get(self.material).unwrap()
         } else {
             &GgxMaterial::WHITE
         };
         let mut color = material.color;
 
-        if let Some(texture) = scene.gltf_model.textures.get(material.albedo) {
+        if let Some(texture) = model.textures.get(material.albedo) {
             let sampler = Sampler::default();
-            let image = scene.gltf_model.images.get(texture.image).unwrap();
+            let image = model.images.get(texture.image).unwrap();
 
             let uvs = [
                 &self.vertices[0].uv,

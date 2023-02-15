@@ -1,4 +1,4 @@
-// Copyright © 2022
+// Copyright © 2022-2023
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -62,7 +62,7 @@ impl Intersect for Sphere {
         }
 
         let point = ray.origin + ray.dir * t0;
-        let hit = Hit::new(u32::MAX, t0, point, Vec2::default());
+        let hit = Hit::new(u32::MAX, u32::MAX, t0, point, Vec2::default());
 
         Some(hit)
     }
@@ -112,13 +112,15 @@ impl SphereEx {
 }
 
 impl Shade for SphereEx {
-    fn get_color(&self, scene: &Scene, hit: &Hit) -> Color {
-        let normal = self.get_normal(scene, hit);
-        Color::new(normal.x, normal.y, normal.z, 1.0)
+    fn get_color(&self, _scene: &Scene, _hit: &Hit) -> Color {
+        self.color.into()
     }
 
     fn get_normal(&self, scene: &Scene, hit: &Hit) -> Vec3 {
-        let sphere = scene.get_bvh().get_sphere(hit.primitive);
+        // TODO: Make it onliner: scene.get_sphere(hit);
+        let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
+        let bvh = scene.tlas.bvhs.get(blas_node.bvh).unwrap();
+        let sphere = bvh.get_sphere(hit.primitive);
         let mut normal = hit.point - sphere.center;
         normal.normalize();
         normal

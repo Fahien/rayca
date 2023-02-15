@@ -6,7 +6,7 @@ use std::{
     hash::{Hash, Hasher},
     iter::FromIterator,
     marker::PhantomData,
-    ops::Deref,
+    ops::{Deref, DerefMut},
 };
 
 use instant::{Duration, Instant};
@@ -233,6 +233,12 @@ impl<T> Deref for Pack<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.vec
+    }
+}
+
+impl<T> DerefMut for Pack<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.vec
     }
 }
 

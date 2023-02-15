@@ -7,7 +7,7 @@ pub mod vertex;
 pub use mesh::*;
 pub use vertex::*;
 
-use std::{collections::HashMap, error::Error, path::Path};
+use std::{error::Error, path::Path};
 
 use base64::Engine;
 use gltf::Gltf;
@@ -221,6 +221,18 @@ impl UriBuffers {
 
         let data = &self.data[buffer.index()];
         &data[offset..end_offset]
+    }
+}
+
+#[derive(Default)]
+pub struct SolvedTrs {
+    pub trs: Trs,
+    pub node: Handle<Node>,
+}
+
+impl SolvedTrs {
+    pub fn new(trs: Trs, node: Handle<Node>) -> Self {
+        Self { trs, node }
     }
 }
 
@@ -514,23 +526,18 @@ impl GltfModel {
         }
     }
 
-    fn traverse<'a>(
-        &'a self,
-        trss: &mut HashMap<&'a Node, Trs>,
-        transform: Trs,
-        node: Handle<Node>,
-    ) {
+    fn traverse(&self, trss: &mut Pack<SolvedTrs>, transform: Trs, node: Handle<Node>) {
         let current_node = self.nodes.get(node).unwrap();
         let current_transform = &transform * &current_node.trs;
-        trss.insert(current_node, current_transform.clone());
+        trss.push(SolvedTrs::new(current_transform.clone(), node));
 
         for child in &current_node.children {
             self.traverse(trss, current_transform.clone(), *child);
         }
     }
 
-    pub fn collect_transforms(&self) -> HashMap<&Node, Trs> {
-        let mut ret = HashMap::new();
+    pub fn collect_transforms(&self) -> Pack<SolvedTrs> {
+        let mut ret = Pack::new();
         for node in self.root.children.iter() {
             self.traverse(&mut ret, self.root.trs.clone(), *node);
         }

@@ -1,10 +1,8 @@
-// Copyright © 2022
+// Copyright © 2022-2023
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::Scene;
-
-use super::*;
+use crate::{Color, Point3, Quat, Scene, Vec2, Vec3};
 
 #[derive(Debug, Clone)]
 pub struct Ray {
@@ -33,6 +31,9 @@ impl Default for Ray {
 }
 
 pub struct Hit {
+    /// BLAS index hit in this intersection
+    pub blas: u32,
+
     /// Primitive index hit in this intersection
     /// If this index goes beyond the final triangle, try with spheres
     pub primitive: u32,
@@ -46,8 +47,9 @@ pub struct Hit {
 }
 
 impl Hit {
-    pub fn new(primitive: u32, depth: f32, point: Point3, uv: Vec2) -> Self {
+    pub fn new(blas: u32, primitive: u32, depth: f32, point: Point3, uv: Vec2) -> Self {
         Self {
+            blas,
             primitive,
             depth,
             point,

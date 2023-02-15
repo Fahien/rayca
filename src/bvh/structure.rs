@@ -15,6 +15,10 @@ impl AABB {
         Self { a, b }
     }
 
+    pub fn centroid(&self) -> Point3 {
+        ((self.b - self.a) / 2.0).into()
+    }
+
     /// Slab test. We do not care where we hit the box; only info we need is a yes/no answer.
     fn intersects(&self, ray: &Ray) -> bool {
         let tx1 = (self.a.x - ray.origin.x) / ray.dir.x;
@@ -36,6 +40,8 @@ impl AABB {
     }
 }
 
+/// I could use std::Range<u32>, but that is not #[repr(C)]
+/// TODO: Whould it work aliasing the type and putting #[repr(C)] on it?
 #[derive(Clone, Copy, Default)]
 struct BvhRange {
     offset: u32,
@@ -213,10 +219,15 @@ impl BvhNode {
     }
 }
 
+#[derive(Default)]
 pub struct Bvh {
     pub root: BvhNode,
     pub nodes: Pack<BvhNode>,
-    pub triangle_count: usize,
+
+    /// This is needed for sphere intersections, where we will need to transform
+    /// the ray to model space and then transform the result back to world space.
+    pub trss: Pack<SolvedTrs>,
+    pub cameras: Vec<SolvedCamera>,
 
     pub triangles: Vec<Triangle>,
     pub triangles_ex: Vec<TriangleEx>,
@@ -225,33 +236,79 @@ pub struct Bvh {
     pub spheres_ex: Vec<SphereEx>,
 }
 
-impl Default for Bvh {
-    fn default() -> Self {
-        Self::new(vec![], vec![])
+impl From<&GltfModel> for Bvh {
+    fn from(model: &GltfModel) -> Self {
+        let mut timer = Timer::new();
+
+        let mut ret = Self {
+            trss: model.collect_transforms(),
+            ..Default::default()
+        };
+
+        for i in 0..ret.trss.len() {
+            let trs = &ret.trss[i];
+
+            // Collect triangles
+            let node = model.nodes.get(trs.node).unwrap();
+            if let Some(mesh_handle) = node.mesh {
+                let mesh = model.meshes.get(mesh_handle).unwrap();
+                for prim_handle in mesh.primitives.iter() {
+                    let prim = model.primitives.get(*prim_handle).unwrap();
+                    let (prim_triangles, prim_triangles_ex) = prim.triangles(&trs.trs);
+                    ret.triangles.extend(prim_triangles);
+                    ret.triangles_ex.extend(prim_triangles_ex);
+                }
+            }
+
+            // Collect cameras
+            if let Some(camera_handle) = node.camera {
+                let camera = model.cameras.get(camera_handle).unwrap().clone();
+                ret.cameras.push(SolvedCamera::new(camera, trs.trs.clone()));
+            }
+        }
+
+        ret.set_primitives();
+
+        print_success!(
+            "Collected",
+            "{} triangles in {:.2}s",
+            ret.triangles.len(),
+            timer.get_delta().as_secs_f32()
+        );
+
+        ret
     }
 }
 
 impl Bvh {
-    pub fn new(mut triangles: Vec<Triangle>, mut triangles_ex: Vec<TriangleEx>) -> Self {
-        let mut nodes = Pack::new();
+    pub fn new(triangles: Vec<Triangle>, triangles_ex: Vec<TriangleEx>) -> Self {
+        let mut ret = Self {
+            triangles,
+            triangles_ex,
+            ..Default::default()
+        };
+        ret.set_primitives();
+        ret
+    }
+
+    // TODO: rename in replace_primitives
+    pub fn set_primitives(&mut self) {
+        self.nodes.clear();
 
         let mut root = BvhNode::new();
         root.bounds = AABB::new(
             Point3::new(f32::MAX, f32::MAX, f32::MAX),
             Point3::new(f32::MIN, f32::MIN, f32::MIN),
         );
-        let range = BvhRange::new(0, triangles.len() as u32);
-        root.set_triangles(range, &mut triangles, &mut triangles_ex, &mut nodes);
+        let range = BvhRange::new(0, self.triangles.len() as u32);
+        root.set_triangles(
+            range,
+            &mut self.triangles,
+            &mut self.triangles_ex,
+            &mut self.nodes,
+        );
 
-        Self {
-            root,
-            nodes,
-            triangle_count: 0,
-            triangles,
-            triangles_ex,
-            spheres: Default::default(),
-            spheres_ex: Default::default(),
-        }
+        self.root = root;
     }
 
     pub fn get_shade(&self, primitive: u32) -> &dyn Shade {
@@ -276,6 +333,238 @@ impl Bvh {
     pub fn intersects_stats(&self, ray: &Ray, triangle_count: &mut usize) -> Option<Hit> {
         self.root
             .intersects(ray, &self.nodes, &self.triangles, triangle_count)
+    }
+}
+
+#[derive(Default)]
+pub struct TlasNodeBuilder {
+    bounds: AABB,
+    left: Handle<TlasNode>,
+    right: Handle<TlasNode>,
+    // TODO: make range of handles
+    blas: BvhRange,
+}
+
+impl TlasNodeBuilder {
+    fn _bounds(mut self, bounds: AABB) -> Self {
+        self.bounds = bounds;
+        self
+    }
+
+    fn _blas(mut self, blas: BvhRange) -> Self {
+        self.blas = blas;
+        self
+    }
+
+    pub fn left(mut self, left: Handle<TlasNode>) -> Self {
+        self.left = left;
+        self
+    }
+
+    pub fn right(mut self, right: Handle<TlasNode>) -> Self {
+        self.right = right;
+        self
+    }
+
+    pub fn build(self) -> TlasNode {
+        TlasNode::new(self.bounds, self.left, self.right, self.blas)
+    }
+}
+
+#[derive(Default)]
+pub struct TlasNode {
+    bounds: AABB,
+
+    pub left: Handle<TlasNode>,
+    pub right: Handle<TlasNode>,
+
+    blas: BvhRange,
+}
+
+impl TlasNode {
+    fn new(bounds: AABB, left: Handle<TlasNode>, right: Handle<TlasNode>, blas: BvhRange) -> Self {
+        Self {
+            bounds,
+            left,
+            right,
+            blas,
+        }
+    }
+
+    pub fn builder() -> TlasNodeBuilder {
+        TlasNodeBuilder::default()
+    }
+
+    pub fn is_leaf(&self) -> bool {
+        self.left.is_none() && self.right.is_none()
+    }
+
+    fn replace_models_recursive(&mut self, blas_range: BvhRange, tlas: &mut Tlas) {
+        assert!(!blas_range.is_empty());
+        self.blas = blas_range;
+
+        self.bounds.a = Point3::new(f32::MAX, f32::MAX, f32::MAX);
+        self.bounds.b = Point3::new(f32::MIN, f32::MIN, f32::MIN);
+
+        // Visit each BLAS to find the lowest and highest x, y, and z
+        let a = blas_range.offset;
+        let b = a + blas_range.count;
+        for i in a..b {
+            let blas_node = &tlas.blas_nodes[i as usize];
+            let blas = tlas.bvhs.get(blas_node.bvh).unwrap();
+            self.bounds.a = self.bounds.a.min(&blas.root.bounds.a);
+            self.bounds.b = self.bounds.b.max(&blas.root.bounds.b);
+        }
+
+        // Split AABB along its longest axis
+        let extent = self.bounds.b - self.bounds.a;
+        let mut axis = Axis3::X;
+        if extent.y > extent.x {
+            axis = Axis3::Y;
+        }
+        if extent.z > extent[axis] {
+            axis = Axis3::Z
+        }
+        let split_pos = self.bounds.a[axis] + extent[axis] * 0.5;
+
+        // Partition-in-place to obtain two groups of models on both sides of the split plane
+        let mut i = blas_range.offset as usize;
+        let mut j = (blas_range.offset + blas_range.count) as usize;
+        while i < j {
+            let blas_node = &tlas.blas_nodes[i];
+            let bvh = tlas.bvhs.get(blas_node.bvh).unwrap();
+            if bvh.root.bounds.centroid()[axis] < split_pos {
+                i += 1;
+            } else {
+                tlas.blas_nodes.swap(i, j - 1);
+                j -= 1;
+            }
+        }
+
+        // Create child nodes for each half
+        let left_count = i as u32 - blas_range.offset;
+        let right_count = blas_range.count - left_count;
+        if left_count > 0 && right_count > 0 {
+            let right_models_range = BvhRange::new(blas_range.offset + left_count, right_count);
+            let left_models_range = BvhRange::new(blas_range.offset, left_count);
+
+            // Create two nodes
+            let mut left_child = TlasNode::default();
+            left_child.replace_models_recursive(left_models_range, tlas);
+
+            let mut right_child = TlasNode::default();
+            right_child.replace_models_recursive(right_models_range, tlas);
+
+            self.left = tlas.tlas_nodes.push(left_child);
+            self.right = tlas.tlas_nodes.push(right_child);
+            self.blas.count = 0;
+        }
+    }
+
+    fn intersects(&self, ray: &Ray, tlas: &Tlas) -> Option<Hit> {
+        if !self.bounds.intersects(ray) {
+            return None;
+        }
+
+        let mut ret = None;
+
+        let mut depth = f32::INFINITY;
+
+        if self.is_leaf() {
+            let a = self.blas.offset;
+            let b = a + self.blas.count;
+            for i in a..b {
+                let blas_node = &tlas.blas_nodes[i as usize];
+                let bvh = tlas.bvhs.get(blas_node.bvh)?;
+                if let Some(mut hit) = bvh.intersects(ray) {
+                    if hit.depth < depth {
+                        depth = hit.depth;
+                        hit.blas = i;
+                        ret = Some(hit);
+                    }
+                }
+            }
+        } else {
+            // TODO: refactor in common code for both nodes
+            if let Some(left_node) = tlas.tlas_nodes.get(self.left) {
+                if let Some(hit) = left_node.intersects(ray, tlas) {
+                    if hit.depth < depth {
+                        depth = hit.depth;
+                        ret = Some(hit);
+                    }
+                }
+            }
+
+            if let Some(right_node) = tlas.tlas_nodes.get(self.right) {
+                if let Some(hit) = right_node.intersects(ray, tlas) {
+                    if hit.depth < depth {
+                        ret = Some(hit);
+                    }
+                }
+            }
+        }
+
+        ret
+    }
+}
+
+/// The idea of a BLAS node is that we can reorder them in their vector container
+/// while keeping the BVH and its model in their place.
+pub struct BlasNode {
+    pub bvh: Handle<Bvh>,
+    pub model: Handle<GltfModel>,
+}
+
+impl BlasNode {
+    pub fn new(bvh: Handle<Bvh>, model: Handle<GltfModel>) -> Self {
+        Self { bvh, model }
+    }
+}
+
+/// Top Level Acceleration Structure
+#[derive(Default)]
+pub struct Tlas {
+    pub root: TlasNode,
+
+    /// TODO: Use index 0 as root, ignore 1, and children from 2 onwards
+    pub tlas_nodes: Pack<TlasNode>,
+
+    /// BLAS nodes are referenced by TLAS nodes
+    pub blas_nodes: Vec<BlasNode>,
+
+    /// Bounding Volume Hierarchies should have a 1-1 mapping with model geometries
+    /// Bottom Level Acceleration Structures refer a BVH and a Model
+    /// TODO: Change this reference from Model to Materials?
+    pub bvhs: Pack<Bvh>,
+}
+
+impl Tlas {
+    pub fn clear(&mut self) {
+        self.root = TlasNode::default();
+        self.tlas_nodes.clear();
+        self.blas_nodes.clear();
+        self.bvhs.clear();
+    }
+
+    pub fn replace_models(&mut self, models: &[GltfModel]) {
+        self.clear();
+
+        for (i, model) in models.iter().enumerate() {
+            let bvh_handle = self.bvhs.push(Bvh::from(model));
+            self.blas_nodes
+                .push(BlasNode::new(bvh_handle, Handle::new(i)))
+        }
+
+        // TODO: make a function which returns a range of handles from a pack
+        let mut root = TlasNode::default();
+        let range = BvhRange::new(0, models.len() as u32);
+        root.replace_models_recursive(range, self);
+        self.root = root;
+    }
+
+    pub fn intersects(&self, ray: &Ray) -> Option<Hit> {
+        assert!(self.root.blas.count > 0 || self.root.left.is_some() || self.root.right.is_some());
+        self.root.intersects(ray, self)
     }
 }
 

@@ -9,7 +9,9 @@ pub struct Scratcher {}
 
 impl Integrator for Scratcher {
     fn get_color(&self, scene: &Scene, hit: Hit) -> Color {
-        let primitive = scene.get_bvh().get_shade(hit.primitive);
+        let blas_node = &scene.tlas.blas_nodes[hit.blas as usize];
+        let bvh = scene.tlas.bvhs.get(blas_node.bvh).unwrap();
+        let primitive = bvh.get_shade(hit.primitive);
         let n = primitive.get_normal(scene, &hit);
         let mut pixel_color = Color::black();
         let color = primitive.get_color(scene, &hit);
@@ -27,7 +29,7 @@ impl Integrator for Scratcher {
             let light_dir = light.get_direction(light_node, &hit.point);
 
             let shadow_ray = Ray::new(shadow_origin, light_dir);
-            let shadow_result = scene.get_bvh().intersects(&shadow_ray);
+            let shadow_result = scene.tlas.intersects(&shadow_ray);
 
             let is_light = match shadow_result {
                 None => true,

@@ -9,12 +9,13 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterato
 
 use super::*;
 
-pub struct DefaultCamera {
+#[derive(Clone)]
+pub struct SolvedCamera {
     pub camera: Camera,
     pub trs: Trs,
 }
 
-impl Default for DefaultCamera {
+impl Default for SolvedCamera {
     fn default() -> Self {
         Self {
             camera: Camera::default(),
@@ -24,6 +25,12 @@ impl Default for DefaultCamera {
                 Vec3::new(1.0, 1.0, 1.0),
             ),
         }
+    }
+}
+
+impl SolvedCamera {
+    pub fn new(camera: Camera, trs: Trs) -> Self {
+        Self { camera, trs }
     }
 }
 
@@ -62,11 +69,11 @@ impl Default for DefaultLights {
 pub struct Scene {
     pub integrator: Box<dyn Integrator + Sync>,
 
-    pub bvh: Option<Bvh>,
-    pub gltf_model: GltfModel,
+    pub tlas: Tlas,
+    pub gltf_models: Pack<GltfModel>,
 
     /// This can be used for default values which are not defined in any other model in the scene
-    pub default_camera: DefaultCamera,
+    pub default_camera: SolvedCamera,
     pub default_lights: DefaultLights,
 }
 
@@ -75,8 +82,8 @@ impl Default for Scene {
     fn default() -> Self {
         Self {
             integrator: Box::<Scratcher>::default(),
-            bvh: Default::default(),
-            gltf_model: Default::default(),
+            tlas: Default::default(),
+            gltf_models: Default::default(),
             default_camera: Default::default(),
             default_lights: Default::default(),
         }
@@ -88,67 +95,20 @@ impl Scene {
         Self::default()
     }
 
-    pub fn get_bvh(&self) -> &Bvh {
-        self.bvh.as_ref().unwrap()
-    }
-
-    fn draw_pixel_primitive(&self, hit: Hit, pixel: &mut RGBA8) {
-        let color = self.integrator.get_color(self, hit);
-        // No over operation here as transparency should be handled by the lighting model
-        *pixel = color.into();
-    }
-
-    fn draw_pixel_bvh(&self, ray: Ray, pixel: &mut RGBA8) -> usize {
-        let mut triangle_count = 0;
-        let bvh = self.bvh.as_ref().unwrap();
-        if let Some(hit) = bvh.intersects_stats(&ray, &mut triangle_count) {
-            self.draw_pixel_primitive(hit, pixel);
+    fn draw_pixel(&self, ray: Ray, pixel: &mut RGBA8) {
+        if let Some(hit) = self.tlas.intersects(&ray) {
+            let color = self.integrator.get_color(self, hit);
+            // No over operation here as transparency should be handled by the lighting model
+            *pixel = color.into();
         }
-        triangle_count
-    }
-
-    fn collect_triangles(&self) -> (Vec<Triangle>, Vec<TriangleEx>, Vec<(Camera, Trs)>) {
-        let mut triangles = vec![];
-        let mut triangles_ex = vec![];
-        let mut cameras = vec![];
-
-        let mut timer = Timer::new();
-
-        let transforms = self.gltf_model.collect_transforms();
-        for (node, trs) in transforms {
-            // Collect triangles
-            if let Some(mesh_handle) = node.mesh {
-                let mesh = self.gltf_model.meshes.get(mesh_handle).unwrap();
-                for prim_handle in mesh.primitives.iter() {
-                    let prim = self.gltf_model.primitives.get(*prim_handle).unwrap();
-                    let (mut prim_triangles, mut prim_triangles_ex) = prim.triangles(&trs);
-                    triangles.append(&mut prim_triangles);
-                    triangles_ex.append(&mut prim_triangles_ex);
-                }
-            }
-
-            // Collect cameras
-            if let Some(camera_handle) = node.camera {
-                let camera = self.gltf_model.cameras.get(camera_handle).unwrap();
-                cameras.push((camera.clone(), trs));
-            }
-        }
-
-        println!(
-            "{:>12} {} triangles in {:.2}s",
-            "Collected".green().bold(),
-            triangles.len(),
-            timer.get_delta().as_secs_f32()
-        );
-        (triangles, triangles_ex, cameras)
     }
 
     pub fn update(&mut self) {
-        let (triangles, triangles_ex, cameras) = self.collect_triangles();
-        self.bvh.replace(Bvh::new(triangles, triangles_ex));
-        if !cameras.is_empty() {
-            self.default_camera.camera = cameras[0].0.clone();
-            self.default_camera.trs = cameras[0].1.clone();
+        self.tlas.replace_models(&self.gltf_models);
+
+        let solved_cameras = &self.tlas.bvhs[0].cameras;
+        if !solved_cameras.is_empty() {
+            self.default_camera = solved_cameras[0].clone();
         }
     }
 }
@@ -186,7 +146,7 @@ impl Draw for Scene {
                 let origin = Point3::new(0.0, 0.0, 0.0);
                 let ray = &self.default_camera.trs * Ray::new(origin, dir);
 
-                self.draw_pixel_bvh(ray, pixel);
+                self.draw_pixel(ray, pixel);
             });
         });
 
