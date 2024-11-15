@@ -13,13 +13,6 @@ use web_sys::{Request, RequestInit, RequestMode, Response};
 use crate::*;
 
 pub fn set_panic_hook() {
-    // When the `console_error_panic_hook` feature is enabled, we can call the
-    // `set_panic_hook` function at least once during initialization, and then
-    // we will get better error messages if our code ever panics.
-    //
-    // For more details see
-    // https://github.com/rustwasm/console_error_panic_hook#readme
-    #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
 }
 
@@ -58,9 +51,9 @@ fn get_canvas(id: &str) -> Result<CanvasRenderingContext2d, JsValue> {
 }
 
 async fn get_model() -> Result<Model, JsValue> {
-    let mut opts = RequestInit::new();
-    opts.method("GET");
-    opts.mode(RequestMode::Cors);
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
 
     let url = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF-Embedded/Box.gltf";
 
@@ -136,7 +129,7 @@ pub struct Context {
 #[wasm_bindgen]
 impl Context {
     pub async fn new() -> Result<Context, JsValue> {
-        set_panic_hook();
+        //set_panic_hook();
 
         let canvas = get_canvas("area")?;
 
