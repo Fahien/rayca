@@ -55,5 +55,5 @@ jobs:
       if: github.ref == 'refs/heads/main'
       with:
         external_repository: fahien/rayca-web
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        personal_token: ${{ secrets.RAYCA_WEB }}
         publish_dir: www/dist
