@@ -1,14 +1,28 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use super::*;
+use crate::*;
+
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, PartialEq)]
+pub struct Vertex {
+    pub pos: Point3,
+    pub ext: VertexExt,
+}
+
+impl Vertex {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self {
+            pos: Point3::new(x, y, z),
+            ext: Default::default(),
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Vertex {
-    pub pos: Point3,
-
+pub struct VertexExt {
     pub uv: Vec2,
     pub color: Color,
 
@@ -17,21 +31,14 @@ pub struct Vertex {
     pub bitangent: Vec3,
 }
 
-impl Vertex {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
+impl Default for VertexExt {
+    fn default() -> Self {
         Self {
-            pos: Point3::new(x, y, z),
             uv: Vec2::default(),
             color: Color::from(0xFFFFFFFF),
             normal: Vec3::new(0.0, 0.0, 1.0),
             tangent: Vec3::new(0.0, 0.0, 0.0),
             bitangent: Vec3::new(0.0, 0.0, 0.0),
         }
-    }
-}
-
-impl Default for Vertex {
-    fn default() -> Self {
-        Self::new(0.0, 0.0, 0.0)
     }
 }

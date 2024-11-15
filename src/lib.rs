@@ -1,4 +1,4 @@
-// Copyright © 2022
+// Copyright © 2022-2024
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -22,7 +22,6 @@ pub mod sampler;
 pub mod scene;
 pub mod texture;
 pub mod util;
-pub mod vertex;
 #[cfg(target_arch = "wasm32")]
 pub mod www;
 
@@ -43,6 +42,5 @@ pub use sampler::*;
 pub use scene::*;
 pub use texture::*;
 pub use util::*;
-pub use vertex::*;
 #[cfg(target_arch = "wasm32")]
 pub use www::*;

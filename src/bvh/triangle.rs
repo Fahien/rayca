@@ -35,40 +35,40 @@ impl BvhTriangle {
 
     /// Returns the interpolation of the vertices colors
     pub fn interpolate_colors(&self, hit_uv: &Vec2) -> Color {
-        self.vertices[2].color * (1.0 - hit_uv.x - hit_uv.y)
-            + self.vertices[0].color * hit_uv.x
-            + self.vertices[1].color * hit_uv.y
+        self.vertices[2].ext.color * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].ext.color * hit_uv.x
+            + self.vertices[1].ext.color * hit_uv.y
     }
 
     /// Returns the interpolation of the vertices uvs
     pub fn interpolate_uvs(&self, hit_uv: &Vec2) -> Vec2 {
-        self.vertices[2].uv * (1.0 - hit_uv.x - hit_uv.y)
-            + self.vertices[0].uv * hit_uv.x
-            + self.vertices[1].uv * hit_uv.y
+        self.vertices[2].ext.uv * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].ext.uv * hit_uv.x
+            + self.vertices[1].ext.uv * hit_uv.y
     }
 
     /// Returns the interpolation of the vertices normals
     pub fn interpolate_normals(&self, hit_uv: &Vec2) -> Vec3 {
-        let n = self.vertices[2].normal * (1.0 - hit_uv.x - hit_uv.y)
-            + self.vertices[0].normal * hit_uv.x
-            + self.vertices[1].normal * hit_uv.y;
+        let n = self.vertices[2].ext.normal * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].ext.normal * hit_uv.x
+            + self.vertices[1].ext.normal * hit_uv.y;
         n.get_normalized()
     }
 
     /// Returns the interpolation of the vertices tangents
     pub fn interpolate_tangents(&self, hit_uv: &Vec2) -> Vec3 {
-        let mut t = self.vertices[2].tangent * (1.0 - hit_uv.x - hit_uv.y)
-            + self.vertices[0].tangent * hit_uv.x
-            + self.vertices[1].tangent * hit_uv.y;
+        let mut t = self.vertices[2].ext.tangent * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].ext.tangent * hit_uv.x
+            + self.vertices[1].ext.tangent * hit_uv.y;
         t.normalize();
         t
     }
 
     /// Returns the interpolation of the vertices bitangents
     pub fn interpolate_bitangents(&self, hit_uv: &Vec2) -> Vec3 {
-        let mut b = self.vertices[2].bitangent * (1.0 - hit_uv.x - hit_uv.y)
-            + self.vertices[0].bitangent * hit_uv.x
-            + self.vertices[1].bitangent * hit_uv.y;
+        let mut b = self.vertices[2].ext.bitangent * (1.0 - hit_uv.x - hit_uv.y)
+            + self.vertices[0].ext.bitangent * hit_uv.x
+            + self.vertices[1].ext.bitangent * hit_uv.y;
         b.normalize();
         b
     }

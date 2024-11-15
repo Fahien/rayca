@@ -40,30 +40,30 @@ impl Triangles {
     ) -> Vec<BvhPrimitive> {
         let mut ret = vec![];
 
-        let trs = model.nodes.get(node).unwrap().trs.clone();
-        let tangent_matrix = Mat3::from(&trs);
+        let trs = model.solved_trs.get(&node).unwrap();
+        let tangent_matrix = Mat3::from(&trs.trs);
 
-        let inverse_trs = Inversed::from(&trs);
+        let inverse_trs = Inversed::from(&trs.trs);
         let normal_matrix = Mat3::from(&inverse_trs).get_transpose();
 
         for i in 0..(indices.len() / 3) {
             let mut a = self.vertices[indices[i * 3].to_usize().unwrap()];
-            a.pos = &trs * a.pos;
-            a.normal = &normal_matrix * a.normal;
-            a.tangent = &tangent_matrix * a.tangent;
-            a.bitangent = &tangent_matrix * a.bitangent;
+            a.pos = &trs.trs * a.pos;
+            a.ext.normal = &normal_matrix * a.ext.normal;
+            a.ext.tangent = &tangent_matrix * a.ext.tangent;
+            a.ext.bitangent = &tangent_matrix * a.ext.bitangent;
 
             let mut b = self.vertices[indices[i * 3 + 1].to_usize().unwrap()];
-            b.pos = &trs * b.pos;
-            b.normal = &normal_matrix * b.normal;
-            b.tangent = &tangent_matrix * b.tangent;
-            b.bitangent = &tangent_matrix * b.bitangent;
+            b.pos = &trs.trs * b.pos;
+            b.ext.normal = &normal_matrix * b.ext.normal;
+            b.ext.tangent = &tangent_matrix * b.ext.tangent;
+            b.ext.bitangent = &tangent_matrix * b.ext.bitangent;
 
             let mut c = self.vertices[indices[i * 3 + 2].to_usize().unwrap()];
-            c.pos = &trs * c.pos;
-            c.normal = &normal_matrix * c.normal;
-            c.tangent = &tangent_matrix * c.tangent;
-            c.bitangent = &tangent_matrix * c.bitangent;
+            c.pos = &trs.trs * c.pos;
+            c.ext.normal = &normal_matrix * c.ext.normal;
+            c.ext.tangent = &tangent_matrix * c.ext.tangent;
+            c.ext.bitangent = &tangent_matrix * c.ext.bitangent;
 
             let triangle = Box::new(BvhTriangle::new(a, b, c));
             let geometry = BvhGeometry::Triangle(triangle);

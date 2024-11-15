@@ -432,8 +432,8 @@ impl ModelBuilder {
         let uvs = self.get_slices(accessor);
         vertices.resize(uvs.len(), Vertex::default());
         for (i, uv) in uvs.into_iter().enumerate() {
-            vertices[i].uv.x = uv[0];
-            vertices[i].uv.y = uv[1];
+            vertices[i].ext.uv.x = uv[0];
+            vertices[i].ext.uv.y = uv[1];
         }
         Ok(())
     }
@@ -446,7 +446,7 @@ impl ModelBuilder {
         let normals = self.get_slices(accessor);
         vertices.resize(normals.len(), Vertex::default());
         for (i, normal) in normals.into_iter().enumerate() {
-            vertices[i].normal = Vec3::new(normal[0], normal[1], normal[2]);
+            vertices[i].ext.normal = Vec3::new(normal[0], normal[1], normal[2]);
         }
         Ok(())
     }
@@ -459,10 +459,10 @@ impl ModelBuilder {
         let colors = self.get_slices(accessor);
         vertices.resize(colors.len(), Vertex::default());
         for (i, color) in colors.into_iter().enumerate() {
-            vertices[i].color.r = color[0];
-            vertices[i].color.g = color[1];
-            vertices[i].color.b = color[2];
-            vertices[i].color.a = if color.len() == 4 { color[3] } else { 1.0 };
+            vertices[i].ext.color.r = color[0];
+            vertices[i].ext.color.g = color[1];
+            vertices[i].ext.color.b = color[2];
+            vertices[i].ext.color.a = if color.len() == 4 { color[3] } else { 1.0 };
         }
         Ok(())
     }
@@ -492,10 +492,10 @@ impl ModelBuilder {
             let d = &data[offset];
             let tangent = unsafe { std::slice::from_raw_parts::<f32>(d as *const u8 as _, 4) };
 
-            vertex.tangent = Vec3::new(tangent[0], tangent[1], tangent[2]);
+            vertex.ext.tangent = Vec3::new(tangent[0], tangent[1], tangent[2]);
 
             // Compute bitangent as for glTF 2.0 spec
-            vertex.bitangent = vertex.normal.cross(&vertex.tangent) * tangent[3];
+            vertex.ext.bitangent = vertex.ext.normal.cross(&vertex.ext.tangent) * tangent[3];
         });
 
         Ok(())
