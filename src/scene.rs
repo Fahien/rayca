@@ -26,7 +26,7 @@ impl Default for Scene {
 
 impl Scene {
     /// This can be used for default values which are not defined in any other model in the scene
-    fn create_default_model() -> Model {
+    pub fn create_default_model() -> Model {
         let mut model = Model::new();
 
         // Add 1 camera

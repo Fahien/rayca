@@ -141,7 +141,8 @@ impl Context {
         tweak_box_scene(&mut model);
 
         let mut scene = Scene::new();
-        scene.models.push(model);
+        scene.push(model);
+        scene.push(Scene::create_default_model());
 
         let data = Clamped(image.bytes());
 
@@ -160,9 +161,10 @@ impl Context {
     pub fn rotate_box(&mut self) {
         let delta = self.timer.get_delta().as_secs_f32();
         let angle = FRAC_PI_8 * delta;
-        self.scene.models[0]
+        self.scene
+            .model
             .nodes
-            .get_mut(1.into())
+            .get_mut(2.into())
             .unwrap()
             .trs
             .rotation *= Quat::new(0.0, angle.sin(), 0.0, angle.cos());

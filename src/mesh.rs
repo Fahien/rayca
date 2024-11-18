@@ -126,11 +126,33 @@ impl Primitive {
 }
 
 #[derive(Default)]
+pub struct MeshBuilder {
+    pub primitives: Vec<Handle<Primitive>>,
+}
+
+impl MeshBuilder {
+    pub fn primitives(mut self, primitives: Vec<Handle<Primitive>>) -> Self {
+        self.primitives = primitives;
+        self
+    }
+
+    pub fn build(self) -> Mesh {
+        Mesh {
+            primitives: self.primitives,
+        }
+    }
+}
+
+#[derive(Default)]
 pub struct Mesh {
     pub primitives: Vec<Handle<Primitive>>,
 }
 
 impl Mesh {
+    pub fn builder() -> MeshBuilder {
+        MeshBuilder::default()
+    }
+
     pub fn new(primitives: Vec<Handle<Primitive>>) -> Self {
         Self { primitives }
     }

@@ -156,10 +156,13 @@ mod test {
     #[test]
     fn intersect() {
         let mut model = Model::new();
-        let material = model.materials.push(Material::new());
-        let triangle_prim = Primitive::unit_triangle();
-        let node = model.nodes.push(Node::default());
-        let triangles = triangle_prim.primitives(node, material, &model);
+        let triangle_prim = model.primitives.push(Primitive::unit_triangle());
+        let mesh = model
+            .meshes
+            .push(Mesh::builder().primitives(vec![triangle_prim]).build());
+        let node = model.nodes.push(Node::builder().mesh(mesh).build());
+        model.root.children.push(node);
+        let triangles = model.collect();
         let triangle_ref = &triangles[0];
 
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
