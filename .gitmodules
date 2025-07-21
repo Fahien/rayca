@@ -1,3 +1,3 @@
-[submodule "tests/model"]
-	path = tests/model
+[submodule "rayca-soft/tests/model"]
+	path = rayca-soft/tests/model
 	url = https://github.com/Fahien/rayca-models.git

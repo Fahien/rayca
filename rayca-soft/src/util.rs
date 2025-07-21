@@ -7,9 +7,22 @@ use std::{
     iter::FromIterator,
     marker::PhantomData,
     ops::{Deref, DerefMut},
+    path::PathBuf,
 };
 
 use instant::{Duration, Instant};
+
+pub fn get_artifacts_path() -> PathBuf {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push("target");
+    path.push("artifacts");
+    if !path.exists() {
+        use crate::print_info;
+        print_info!("Creating", "artifacts directory: {}", path.display());
+        std::fs::create_dir_all(&path).unwrap();
+    }
+    path
+}
 
 /// Useful timer to get delta time, and previous time
 pub struct Timer {

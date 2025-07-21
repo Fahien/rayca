@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "*" ]
   pull_request:
     branches: [ main ]
 
@@ -37,18 +37,20 @@ jobs:
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
         sudo chmod 666 /proc/kallsyms
-        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph -c "record -F 997 --call-graph dwarf,16384 -g -o ./perf.data" --no-default-features --test test -- cube_over_plane
-        mkdir www/dist
-        mv flamegraph.svg www/dist/
+        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --no-default-features \
+          --package rayca-soft --test test -- cube_over_plane
+        mkdir rayca-soft/www/dist
+        mv flamegraph.svg rayca-soft/www/dist/
 
     - name: Web
       run: |
-        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        cargo install wasm-pack
+        cd rayca-soft
         wasm-pack build -- --no-default-features
         cd www
         npm install
         npm run build
-        cp ../target/*.png dist
+        cp ../target/artifacts/*.png dist
 
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v4

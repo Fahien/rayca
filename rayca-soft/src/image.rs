@@ -257,7 +257,7 @@ mod test {
     #[test]
     fn dump() {
         let image = Image::new(32, 32, ColorType::RGBA8);
-        image.dump_png("target/image.png");
+        image.dump_png(get_artifacts_path().join("image.png"));
     }
 
     #[test]
@@ -266,8 +266,8 @@ mod test {
         let color = RGBA8::from(0x0000FFFF);
         image.clear(color);
 
-        let blue_path = "target/blue.png";
-        image.dump_png(blue_path);
+        let blue_path = get_artifacts_path().join("blue.png");
+        image.dump_png(&blue_path);
 
         let image = Image::load_png_file(blue_path);
         assert!(image
@@ -281,7 +281,7 @@ mod test {
         const DUCK_BASE64: &str = include_str!("../tests/model/duck/duck.base64");
         let duck_data = base64::decode(DUCK_BASE64).expect("Failed to decode duck base64");
         let image = Image::load_png_data(&duck_data);
-        image.dump_png("target/duck-texture.png");
+        image.dump_png(get_artifacts_path().join("duck-texture.png"));
         rlog!("{:?}", image.data::<RGB8>()[0]);
     }
 }
