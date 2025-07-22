@@ -22,35 +22,35 @@ impl AABB {
         e.simd[0] * e.simd[1] + e.simd[1] * e.simd[2] + e.simd[2] * e.simd[0]
     }
 
-    fn grow(&mut self, p: &Point3) {
+    fn grow(&mut self, p: Point3) {
         self.a = self.a.min(p);
         self.b = self.b.max(p);
     }
 
-    fn grow_triangle(&mut self, triangle: &BvhTriangle) {
-        self.grow(&triangle.vertices[0].pos);
-        self.grow(&triangle.vertices[1].pos);
-        self.grow(&triangle.vertices[2].pos);
+    fn grow_triangle(&mut self, triangle: &BvhTriangle, trs: &Trs) {
+        self.grow(triangle.get_vertex(0, trs));
+        self.grow(triangle.get_vertex(1, trs));
+        self.grow(triangle.get_vertex(2, trs));
     }
 
-    fn grow_sphere(&mut self, sphere: &BvhSphere, trs: &Trs) {
+    fn grow_sphere(&mut self, sphere: &Sphere, trs: &Trs) {
         let radius = sphere.get_radius();
-        let center = trs * sphere.center;
-        self.grow(&(center + Vec3::new(-radius, 0.0, 0.0)));
-        self.grow(&(center + Vec3::new(radius, 0.0, 0.0)));
-        self.grow(&(center + Vec3::new(0.0, -radius, 0.0)));
-        self.grow(&(center + Vec3::new(0.0, radius, 0.0)));
-        self.grow(&(center + Vec3::new(0.0, 0.0, -radius)));
-        self.grow(&(center + Vec3::new(0.0, 0.0, radius)));
+        let center = sphere.get_center(trs);
+        self.grow(center + Vec3::new(-radius, 0.0, 0.0));
+        self.grow(center + Vec3::new(radius, 0.0, 0.0));
+        self.grow(center + Vec3::new(0.0, -radius, 0.0));
+        self.grow(center + Vec3::new(0.0, radius, 0.0));
+        self.grow(center + Vec3::new(0.0, 0.0, -radius));
+        self.grow(center + Vec3::new(0.0, 0.0, radius));
     }
 
     fn grow_primitive(&mut self, model: &Model, primitive: &BvhPrimitive) {
+        let trs = model.solved_trs.get(&primitive.node).unwrap();
         match &primitive.geometry {
             BvhGeometry::Triangle(triangle) => {
-                self.grow_triangle(triangle);
+                self.grow_triangle(triangle, &trs.trs);
             }
             BvhGeometry::Sphere(sphere) => {
-                let trs = model.solved_trs.get(&primitive.node).unwrap();
                 self.grow_sphere(sphere, &trs.trs);
             }
         }
@@ -62,8 +62,8 @@ impl AABB {
         let t1 = (self.a - origin_vec) * ray.rdir;
         let t2 = (self.b - origin_vec) * ray.rdir;
 
-        let vmax = t1.max(&t2);
-        let vmin = t1.min(&t2);
+        let vmax = t1.max(t2);
+        let vmin = t1.min(t2);
 
         let tmax = vmax.simd[0].min(vmax.simd[1].min(vmax.simd[2]));
         let tmin = vmin.simd[0].max(vmin.simd[1].max(vmin.simd[2]));
@@ -260,8 +260,8 @@ impl BvhNode {
         // Visit each vertex of the primitives to find the lowest and highest x, y, and z
         for pri_index in &self.primitives {
             let pri = &primitives[pri_index];
-            self.bounds.a = self.bounds.a.min(&pri.min(model));
-            self.bounds.b = self.bounds.b.max(&pri.max(model));
+            self.bounds.a = self.bounds.a.min(pri.min(model));
+            self.bounds.b = self.bounds.b.max(pri.max(model));
         }
 
         if level >= max_depth {

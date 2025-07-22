@@ -80,15 +80,15 @@ impl Point3 {
         self.simd += translation.simd;
     }
 
-    pub fn min(self, other: &Self) -> Self {
+    pub fn min(&self, other: Self) -> Self {
         Self::simd(self.simd.simd_min(other.simd))
     }
 
-    pub fn max(self, other: &Self) -> Self {
+    pub fn max(&self, other: Self) -> Self {
         Self::simd(self.simd.simd_max(other.simd))
     }
 
-    pub fn close(&self, b: &Self) -> bool {
+    pub fn close(&self, b: Self) -> bool {
         let diff = (self - b).abs();
         diff < Vec3::splat(EPS)
     }
@@ -315,8 +315,8 @@ mod test {
     fn min_max() {
         let a = Point3::new(1.0, 5.0, 3.0);
         let b = Point3::new(2.0, 4.0, 6.0);
-        let min = a.min(&b);
-        let max = a.max(&b);
+        let min = a.min(b);
+        let max = a.max(b);
         assert_eq!(min, Point3::new(1.0, 4.0, 3.0));
         assert_eq!(max, Point3::new(2.0, 5.0, 6.0));
     }

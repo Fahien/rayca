@@ -155,22 +155,21 @@ impl Triangle {
     }
 
     pub fn get_centroid(&self, trs: &Trs) -> Vec3 {
-        // let trs = geometries.trss.get(self.trs).unwrap();
         trs * self.centroid
     }
 
     pub fn min(&self, trs: &Trs) -> Point3 {
         Point3::new(f32::MAX, f32::MAX, f32::MAX)
-            .min(&self.get_vertex(0, trs))
-            .min(&self.get_vertex(1, trs))
-            .min(&self.get_vertex(2, trs))
+            .min(self.get_vertex(0, trs))
+            .min(self.get_vertex(1, trs))
+            .min(self.get_vertex(2, trs))
     }
 
     pub fn max(&self, trs: &Trs) -> Point3 {
         Point3::new(f32::MIN, f32::MIN, f32::MIN)
-            .max(&self.get_vertex(0, trs))
-            .max(&self.get_vertex(1, trs))
-            .max(&self.get_vertex(2, trs))
+            .max(self.get_vertex(0, trs))
+            .max(self.get_vertex(1, trs))
+            .max(self.get_vertex(2, trs))
     }
 }
 

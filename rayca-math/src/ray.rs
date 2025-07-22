@@ -112,7 +112,7 @@ mod test {
         let translation = Vec3::new(1.0, 2.0, 3.0);
         let orig_origin = ray.origin;
         ray.translate(&translation);
-        assert!(ray.origin.close(&(orig_origin + translation)));
+        assert!(ray.origin.close(orig_origin + translation));
         assert_eq!(ray.origin.simd[3], 1.0);
     }
 

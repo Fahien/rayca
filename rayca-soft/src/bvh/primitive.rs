@@ -8,7 +8,7 @@ use crate::*;
 
 pub enum BvhGeometry {
     Triangle(BvhTriangle),
-    Sphere(BvhSphere),
+    Sphere(Sphere),
 }
 
 impl BvhGeometry {
@@ -82,50 +82,34 @@ impl BvhPrimitive {
     }
 
     pub fn centroid(&self, model: &Model) -> Point3 {
+        let trs = model.solved_trs.get(&self.node).unwrap();
         match &self.geometry {
-            BvhGeometry::Triangle(triangle) => triangle.centroid,
-            BvhGeometry::Sphere(sphere) => {
-                let trs = model.solved_trs.get(&self.node).unwrap();
-                &trs.trs * sphere.center
-            }
+            BvhGeometry::Triangle(triangle) => triangle.get_centroid(trs).into(),
+            BvhGeometry::Sphere(sphere) => sphere.get_center(trs),
         }
     }
 
     pub fn min(&self, model: &Model) -> Point3 {
+        let trs = model.solved_trs.get(&self.node).unwrap();
         match &self.geometry {
-            BvhGeometry::Triangle(triangle) => triangle.min(),
-            BvhGeometry::Sphere(sphere) => {
-                let trs = model.solved_trs.get(&self.node).unwrap();
-                &trs.trs * sphere.min()
-            }
+            BvhGeometry::Triangle(triangle) => triangle.min(trs),
+            BvhGeometry::Sphere(sphere) => sphere.min(trs),
         }
     }
 
     pub fn max(&self, model: &Model) -> Point3 {
+        let trs = model.solved_trs.get(&self.node).unwrap();
         match &self.geometry {
-            BvhGeometry::Triangle(triangle) => triangle.max(),
-            BvhGeometry::Sphere(sphere) => {
-                let trs = model.solved_trs.get(&self.node).unwrap();
-                &trs.trs * sphere.max()
-            }
+            BvhGeometry::Triangle(triangle) => triangle.max(trs),
+            BvhGeometry::Sphere(sphere) => sphere.max(trs),
         }
     }
 
     pub fn intersects(&self, model: &Model, ray: &Ray) -> Option<Hit> {
+        let trs = model.solved_trs.get(&self.node).unwrap();
         match &self.geometry {
-            BvhGeometry::Triangle(triangle) => triangle.intersects(ray),
-            BvhGeometry::Sphere(sphere) => {
-                let ray = ray.clone();
-                let trs = model.solved_trs.get(&self.node).unwrap();
-                let inverse = Inversed::from(&trs.trs);
-                let inverse_ray = &inverse * ray;
-                let mut hit = sphere.intersects(&inverse_ray);
-                if let Some(hit) = hit.as_mut() {
-                    let transformed_point = hit.point;
-                    hit.point = &trs.trs * transformed_point;
-                }
-                hit
-            }
+            BvhGeometry::Triangle(triangle) => triangle.intersects(trs, ray),
+            BvhGeometry::Sphere(sphere) => sphere.intersects(trs, ray),
         }
     }
 
@@ -199,24 +183,25 @@ impl BvhPrimitive {
 
         for i in 0..(indices.len() / 3) {
             let mut a = triangles.vertices[indices[i * 3].to_usize().unwrap()].clone();
-            a.pos = &trs.trs * a.pos;
+            a.pos = a.pos;
             a.ext.normal = &normal_matrix * a.ext.normal;
             a.ext.tangent = &tangent_matrix * a.ext.tangent;
             a.ext.bitangent = &tangent_matrix * a.ext.bitangent;
 
             let mut b = triangles.vertices[indices[i * 3 + 1].to_usize().unwrap()].clone();
-            b.pos = &trs.trs * b.pos;
+            b.pos = b.pos;
             b.ext.normal = &normal_matrix * b.ext.normal;
             b.ext.tangent = &tangent_matrix * b.ext.tangent;
             b.ext.bitangent = &tangent_matrix * b.ext.bitangent;
 
             let mut c = triangles.vertices[indices[i * 3 + 2].to_usize().unwrap()].clone();
-            c.pos = &trs.trs * c.pos;
+            c.pos = c.pos;
             c.ext.normal = &normal_matrix * c.ext.normal;
             c.ext.tangent = &tangent_matrix * c.ext.tangent;
             c.ext.bitangent = &tangent_matrix * c.ext.bitangent;
 
-            let triangle = BvhTriangle::new(a, b, c);
+            let triangle = Triangle::new([a.pos, b.pos, c.pos]);
+            let triangle = BvhTriangle::new(triangle, [a.ext, b.ext, c.ext]);
             let geometry = BvhGeometry::Triangle(triangle);
             let primitive = BvhPrimitive::new(geometry, node, material);
             ret.push(primitive)
@@ -268,7 +253,7 @@ impl BvhPrimitive {
     ) -> Vec<Self> {
         // Transforming a sphere is complicated. The trick is to store transform with sphere,
         // then pre-transform the ray, and post-transform the intersection point.
-        let sphere = BvhSphere::new(sphere.get_model_center(), sphere.get_radius());
+        let sphere = Sphere::new(sphere.get_model_center(), sphere.get_radius());
         let geometry = BvhGeometry::Sphere(sphere);
         let primitive = BvhPrimitive::new(geometry, node, material);
 

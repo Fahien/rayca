@@ -3,11 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 mod primitive;
-mod sphere;
 mod structure;
 mod triangle;
 
 pub use primitive::*;
-pub use sphere::*;
 pub use structure::*;
 pub use triangle::*;
