@@ -13,7 +13,6 @@ pub mod image;
 pub mod integrator;
 pub mod light;
 pub mod material;
-pub mod math;
 pub mod mesh;
 pub mod model;
 pub mod node;
@@ -33,7 +32,6 @@ pub use image::*;
 pub use integrator::*;
 pub use light::*;
 pub use material::*;
-pub use math::*;
 pub use mesh::*;
 pub use model::*;
 pub use node::*;
@@ -44,4 +42,5 @@ pub use texture::*;
 #[cfg(target_arch = "wasm32")]
 pub use www::*;
 
+pub use rayca_math::*;
 pub use rayca_util::*;

@@ -28,7 +28,8 @@ pub struct Image {
 impl Image {
     pub fn new(width: u32, height: u32, color_type: ColorType) -> Self {
         let mut buffer = Vec::new();
-        buffer.resize(width as usize * height as usize * color_type.channels(), 0);
+        let buffer_size = width * height * color_type.channels();
+        buffer.resize(buffer_size as usize, 0);
 
         Self {
             id: 0,
@@ -188,7 +189,7 @@ impl Image {
 
         let png_color_type = match self.color_type {
             ColorType::RGB8 => png::ColorType::Rgb,
-            ColorType::RGBA8 => png::ColorType::Rgba,
+            ColorType::RGBA8 | ColorType::RGBA32F => png::ColorType::Rgba,
         };
         encoder.set_color(png_color_type);
         encoder.set_depth(png::BitDepth::Eight);

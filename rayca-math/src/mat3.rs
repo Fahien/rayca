@@ -1,4 +1,4 @@
-// Copyright © 2022-2023
+// Copyright © 2022-2025
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -9,8 +9,8 @@ use std::{
 
 use super::*;
 
-#[repr(C, align(16))]
-#[derive(Default, PartialEq)]
+#[repr(C, align(4))]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Mat3 {
     /// Row-major
     values: [[f32; 3]; 3],
@@ -29,6 +29,10 @@ impl Mat3 {
         Self {
             ..Default::default()
         }
+    }
+
+    pub fn get_row(&self, i: usize) -> &[f32; 3] {
+        &self.values[i]
     }
 
     pub fn from_rotation(rotation: &Quat) -> Self {
@@ -86,6 +90,18 @@ impl Mat3 {
             }
         }
         ret
+    }
+
+    pub fn new_rotation(right: Vec3, up: Vec3, forward: Vec3) -> Self {
+        // A rotation matrix actually always defines an orthonormal basis,
+        // where each column defines one of the original axes in its rotated state.
+        Self {
+            values: [
+                [right.get_x(), up.get_x(), forward.get_x()],
+                [right.get_y(), up.get_y(), forward.get_y()],
+                [right.get_z(), up.get_z(), forward.get_z()],
+            ],
+        }
     }
 }
 
@@ -221,7 +237,6 @@ mod test {
 
     #[test]
     fn mul() {
-        // TODO: Further test multiplication
         let a = Mat3::identity();
         let mut b = Mat3::identity();
         b.scale(&Vec3::new(2.0, 2.0, 2.0));
@@ -234,5 +249,38 @@ mod test {
         assert!(c.values[0][0] == 2.0);
         assert!(c.values[1][1] == 2.0);
         assert!(c.values[2][2] == 2.0);
+    }
+
+    #[test]
+    fn identity_is_identity() {
+        let id = Mat3::identity();
+        let v = Vec3::new(1.0, 2.0, 3.0);
+        let result = &id * v;
+        assert_eq!(result, v);
+    }
+
+    #[test]
+    fn transpose_twice_is_identity() {
+        let m = Mat3::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]);
+        let t = m.get_transpose();
+        let tt = t.get_transpose();
+        assert_eq!(m, tt);
+    }
+
+    #[test]
+    fn scale_and_get_scale() {
+        let mut m = Mat3::identity();
+        let scale = Vec3::new(3.0, 4.0, 5.0);
+        m.scale(&scale);
+        assert_eq!(m.get_scale(), scale);
+    }
+
+    #[test]
+    fn from_and_get_row() {
+        let arr = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]];
+        let m = Mat3::from(arr);
+        for i in 0..3 {
+            assert_eq!(m.get_row(i), &arr[i]);
+        }
     }
 }

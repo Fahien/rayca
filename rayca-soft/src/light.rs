@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use super::*;
+use crate::*;
 
 pub enum Light {
     Directional(DirectionalLight),
@@ -87,7 +87,7 @@ impl DirectionalLight {
 
     pub fn get_direction(&self, light_trs: &Trs) -> Vec3 {
         let mut light_dir = Vec3::new(1.0, 0.0, 0.0);
-        light_dir.rotate(&light_trs.rotation);
+        light_dir.rotate(light_trs.rotation);
         -light_dir
     }
 }

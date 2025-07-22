@@ -1,17 +1,17 @@
-// Copyright © 2022-2024
+// Copyright © 2022-2025
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
 use core::simd::*;
 use std::{
     ops::{Add, AddAssign, Div, Index, Mul, MulAssign, Neg, Sub, SubAssign},
-    simd::StdFloat,
+    simd::{StdFloat, num::SimdFloat},
 };
 
-use num::SimdFloat;
 use num_traits::MulAdd;
+use serde::*;
 
-use crate::{Color, Point3, Quat};
+use crate::{Color, EPS, Point3, Quat};
 
 use crate::Dot;
 
@@ -22,15 +22,49 @@ pub enum Axis3 {
     Z,
 }
 
-const EPS: f32 = f32::EPSILON * 8192.0;
-
-#[repr(C)]
+#[repr(C, align(16))]
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Vec3 {
     pub simd: f32x4,
 }
 
+impl std::fmt::Display for Vec3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[ {}, {}, {} ]",
+            self.get_x(),
+            self.get_y(),
+            self.get_z()
+        )
+    }
+}
+
 impl Vec3 {
+    pub const ZERO: Self = Self {
+        simd: f32x4::from_array([0.0, 0.0, 0.0, 0.0]),
+    };
+
+    pub const ONE: Self = Self {
+        simd: f32x4::from_array([1.0, 1.0, 1.0, 0.0]),
+    };
+
+    pub const X_AXIS: Self = Self {
+        simd: f32x4::from_array([1.0, 0.0, 0.0, 0.0]),
+    };
+
+    pub const Y_AXIS: Self = Self {
+        simd: f32x4::from_array([0.0, 1.0, 0.0, 0.0]),
+    };
+
+    pub const Z_AXIS: Self = Self {
+        simd: f32x4::from_array([0.0, 0.0, 1.0, 0.0]),
+    };
+
+    pub fn unit() -> Self {
+        Self::ONE
+    }
+
     pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
         Self {
             simd: f32x4::from_array([x, y, z, 0.0]),
@@ -92,18 +126,14 @@ impl Vec3 {
         let tmp3 = tmp0 * tmp1;
         let tmp4 = simd_swizzle!(tmp2, [1, 2, 0, 3]);
         let res = tmp3 - tmp4;
-        let mask = mask32x4::from_array([true, true, true, false]);
-        let res = mask.select(res, f32x4::default());
         Self::simd(res)
     }
 
     pub fn scale(&mut self, scale: &Vec3) {
-        let mask = mask32x4::from_array([true, true, true, false]);
-        let scale = mask.select(scale.simd, f32x4::splat(1.0));
-        self.simd *= scale;
+        self.simd *= scale.simd;
     }
 
-    pub fn rotate(&mut self, rotation: &Quat) {
+    pub fn rotate(&mut self, rotation: Quat) {
         // Extract the vector part of the quaternion
         let u = Vec3::simd(rotation.simd * f32x4::from_array([1.0, 1.0, 1.0, 0.0]));
 
@@ -116,10 +146,14 @@ impl Vec3 {
         *self = 2.0 * u.dot(&v) * u + (s * s - u.dot(&u)) * v + 2.0 * s * u.cross(&v);
     }
 
+    pub fn get_rotated(&self, rotation: Quat) -> Self {
+        let mut ret = self.clone();
+        ret.rotate(rotation);
+        ret
+    }
+
     pub fn translate(&mut self, translation: &Vec3) {
-        let mask = mask32x4::from_array([true, true, true, false]);
-        let translation = mask.select(translation.simd, f32x4::splat(0.0));
-        self.simd += translation;
+        self.simd += translation.simd;
     }
 
     pub fn norm(&self) -> f32 {
@@ -136,7 +170,9 @@ impl Vec3 {
 
     pub fn normalize(&mut self) {
         let len = self.len();
-        self.simd /= f32x4::from_array([len, len, len, 1.0]);
+        if len > EPS {
+            self.simd /= f32x4::from_array([len, len, len, 1.0]);
+        }
     }
 
     pub fn get_normalized(mut self) -> Self {
@@ -145,15 +181,35 @@ impl Vec3 {
     }
 
     pub fn get_reciprocal(&self) -> Self {
-        let one = f32x4::from_array([1.0, 1.0, 1.0, 0.0]);
-        let mask = mask32x4::from_array([true, true, true, false]);
-        let den = mask.select(self.simd, f32x4::splat(1.0));
-        Self::simd(one / den)
+        static ONE_X: f32x4 = f32x4::from_array([1.0, 0.0, 0.0, 0.0]);
+        static ONE_Y: f32x4 = f32x4::from_array([0.0, 1.0, 0.0, 0.0]);
+        static ONE_Z: f32x4 = f32x4::from_array([0.0, 0.0, 1.0, 0.0]);
+        static ONE_W: f32x4 = f32x4::from_array([0.0, 0.0, 0.0, 1.0]);
+        let mut num = f32x4::from_array([1.0, 1.0, 1.0, 0.0]);
+        let mut den = self.simd + ONE_W;
+        // Avoid division by zero
+        if self.simd[0] == 0.0 {
+            num -= ONE_X;
+            den += ONE_X;
+        }
+        if self.simd[1] == 0.0 {
+            num -= ONE_Y;
+            den += ONE_Y;
+        }
+        if self.simd[2] == 0.0 {
+            num -= ONE_Z;
+            den += ONE_Z;
+        }
+        Self::simd(num / den)
     }
 
     /// Returns the reflection of this vector around a surface normal
     pub fn reflect(&self, normal: &Vec3) -> Self {
         self - 2.0 * self.dot(normal) * normal
+    }
+
+    pub fn to_array(self) -> [f32; 3] {
+        self.simd.to_array()[0..3].try_into().unwrap()
     }
 }
 
@@ -165,10 +221,7 @@ impl Dot<Vec3> for Vec3 {
 
 impl Dot<&Vec3> for Vec3 {
     fn dot(self, rhs: &Vec3) -> f32 {
-        let mul4 = self.simd * rhs.simd;
-        let mask = mask32x4::from_array([true, true, true, false]);
-        let mul3 = mask.select(mul4, f32x4::default());
-        mul3.reduce_sum()
+        (self.simd * rhs.simd).reduce_sum()
     }
 }
 
@@ -307,6 +360,12 @@ impl Mul<Vec3> for f32 {
     }
 }
 
+impl From<&[f32; 3]> for Vec3 {
+    fn from(value: &[f32; 3]) -> Self {
+        Self::new(value[0], value[1], value[2])
+    }
+}
+
 impl From<&Point3> for Vec3 {
     fn from(p: &Point3) -> Self {
         // Set w to 0.0
@@ -343,6 +402,12 @@ impl Mul<&Vec3> for f32 {
 impl MulAssign<f32> for Vec3 {
     fn mul_assign(&mut self, rhs: f32) {
         self.simd *= f32x4::splat(rhs);
+    }
+}
+
+impl MulAssign<Vec3> for Vec3 {
+    fn mul_assign(&mut self, rhs: Vec3) {
+        self.simd *= rhs.simd;
     }
 }
 
@@ -402,6 +467,25 @@ impl Index<Axis3> for Vec3 {
     }
 }
 
+impl Serialize for Vec3 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_array().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Vec3 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let arr: [f32; 3] = Deserialize::deserialize(deserializer)?;
+        Ok(Self::from(&arr))
+    }
+}
+
 #[cfg(test)]
 mod test {
     mod vec3 {
@@ -418,29 +502,83 @@ mod test {
         fn rotate() {
             let mut v = Vec3::new(1.0, 0.0, 0.0);
             let y180 = Quat::new(0.0, 1.0, 0.0, 0.0);
-            v.rotate(&y180);
+            v.rotate(y180);
             assert!(v.close(&Vec3::new(-1.0, 0.0, 0.0)));
 
             let mut v = Vec3::new(1.0, 0.0, 0.0);
             let y90 = Quat::new(0.0, 0.707, 0.0, 0.707);
-            v.rotate(&y90);
+            v.rotate(y90);
             assert!(v.close(&Vec3::new(0.0, 0.0, -1.0)));
 
             let mut v = Vec3::new(1.0, 0.0, 0.0);
             let z180 = Quat::new(0.0, 0.0, 1.0, 0.0);
-            v.rotate(&z180);
+            v.rotate(z180);
             assert!(v.close(&Vec3::new(-1.0, 0.0, 0.0)));
 
             let mut v = Vec3::new(1.0, 0.0, 0.0);
             let z90 = Quat::new(0.0, 0.0, 0.707, 0.707);
-            v.rotate(&z90);
+            v.rotate(z90);
             assert!(v.close(&Vec3::new(0.0, 1.0, 0.0)));
 
             let mut v = Vec3::new(0.0, 0.0, 1.0);
             // x: -45 degrees
             let rot = Quat::new(-0.383, 0.0, 0.0, 0.924);
-            v.rotate(&rot);
+            v.rotate(rot);
             assert!(v.close(&Vec3::new(0.0, 0.707, 0.707)));
+        }
+
+        #[test]
+        fn arithmetic() {
+            let a = Vec3::new(1.0, 2.0, 3.0);
+            let b = Vec3::new(4.0, 5.0, 6.0);
+            assert_eq!(a + b, Vec3::new(5.0, 7.0, 9.0));
+            assert_eq!(b - a, Vec3::new(3.0, 3.0, 3.0));
+            assert_eq!(a * 2.0, Vec3::new(2.0, 4.0, 6.0));
+            assert_eq!(b / 2.0, Vec3::new(2.0, 2.5, 3.0));
+            assert_eq!(-a, Vec3::new(-1.0, -2.0, -3.0));
+        }
+
+        #[test]
+        fn min_max() {
+            let a = Vec3::new(1.0, 5.0, 3.0);
+            let b = Vec3::new(4.0, 2.0, 6.0);
+            assert_eq!(a.min(&b), Vec3::new(1.0, 2.0, 3.0));
+            assert_eq!(a.max(&b), Vec3::new(4.0, 5.0, 6.0));
+        }
+
+        #[test]
+        fn reciprocal() {
+            let a = Vec3::new(2.0, 4.0, 0.0);
+            let r = a.get_reciprocal();
+            assert!((r.get_x() - 0.5).abs() < 1e-6);
+            assert!((r.get_y() - 0.25).abs() < 1e-6);
+            assert_eq!(r.get_z(), 0.0);
+        }
+
+        #[test]
+        fn reflect() {
+            let v = Vec3::new(1.0, -1.0, 0.0);
+            let n = Vec3::new(0.0, 1.0, 0.0);
+            let r = v.reflect(&n);
+            assert!(r.close(&Vec3::new(1.0, 1.0, 0.0)));
+        }
+
+        #[test]
+        fn dot_and_cross() {
+            let a = Vec3::new(1.0, 0.0, 0.0);
+            let b = Vec3::new(0.0, 1.0, 0.0);
+            assert_eq!(a.dot(&b), 0.0);
+            let c = a.cross(&b);
+            assert!(c.close(&Vec3::new(0.0, 0.0, 1.0)));
+        }
+
+        #[test]
+        fn serde() {
+            let v = Vec3::new(1.0, 2.0, 3.0);
+            let serialized = serde_json::to_string(&v).unwrap();
+            assert_eq!(serialized, "[1.0,2.0,3.0]");
+            let deserialized: Vec3 = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(v, deserialized);
         }
     }
 }

@@ -464,6 +464,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastrand"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
+
+[[package]]
 name = "fdeflate"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1220,6 +1226,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
+name = "rayca-math"
+version = "0.1.0"
+dependencies = [
+ "fastrand",
+ "num-traits",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rayca-soft"
 version = "0.4.1"
 dependencies = [
@@ -1231,6 +1247,7 @@ dependencies = [
  "js-sys",
  "num-traits",
  "png",
+ "rayca-math",
  "rayca-util",
  "rayon",
  "wasm-bindgen",

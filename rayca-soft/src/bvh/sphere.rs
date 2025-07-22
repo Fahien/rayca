@@ -78,7 +78,7 @@ impl BvhSphere {
         };
 
         let point = ray.origin + ray.dir * t;
-        let hit = Hit::new(t, point, Vec2::default());
+        let hit = Hit::new(0, 0, t, point, Vec2::default());
 
         Some(hit)
     }

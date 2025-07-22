@@ -23,6 +23,7 @@ impl Sampler {
         let y = (y as u32) % image.height();
 
         match image.color_type {
+            ColorType::RGBA32F => image.get::<RGBA32F>(x, y).into(),
             ColorType::RGBA8 => image.get::<RGBA8>(x, y).into(),
             ColorType::RGB8 => {
                 let rgb8 = image.get::<RGB8>(x, y);

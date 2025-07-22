@@ -1,6 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["rayca-soft"]
+members = [
+    "rayca-soft",
+    "rayca-util",
+    "rayca-math"
+]
 
 [profile.dev.package."*"]
 opt-level = 3

@@ -144,7 +144,7 @@ impl BvhTriangle {
         }
 
         let uv = Vec2::new(u / denom, v / denom);
-        let hit = Hit::new(t, p, uv);
+        let hit = Hit::new(0, 0, t, p, uv);
         Some(hit) // This ray hits the triangle
     }
 }
