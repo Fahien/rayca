@@ -37,10 +37,9 @@ jobs:
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
         sudo chmod 666 /proc/kallsyms
+        mkdir rayca-soft/www/static
         CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --no-default-features \
-          --package rayca-soft --test test -- cube_over_plane
-        mkdir rayca-soft/www/dist
-        mv flamegraph.svg rayca-soft/www/dist/
+          --package rayca-soft --test test --output rayca-soft/www/static/flamegraph.svg -- cube_over_plane
 
     - name: Web
       run: |
@@ -57,5 +56,5 @@ jobs:
       if: github.ref == 'refs/heads/main'
       with:
         external_repository: fahien/rayca-web
-        personal_token: ${{ secrets.RAYCA_WEB }}
-        publish_dir: www/dist
+        deploy_key: ${{ secrets.RAYCA_WEB }}
+        publish_dir: rayca-soft/www/dist

@@ -32,16 +32,21 @@ macro_rules! rlog {
         log(&format!( $( $t )* ))
     }
 }
-
-fn get_canvas(id: &str) -> Result<CanvasRenderingContext2d, JsValue> {
+fn get_canvas(id: &str) -> Result<HtmlCanvasElement, JsValue> {
     let doc = window().unwrap().document().unwrap();
     let canvas = doc
         .get_element_by_id(id)
         .expect(&format!("Failed to get canvas: {}", id));
-    let canvas: HtmlCanvasElement = canvas.dyn_into::<HtmlCanvasElement>()?;
-    canvas.set_width(canvas.client_width() as u32);
-    canvas.set_height(canvas.client_height() as u32);
+    let canvas = canvas.dyn_into::<HtmlCanvasElement>()?;
+    Ok(canvas)
+}
 
+fn set_canvas_size(canvas: &HtmlCanvasElement, width: u32, height: u32) {
+    canvas.set_width(width);
+    canvas.set_height(height);
+}
+
+fn get_canvas_context(canvas: &HtmlCanvasElement) -> Result<CanvasRenderingContext2d, JsValue> {
     let canvas = canvas
         .get_context("2d")?
         .unwrap()
@@ -119,7 +124,7 @@ fn tweak_box_scene(model: &mut Model) {
 
 #[wasm_bindgen]
 pub struct Context {
-    canvas: CanvasRenderingContext2d,
+    canvas_context: CanvasRenderingContext2d,
     image: Image,
     scene: Scene,
     image_data: ImageData,
@@ -132,8 +137,10 @@ impl Context {
         //set_panic_hook();
 
         let canvas = get_canvas("area")?;
-
         const WIDTH: u32 = 128;
+        set_canvas_size(&canvas, WIDTH, WIDTH);
+        let canvas_context = get_canvas_context(&canvas)?;
+
         let mut image = Image::new(WIDTH, WIDTH, ColorType::RGBA8);
         image.clear(RGBA8::black());
 
@@ -147,10 +154,10 @@ impl Context {
         let data = Clamped(image.bytes());
 
         let image_data = ImageData::new_with_u8_clamped_array(data, WIDTH)?;
-        canvas.put_image_data(&image_data, 0.0, 0.0)?;
+        canvas_context.put_image_data(&image_data, 0.0, 0.0)?;
 
         Ok(Self {
-            canvas,
+            canvas_context,
             image,
             scene,
             image_data,
@@ -175,7 +182,7 @@ impl Context {
         self.image.clear(RGBA8::black());
         self.scene.draw(&mut self.image);
 
-        self.canvas.put_image_data(&self.image_data, 0.0, 0.0)?;
+        self.canvas_context.put_image_data(&self.image_data, 0.0, 0.0)?;
         Ok(())
     }
 }

@@ -4,7 +4,7 @@ const path = require('path');
 module.exports = {
   entry: "./bootstrap.js",
   experiments: {
-      asyncWebAssembly: true,
+    asyncWebAssembly: true,
   },
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -13,7 +13,11 @@ module.exports = {
   mode: "development",
   plugins: [
     new CopyWebpackPlugin({
-      patterns: ['index.html']
+      patterns: [
+        'index.html',
+        'CNAME',
+        { from: 'static', to: 'static' },
+      ]
     })
   ],
 };
