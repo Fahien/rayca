@@ -93,7 +93,7 @@ impl Primitive {
     pub fn new(geometry: Geometry) -> Self {
         Self {
             geometry,
-            material: Handle::none(),
+            material: Handle::NONE,
         }
     }
 

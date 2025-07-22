@@ -143,12 +143,14 @@ impl Image {
     /// Opens a PNG file without loading data yet
     pub fn load_png_file<P: AsRef<Path>>(path: P) -> Image {
         let current_dir = std::env::current_dir().expect("Failed to get current dir");
-        let err_msg = fail!(
-            "to load PNG file: {}/{}",
-            current_dir.display(),
-            path.as_ref().display()
-        );
-        let file = File::open(path.as_ref()).expect(&err_msg);
+        let Ok(file) = File::open(path.as_ref()) else {
+            log::error!(
+                "Failed to load PNG file: {}/{}",
+                current_dir.display(),
+                path.as_ref().display()
+            );
+            panic!();
+        };
 
         let mut decoder = png::Decoder::new(file);
         decoder.set_transformations(Transformations::normalize_to_color8());
@@ -164,17 +166,22 @@ impl Image {
         };
 
         let mut ret = Self::new(info.width, info.height, color_type);
-        let err_msg = format!(
-            "Failed to read frame from PNG file: {}/{}",
-            current_dir.display(),
-            path.as_ref().display()
-        );
-        reader.next_frame(ret.bytes_mut()).expect(&err_msg);
+        if reader.next_frame(ret.bytes_mut()).is_err() {
+            log::error!(
+                "Failed to read frame from PNG file: {}/{}",
+                current_dir.display(),
+                path.as_ref().display()
+            );
+            panic!();
+        }
         ret
     }
 
     pub fn dump_png<P: AsRef<Path>>(&self, path: P) {
-        let file = File::create(path).expect(&fail!("to create PNG file"));
+        let Ok(file) = File::create(path.as_ref()) else {
+            log::error!("Failed to create PNG file: {}", path.as_ref().display());
+            panic!();
+        };
         let w = BufWriter::new(file);
 
         let mut encoder = png::Encoder::new(w, self.width, self.height);
@@ -282,6 +289,7 @@ mod test {
         let duck_data = base64::decode(DUCK_BASE64).expect("Failed to decode duck base64");
         let image = Image::load_png_data(&duck_data);
         image.dump_png(get_artifacts_path().join("duck-texture.png"));
-        rlog!("{:?}", image.data::<RGB8>()[0]);
+        logging::init();
+        log::info!("{:?}", image.data::<RGB8>()[0]);
     }
 }

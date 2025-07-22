@@ -66,14 +66,13 @@ impl Hit {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn rotate() {
         let mut ray = Ray::default();
         let rot = Quat::new(-0.383, 0.0, 0.0, 0.924);
         ray.rotate(&rot);
-        println!("{:?}", ray.dir);
         assert!(ray.dir.close(&Vec3::new(0.0, -0.707, -0.707)));
     }
 }

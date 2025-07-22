@@ -161,7 +161,7 @@ impl BvhNode {
     ) {
         let mut timer = Timer::new();
         self.set_primitives_recursive(model, primitives_range, primitives, max_depth, 0, nodes);
-        print_success!("BVH", "built in {:.2}ms", timer.get_delta().as_millis());
+        log::info!("BVH built in {:.2}ms", timer.get_delta().as_millis());
     }
 
     /// Surface Area Heuristics:
@@ -529,8 +529,8 @@ mod test {
 
         let bvh = Bvh::builder().primitives(primitives).build(&model);
         assert!(bvh.nodes.is_empty());
-        assert!(!bvh.root.left.valid());
-        assert!(!bvh.root.right.valid());
+        assert!(!bvh.root.left.is_valid());
+        assert!(!bvh.root.right.is_valid());
         assert!(!bvh.root.primitives.is_empty());
     }
 
@@ -561,8 +561,8 @@ mod test {
 
         let bvh = Bvh::builder().primitives(primitives).build(&model);
         assert!(!bvh.nodes.is_empty());
-        assert!(bvh.root.left.valid());
-        assert!(bvh.root.right.valid());
+        assert!(bvh.root.left.is_valid());
+        assert!(bvh.root.right.is_valid());
         assert!(bvh.root.primitives.is_empty());
     }
 }

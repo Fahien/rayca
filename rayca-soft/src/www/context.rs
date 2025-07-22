@@ -16,22 +16,6 @@ pub fn set_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    pub fn log(s: &str);
-}
-
-// Wrap web-sys console log function in a println! style macro
-#[cfg(target_arch = "wasm32")]
-#[macro_export]
-macro_rules! rlog {
-    ( $( $t:tt )* ) => {
-        log(&format!( $( $t )* ))
-    }
-}
 fn get_canvas(id: &str) -> Result<HtmlCanvasElement, JsValue> {
     let doc = window().unwrap().document().unwrap();
     let canvas = doc
@@ -135,6 +119,7 @@ pub struct Context {
 impl Context {
     pub async fn new() -> Result<Context, JsValue> {
         //set_panic_hook();
+        logging::init();
 
         let canvas = get_canvas("area")?;
         const WIDTH: u32 = 128;
@@ -182,7 +167,8 @@ impl Context {
         self.image.clear(RGBA8::black());
         self.scene.draw(&mut self.image);
 
-        self.canvas_context.put_image_data(&self.image_data, 0.0, 0.0)?;
+        self.canvas_context
+            .put_image_data(&self.image_data, 0.0, 0.0)?;
         Ok(())
     }
 }

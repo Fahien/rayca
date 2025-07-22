@@ -4,8 +4,6 @@
 
 use std::{error::Error, path::Path};
 
-use owo_colors::OwoColorize;
-
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
@@ -83,9 +81,8 @@ impl Scene {
         let model = Model::builder().path(path)?.build()?;
         self.model.append(model);
 
-        print_info!(
-            "Loaded",
-            "{} in {:.2}ms",
+        log::info!(
+            "Loaded {} in {:.2}ms",
             path_str,
             timer.get_delta().as_millis()
         );
@@ -162,18 +159,12 @@ impl Draw for Scene {
             });
         });
 
-        rlog!(
-            "{:>12} in {:.2}ms",
-            "Rendered".green().bold(),
-            timer.get_delta().as_millis()
-        );
+        log::info!("Rendered in {:.2}ms", timer.get_delta().as_millis());
     }
 }
 
 #[cfg(test)]
 mod test {
-    use owo_colors::{OwoColorize, Stream::Stdout};
-
     use super::*;
 
     #[test]
@@ -182,16 +173,10 @@ mod test {
         assert!(scene.load("test").is_err());
 
         let path = "tests/model/box/box.gltf";
-        match scene.load(path) {
-            Ok(_) => (),
-            Err(err) => {
-                panic!(
-                    "{}: Failed to load \"{}\": {}",
-                    "ERROR".if_supports_color(Stdout, |text| text.red()),
-                    path,
-                    err
-                );
-            }
+        if let Err(e) = scene.load(path) {
+            logging::init();
+            log::error!("Failed to load `{}`: {}", path, e);
+            panic!();
         };
     }
 }

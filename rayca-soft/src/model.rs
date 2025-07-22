@@ -127,9 +127,8 @@ impl ModelBuilder {
 
         vec.sort_by_key(|image| image.id);
 
-        print_info!(
-            "Loaded",
-            "images from file in {:.2}s",
+        log::info!(
+            "Loaded images from file in {:.2}s",
             timer.get_delta().as_secs_f32()
         );
 
@@ -145,8 +144,8 @@ impl ModelBuilder {
         let vec: Vec<Texture> = gltf
             .textures()
             .map(|gtexture| {
-                let image = Handle::new(gtexture.source().index());
-                let sampler = Handle::none();
+                let image = Handle::from(gtexture.source().index());
+                let sampler = Handle::NONE;
                 Texture::new(image, sampler)
             })
             .collect();
@@ -269,19 +268,19 @@ impl ModelBuilder {
 
             // Load albedo
             if let Some(gtexture) = pbr.base_color_texture() {
-                material.albedo_texture = Handle::new(gtexture.texture().index());
+                material.albedo_texture = Handle::from(gtexture.texture().index());
             }
 
             // Load normal
             if let Some(gtexture) = gmaterial.normal_texture() {
-                material.normal_texture = Handle::new(gtexture.texture().index());
+                material.normal_texture = Handle::from(gtexture.texture().index());
             }
 
             // Load metallic roughness factors and texture
             material.metallic_factor = pbr.metallic_factor();
             material.roughness_factor = pbr.roughness_factor();
             if let Some(gtexture) = pbr.metallic_roughness_texture() {
-                material.metallic_roughness_texture = Handle::new(gtexture.texture().index());
+                material.metallic_roughness_texture = Handle::from(gtexture.texture().index());
             }
 
             materials.push(material);
@@ -310,7 +309,7 @@ impl ModelBuilder {
                 gltf::mesh::Semantic::Colors(_) => self.load_colors(&mut vertices, &accessor)?,
                 gltf::mesh::Semantic::Normals => (), // Already loaded
                 gltf::mesh::Semantic::Tangents => self.load_tangents(&mut vertices, &accessor)?,
-                _ => print_warning!("Skipping", "semantic: {:?}", semantic),
+                _ => log::warn!("Skipping semantic: {:?}", semantic),
             }
         }
 
@@ -348,7 +347,7 @@ impl ModelBuilder {
         let material = gprimitive
             .material()
             .index()
-            .map_or(Handle::none(), Handle::new);
+            .map_or(Handle::NONE, Handle::from);
 
         let primitive = Primitive::builder()
             .vertices(vertices)
@@ -507,7 +506,7 @@ impl ModelBuilder {
             .children(
                 scene
                     .nodes()
-                    .map(|gchild| Handle::new(gchild.index()))
+                    .map(|gchild| Handle::from(gchild.index()))
                     .collect(),
             )
             .build()
@@ -531,7 +530,7 @@ impl ModelBuilder {
             .children(
                 gnode
                     .children()
-                    .map(|gchild| Handle::new(gchild.index()))
+                    .map(|gchild| Handle::from(gchild.index()))
                     .collect(),
             )
             .translation(translation)
@@ -539,11 +538,11 @@ impl ModelBuilder {
             .scale(scale);
 
         if let Some(mesh) = gnode.mesh() {
-            node_builder = node_builder.mesh(Handle::new(mesh.index()));
+            node_builder = node_builder.mesh(Handle::from(mesh.index()));
         }
 
         if let Some(camera) = gnode.camera() {
-            node_builder = node_builder.camera(Handle::new(camera.index()));
+            node_builder = node_builder.camera(Handle::from(camera.index()));
         }
 
         node_builder.build()
@@ -658,7 +657,7 @@ impl Model {
         let light_offset = self.lights.append(&mut model.lights);
         let camera_offset = self.cameras.append(&mut model.cameras);
         let mesh_offset = self.meshes.append(&mut model.meshes);
-        let node_offset = self.nodes.len();
+        let node_offset = self.nodes.len() as u32;
         // Update mesh and node handles
         for node in model.nodes.iter_mut() {
             node.light.offset(light_offset);
@@ -718,12 +717,12 @@ impl Model {
             }
 
             // Collect cameras
-            if node.camera.valid() {
+            if node.camera.is_valid() {
                 self.camera_nodes.push(*node_handle);
             }
 
             // Collect light nodes
-            if node.light.valid() {
+            if node.light.is_valid() {
                 self.light_nodes.push(*node_handle);
             }
         }
