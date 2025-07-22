@@ -6,6 +6,7 @@ pub mod asset;
 pub mod bytes;
 pub mod logging;
 pub mod pack;
+pub mod tests;
 pub mod timer;
 
 pub use asset::*;

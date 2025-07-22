@@ -17,7 +17,6 @@ pub mod model;
 pub mod node;
 pub mod sampler;
 pub mod scene;
-pub mod test;
 pub mod texture;
 #[cfg(target_arch = "wasm32")]
 pub mod www;
@@ -35,7 +34,6 @@ pub use model::*;
 pub use node::*;
 pub use sampler::*;
 pub use scene::*;
-pub use test::*;
 pub use texture::*;
 #[cfg(target_arch = "wasm32")]
 pub use www::*;

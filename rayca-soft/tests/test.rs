@@ -4,11 +4,6 @@
 
 use rayca_soft::*;
 
-fn get_model_path() -> std::path::PathBuf {
-    let cargo_dir = env!("CARGO_MANIFEST_DIR");
-    std::path::Path::new(cargo_dir).join("tests/model")
-}
-
 #[test]
 fn sphere() {
     let mut image = Image::new(256, 256, ColorType::RGBA8);
@@ -30,7 +25,7 @@ fn sphere() {
     scene.push_default_model();
 
     scene.draw(&mut image);
-    image.dump_png(get_artifacts_path().join("sphere.png"));
+    image.dump_png(tests::get_artifact_path().join("sphere.png"));
 }
 
 #[test]
@@ -59,7 +54,7 @@ fn triangle() {
     scene.push_default_model();
 
     scene.draw(&mut image);
-    image.dump_png(get_artifacts_path().join("triangle.png"));
+    image.dump_png(tests::get_artifact_path().join("triangle.png"));
 }
 
 #[test]
@@ -67,7 +62,7 @@ fn cube_over_plane() {
     let mut image = Image::new(512, 512, ColorType::RGBA8);
     let mut scene = Scene::new();
 
-    let model_path = get_model_path();
+    let model_path = tests::get_model_path();
     scene.load(model_path.join("box/box.gltf")).unwrap();
     scene.load(model_path.join("box/box.gltf")).unwrap();
     scene.load(model_path.join("box/box.gltf")).unwrap();
@@ -123,7 +118,7 @@ fn cube_over_plane() {
     root3.trs.translation += shift;
 
     scene.draw(&mut image);
-    image.dump_png(get_artifacts_path().join("cube-over-plane.png"));
+    image.dump_png(tests::get_artifact_path().join("cube-over-plane.png"));
 }
 
 mod gltf {
@@ -134,11 +129,13 @@ mod gltf {
         let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
 
-        scene.load(get_model_path().join("box/box.gltf")).unwrap();
+        scene
+            .load(tests::get_model_path().join("box/box.gltf"))
+            .unwrap();
         scene.push_default_model();
 
         scene.draw(&mut image);
-        image.dump_png(get_artifacts_path().join("gltf-cube.png"));
+        image.dump_png(tests::get_artifact_path().join("gltf-cube.png"));
     }
 
     #[test]
@@ -146,12 +143,12 @@ mod gltf {
         let mut image = Image::new(128, 128, ColorType::RGBA8);
         let mut scene = Scene::new();
         scene
-            .load(get_model_path().join("triangle/triangle.gltf"))
+            .load(tests::get_model_path().join("triangle/triangle.gltf"))
             .unwrap();
         scene.push_default_model();
 
         scene.draw(&mut image);
-        image.dump_png(get_artifacts_path().join("gltf-triangle.png"));
+        image.dump_png(tests::get_artifact_path().join("gltf-triangle.png"));
     }
 
     #[test]
@@ -160,12 +157,12 @@ mod gltf {
         let mut scene = Scene::new();
 
         scene
-            .load(get_model_path().join("suzanne/suzanne.gltf"))
+            .load(tests::get_model_path().join("suzanne/suzanne.gltf"))
             .unwrap();
         scene.push_default_model();
 
         scene.draw(&mut image);
-        image.dump_png(get_artifacts_path().join("suzanne.png"));
+        image.dump_png(tests::get_artifact_path().join("suzanne.png"));
     }
 
     #[test]
@@ -173,14 +170,16 @@ mod gltf {
         let mut image = Image::new(512, 512, ColorType::RGBA8);
         let mut scene = Scene::new();
 
-        scene.load(get_model_path().join("duck/duck.gltf")).unwrap();
+        scene
+            .load(tests::get_model_path().join("duck/duck.gltf"))
+            .unwrap();
 
         // Custom camera
         add_camera(&mut scene.model, Vec3::new(0.1, 0.8, 2.2));
         scene.model.root.trs.scale *= 0.125;
 
         scene.draw(&mut image);
-        image.dump_png(get_artifacts_path().join("duck.png"));
+        image.dump_png(tests::get_artifact_path().join("duck.png"));
     }
 
     #[test]
@@ -188,10 +187,10 @@ mod gltf {
         let mut image = Image::new(256, 256, ColorType::RGBA8);
         let mut scene = Scene::new();
         scene
-            .load(get_model_path().join("cameras/cameras.gltf"))
+            .load(tests::get_model_path().join("cameras/cameras.gltf"))
             .unwrap();
         scene.draw(&mut image);
-        image.dump_png(get_artifacts_path().join("cameras.png"));
+        image.dump_png(tests::get_artifact_path().join("cameras.png"));
     }
 
     /// Add a custom camera
@@ -210,12 +209,12 @@ mod gltf {
         let mut image = Image::new(512, 512, ColorType::RGBA8);
         let mut scene = Scene::new();
         scene
-            .load(get_model_path().join("orientation/OrientationTest.gltf"))
+            .load(tests::get_model_path().join("orientation/OrientationTest.gltf"))
             .unwrap();
         add_camera(&mut scene.model, Vec3::new(0.0, 0.0, 20.0));
 
         scene.draw(&mut image);
-        image.dump_png(get_artifacts_path().join("orientation.png"));
+        image.dump_png(tests::get_artifact_path().join("orientation.png"));
     }
 
     #[test]
@@ -224,13 +223,13 @@ mod gltf {
         let mut scene = Scene::new();
 
         scene
-            .load(get_model_path().join("flight-helmet/FlightHelmet.gltf"))
+            .load(tests::get_model_path().join("flight-helmet/FlightHelmet.gltf"))
             .unwrap();
 
         add_camera(&mut scene.model, Vec3::new(0.0, 0.32, 1.0));
 
         scene.draw(&mut image);
-        image.dump_png(get_artifacts_path().join("flight.png"));
+        image.dump_png(tests::get_artifact_path().join("flight.png"));
     }
 
     #[test]
@@ -239,7 +238,7 @@ mod gltf {
         let mut scene = Scene::new();
 
         scene
-            .load(get_model_path().join("sponza/sponza.gltf"))
+            .load(tests::get_model_path().join("sponza/sponza.gltf"))
             .unwrap();
 
         // Custom camera
@@ -255,6 +254,6 @@ mod gltf {
         scene.model.root.children.push(camera_node_handle);
 
         scene.draw(&mut image);
-        image.dump_png(get_artifacts_path().join("sponza.png"));
+        image.dump_png(tests::get_artifact_path().join("sponza.png"));
     }
 }

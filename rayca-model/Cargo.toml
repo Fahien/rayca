@@ -1,0 +1,16 @@
+[package]
+name = "rayca-model"
+version = "0.1.0"
+edition = "2024"
+authors = ["Antonio Caggiano <info@antoniocaggiano.eu>"]
+license = "MIT"
+
+[dependencies]
+rayca-math = { path = "../rayca-math" }
+rayca-util = { path = "../rayca-util" }
+rayca-geometry = { path = "../rayca-geometry" }
+gltf = "1.4.*"
+base64 = "0.22.1"
+serde_json = "1.0.*"
+serde = { version = "1.0.*", features = [ "serde_derive" ] }
+bon = "3.6.*"

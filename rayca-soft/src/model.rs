@@ -737,11 +737,8 @@ mod test {
 
     #[test]
     fn load() {
-        let model = Model::builder()
-            .path("tests/model/suzanne/suzanne.gltf")
-            .unwrap()
-            .build()
-            .unwrap();
+        let path = tests::get_model_path().join("suzanne/suzanne.gltf");
+        let model = Model::builder().path(path).unwrap().build().unwrap();
 
         assert!(model.images.len() == 2);
     }

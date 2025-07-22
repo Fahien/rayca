@@ -172,11 +172,9 @@ mod test {
         let mut scene = Scene::new();
         assert!(scene.load("test").is_err());
 
-        let path = "tests/model/box/box.gltf";
-        if let Err(e) = scene.load(path) {
-            logging::init();
-            log::error!("Failed to load `{}`: {}", path, e);
-            panic!();
+        let path = tests::get_model_path().join("box/box.gltf");
+        if let Err(e) = scene.load(&path) {
+            panic!("Failed to load `{}`: {}", path.display(), e);
         };
     }
 }

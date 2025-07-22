@@ -3,7 +3,9 @@ resolver = "3"
 members = [
     "rayca-soft",
     "rayca-util",
-    "rayca-math"
+    "rayca-math",
+    "rayca-geometry",
+    "rayca-model",
 ]
 
 [profile.dev.package."*"]

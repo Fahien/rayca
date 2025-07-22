@@ -49,7 +49,7 @@ jobs:
         cd www
         npm install
         npm run build
-        cp ../target/artifacts/*.png dist
+        cp ../../tests/artifact/*.png dist
 
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v4

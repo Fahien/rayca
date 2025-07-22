@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, io, path::Path};
 
 pub struct Asset {
     data: Vec<u8>,
@@ -13,7 +13,7 @@ impl Asset {
     pub fn load<P: AsRef<Path>>(
         android_app: &winit::platform::android::activity::AndroidApp,
         path: P,
-    ) -> Self {
+    ) -> io::Result<Self> {
         use std::str::FromStr;
         let str_path = path
             .as_ref()
@@ -29,15 +29,13 @@ impl Asset {
 
         let data = asset.buffer().expect("Failed to read asset data").to_vec();
 
-        Self { data }
+        Ok(Self { data })
     }
 
     #[cfg(not(target_os = "android"))]
-    pub fn load<P: AsRef<Path>>(path: P) -> Self {
-        let path = path.as_ref();
-        let msg = format!("Failed to read asset file: {}", path.display());
-        let data = std::fs::read(path).expect(&msg);
-        Self { data }
+    pub fn load<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+        let data = std::fs::read(path)?;
+        Ok(Self { data })
     }
 
     pub fn get_bytes(&self) -> &[u8] {
@@ -64,8 +62,8 @@ impl std::ops::Deref for Asset {
     }
 }
 
-impl std::io::Read for Asset {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+impl io::Read for Asset {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.data.as_slice().read(buf)
     }
 }
@@ -86,11 +84,17 @@ impl Assets {
         Self {}
     }
 
-    pub fn load<P: AsRef<Path>>(&self, path: P) -> Asset {
-        Asset::load(
+    pub fn load<P: AsRef<Path>>(&self, path: P) -> io::Result<Asset> {
+        match Asset::load(
             #[cfg(target_os = "android")]
             &self.android_app,
-            path,
-        )
+            &path,
+        ) {
+            Ok(asset) => Ok(asset),
+            Err(e) => {
+                log::error!("Failed to load asset `{}`: {}", path.as_ref().display(), e);
+                Err(e)
+            }
+        }
     }
 }
