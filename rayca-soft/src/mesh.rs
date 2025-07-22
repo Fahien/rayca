@@ -1,4 +1,4 @@
-// Copyright © 2022
+// Copyright © 2022-2025
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -20,33 +20,33 @@ impl PrimitiveBuilder {
 
     pub fn vertices(mut self, vertices: Vec<Vertex>) -> Self {
         match &mut self.geometry {
-            Geometry::Triangles(triangles) => {
+            Geometry::TriangleMesh(triangles) => {
                 triangles.vertices = vertices;
             }
-            _ => self.geometry = Geometry::Triangles(Triangles::new(vertices, vec![])),
+            _ => self.geometry = Geometry::TriangleMesh(TriangleMesh::new(vertices, vec![])),
         }
         self
     }
 
     pub fn indices(mut self, indices: Vec<u8>) -> Self {
         match &mut self.geometry {
-            Geometry::Triangles(triangles) => {
+            Geometry::TriangleMesh(triangles) => {
                 triangles.indices = indices;
             }
-            _ => self.geometry = Geometry::Triangles(Triangles::new(vec![], indices)),
+            _ => self.geometry = Geometry::TriangleMesh(TriangleMesh::new(vec![], indices)),
         }
         self
     }
 
     pub fn index_size(mut self, index_size_in_bytes: usize) -> Self {
         match &mut self.geometry {
-            Geometry::Triangles(triangles) => {
+            Geometry::TriangleMesh(triangles) => {
                 triangles.index_size_in_bytes = index_size_in_bytes;
             }
             _ => {
-                let mut triangle = Triangles::new(vec![], vec![]);
+                let mut triangle = TriangleMesh::new(vec![], vec![]);
                 triangle.index_size_in_bytes = index_size_in_bytes;
-                self.geometry = Geometry::Triangles(triangle);
+                self.geometry = Geometry::TriangleMesh(triangle);
             }
         }
         self
@@ -54,7 +54,7 @@ impl PrimitiveBuilder {
     pub fn sphere(mut self, center: Point3, radius: f32) -> Self {
         match &mut self.geometry {
             Geometry::Sphere(sphere) => {
-                sphere.center = center;
+                sphere.set_center(center);
                 sphere.set_radius(radius);
             }
             _ => {
@@ -100,9 +100,15 @@ impl Primitive {
     pub fn unit_triangle() -> Self {
         Self::builder()
             .vertices(vec![
-                Vertex::new(-1.0, 0.0, 0.0),
-                Vertex::new(1.0, 0.0, 0.0),
-                Vertex::new(0.0, 1.0, 0.0),
+                Vertex::builder()
+                    .position(Point3::new(-1.0, 0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(1.0, 0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.0, 1.0, 0.0))
+                    .build(),
             ])
             .indices(vec![0, 1, 2])
             .build()
@@ -119,8 +125,10 @@ impl Primitive {
         model: &Model,
     ) -> Vec<BvhPrimitive> {
         match &self.geometry {
-            Geometry::Triangles(triangles) => triangles.primitives(node, material, model),
-            Geometry::Sphere(sphere) => sphere.primitives(node, material),
+            Geometry::TriangleMesh(triangles) => {
+                BvhPrimitive::from_triangle_mesh(triangles, node, material, model)
+            }
+            Geometry::Sphere(sphere) => BvhPrimitive::from_sphere(node, material, sphere),
         }
     }
 }

@@ -541,9 +541,15 @@ mod test {
         let left_triangle_prim = model.primitives.push(
             Primitive::builder()
                 .vertices(vec![
-                    Vertex::new(-4.0, 0.0, 0.0),
-                    Vertex::new(-2.0, 0.0, 0.0),
-                    Vertex::new(-3.0, 0.3, 0.0),
+                    Vertex::builder()
+                        .position(Point3::new(-4.0, 0.0, 0.0))
+                        .build(),
+                    Vertex::builder()
+                        .position(Point3::new(-2.0, 0.0, 0.0))
+                        .build(),
+                    Vertex::builder()
+                        .position(Point3::new(-3.0, 0.3, 0.0))
+                        .build(),
                 ])
                 .indices(vec![0, 1, 2])
                 .build(),

@@ -2,10 +2,12 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use num_traits::NumCast;
+
 use crate::*;
 
 pub enum BvhGeometry {
-    Triangle(Box<BvhTriangle>),
+    Triangle(BvhTriangle),
     Sphere(BvhSphere),
 }
 
@@ -178,5 +180,98 @@ impl BvhPrimitive {
     /// Calculates the light coming out towards the viewer at a certain intersection
     pub fn get_radiance(&self, model: &Model, ir: &Irradiance) -> Color {
         self.get_material(model).get_radiance(ir, model)
+    }
+
+    fn from_triangle_mesh_impl<'m, Index: NumCast>(
+        triangles: &TriangleMesh,
+        node: Handle<Node>,
+        material: Handle<Material>,
+        model: &'m Model,
+        indices: &[Index],
+    ) -> Vec<BvhPrimitive> {
+        let mut ret = vec![];
+
+        let trs = model.solved_trs.get(&node).unwrap();
+        let tangent_matrix = Mat3::from(&trs.trs);
+
+        let inverse_trs = Inversed::from(&trs.trs);
+        let normal_matrix = Mat3::from(&inverse_trs).get_transpose();
+
+        for i in 0..(indices.len() / 3) {
+            let mut a = triangles.vertices[indices[i * 3].to_usize().unwrap()].clone();
+            a.pos = &trs.trs * a.pos;
+            a.ext.normal = &normal_matrix * a.ext.normal;
+            a.ext.tangent = &tangent_matrix * a.ext.tangent;
+            a.ext.bitangent = &tangent_matrix * a.ext.bitangent;
+
+            let mut b = triangles.vertices[indices[i * 3 + 1].to_usize().unwrap()].clone();
+            b.pos = &trs.trs * b.pos;
+            b.ext.normal = &normal_matrix * b.ext.normal;
+            b.ext.tangent = &tangent_matrix * b.ext.tangent;
+            b.ext.bitangent = &tangent_matrix * b.ext.bitangent;
+
+            let mut c = triangles.vertices[indices[i * 3 + 2].to_usize().unwrap()].clone();
+            c.pos = &trs.trs * c.pos;
+            c.ext.normal = &normal_matrix * c.ext.normal;
+            c.ext.tangent = &tangent_matrix * c.ext.tangent;
+            c.ext.bitangent = &tangent_matrix * c.ext.bitangent;
+
+            let triangle = BvhTriangle::new(a, b, c);
+            let geometry = BvhGeometry::Triangle(triangle);
+            let primitive = BvhPrimitive::new(geometry, node, material);
+            ret.push(primitive)
+        }
+
+        ret
+    }
+
+    pub fn from_triangle_mesh(
+        triangles: &TriangleMesh,
+        node: Handle<Node>,
+        material: Handle<Material>,
+        model: &Model,
+    ) -> Vec<BvhPrimitive> {
+        let indices_len = triangles.indices.len() / triangles.index_size_in_bytes;
+
+        match triangles.index_size_in_bytes {
+            1 => {
+                Self::from_triangle_mesh_impl(triangles, node, material, model, &triangles.indices)
+            }
+            2 => {
+                let indices = unsafe {
+                    std::slice::from_raw_parts(
+                        triangles.indices.as_ptr() as *const u16,
+                        indices_len,
+                    )
+                };
+
+                Self::from_triangle_mesh_impl(triangles, node, material, model, indices)
+            }
+            4 => {
+                let indices = unsafe {
+                    std::slice::from_raw_parts(
+                        triangles.indices.as_ptr() as *const u32,
+                        indices_len,
+                    )
+                };
+
+                Self::from_triangle_mesh_impl(triangles, node, material, model, indices)
+            }
+            _ => panic!("Index size not supported"),
+        }
+    }
+
+    pub fn from_sphere(
+        node: Handle<Node>,
+        material: Handle<Material>,
+        sphere: &Sphere,
+    ) -> Vec<Self> {
+        // Transforming a sphere is complicated. The trick is to store transform with sphere,
+        // then pre-transform the ray, and post-transform the intersection point.
+        let sphere = BvhSphere::new(sphere.get_model_center(), sphere.get_radius());
+        let geometry = BvhGeometry::Sphere(sphere);
+        let primitive = BvhPrimitive::new(geometry, node, material);
+
+        vec![primitive]
     }
 }

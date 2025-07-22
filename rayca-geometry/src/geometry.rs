@@ -2,22 +2,16 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-pub mod sphere;
-pub mod triangles;
-pub mod vertex;
-
-pub use sphere::*;
-pub use triangles::*;
-pub use vertex::*;
+use crate::*;
 
 #[derive(Debug, Clone)]
 pub enum Geometry {
-    Triangles(Triangles),
+    TriangleMesh(TriangleMesh),
     Sphere(Sphere),
 }
 
 impl Default for Geometry {
     fn default() -> Self {
-        Self::Triangles(Triangles::default())
+        Self::TriangleMesh(TriangleMesh::default())
     }
 }

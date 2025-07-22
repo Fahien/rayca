@@ -8,7 +8,6 @@ pub mod bvh;
 pub mod camera;
 pub mod config;
 pub mod draw;
-pub mod geometry;
 pub mod image;
 pub mod integrator;
 pub mod light;
@@ -27,7 +26,6 @@ pub use bvh::*;
 pub use camera::*;
 pub use config::*;
 pub use draw::*;
-pub use geometry::*;
 pub use image::*;
 pub use integrator::*;
 pub use light::*;
@@ -42,5 +40,5 @@ pub use texture::*;
 #[cfg(target_arch = "wasm32")]
 pub use www::*;
 
-pub use rayca_math::*;
+pub use rayca_geometry::*;
 pub use rayca_util::*;

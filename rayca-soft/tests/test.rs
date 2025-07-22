@@ -40,7 +40,7 @@ fn triangle() {
 
     let mut model = Model::new();
     let mut prim = Primitive::unit_triangle();
-    if let Geometry::Triangles(triangle) = &mut prim.geometry {
+    if let Geometry::TriangleMesh(triangle) = &mut prim.geometry {
         triangle.vertices[0].ext.color = Color::from(0xFF0000FF);
         triangle.vertices[1].ext.color = Color::from(0x00FF00FF);
         triangle.vertices[2].ext.color = Color::from(0x0000FFFF);

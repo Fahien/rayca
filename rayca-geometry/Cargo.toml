@@ -1,0 +1,11 @@
+[package]
+name = "rayca-geometry"
+version = "0.1.0"
+edition = "2024"
+authors = ["Antonio Caggiano <info@antoniocaggiano.eu>"]
+description = "Geometry library"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+rayca-math = { path = "../rayca-math" }

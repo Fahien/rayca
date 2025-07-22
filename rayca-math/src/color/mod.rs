@@ -143,12 +143,7 @@ impl Color {
     }
 
     pub fn random() -> Self {
-        Color::new(
-            fastrand::f32(),
-            fastrand::f32(),
-            fastrand::f32(),
-            1.0,
-        )
+        Color::new(fastrand::f32(), fastrand::f32(), fastrand::f32(), 1.0)
     }
 
     pub fn black() -> Self {
