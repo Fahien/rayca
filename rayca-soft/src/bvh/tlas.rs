@@ -196,14 +196,14 @@ impl BlasNode {
 
 pub struct TlasBuilder {
     scene: BvhScene,
-    max_depth: usize,
+    max_depth: u8,
 }
 
 impl Default for TlasBuilder {
     fn default() -> Self {
         Self {
             scene: BvhScene::default(),
-            max_depth: usize::MAX,
+            max_depth: u8::MAX,
         }
     }
 }
@@ -214,7 +214,7 @@ impl TlasBuilder {
         self
     }
 
-    pub fn max_depth(mut self, max_depth: usize) -> Self {
+    pub fn max_depth(mut self, max_depth: u8) -> Self {
         self.max_depth = max_depth;
         self
     }
@@ -245,7 +245,7 @@ impl Tlas {
         TlasBuilder::default()
     }
 
-    pub fn new(scene_draw_info: &SceneDrawInfo, scene: BvhScene, max_depth: usize) -> Self {
+    pub fn new(scene_draw_info: &SceneDrawInfo, scene: BvhScene, max_depth: u8) -> Self {
         let mut ret = Self::default();
 
         let model_count = scene.models.len();

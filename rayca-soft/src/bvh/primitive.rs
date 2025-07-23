@@ -68,24 +68,24 @@ impl BvhPrimitive {
         }
     }
 
-    pub fn centroid(&self, scene_draw_info: &SceneDrawInfo) -> Point3 {
-        let trs = scene_draw_info.get_world_trs(self.node);
+    pub fn get_centroid(&self, scene: &SceneDrawInfo) -> Point3 {
+        let trs = scene.get_world_trs(self.node);
         match &self.geometry {
             BvhGeometry::Triangle(triangle) => triangle.get_centroid(trs).into(),
             BvhGeometry::Sphere(sphere) => sphere.get_center(trs),
         }
     }
 
-    pub fn min(&self, model: &SceneDrawInfo) -> Point3 {
-        let trs = model.get_world_trs(self.node);
+    pub fn min(&self, scene: &SceneDrawInfo) -> Point3 {
+        let trs = scene.get_world_trs(self.node);
         match &self.geometry {
             BvhGeometry::Triangle(triangle) => triangle.min(trs),
             BvhGeometry::Sphere(sphere) => sphere.min(trs),
         }
     }
 
-    pub fn max(&self, model: &SceneDrawInfo) -> Point3 {
-        let trs = model.get_world_trs(self.node);
+    pub fn max(&self, scene: &SceneDrawInfo) -> Point3 {
+        let trs = scene.get_world_trs(self.node);
         match &self.geometry {
             BvhGeometry::Triangle(triangle) => triangle.max(trs),
             BvhGeometry::Sphere(sphere) => sphere.max(trs),

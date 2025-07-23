@@ -6,7 +6,7 @@ use std::simd::{f32x4, num::SimdFloat};
 
 use crate::*;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct AABB {
     pub a: Point3,
     pub b: Point3,
@@ -42,6 +42,20 @@ impl AABB {
         self.grow(center + Vec3::new(0.0, radius, 0.0));
         self.grow(center + Vec3::new(0.0, 0.0, -radius));
         self.grow(center + Vec3::new(0.0, 0.0, radius));
+    }
+
+    pub fn grow_range(
+        &mut self,
+        blas: &Blas,
+        range: BvhRange<BvhPrimitive>,
+        scene: &SceneDrawInfo,
+    ) {
+        // Visits each primitive to find the lowest and highest x, y, and z
+        for i in range.to_range() {
+            let prim = &blas.model.primitives[i];
+            self.a = self.a.min(prim.min(scene));
+            self.b = self.b.max(prim.max(scene));
+        }
     }
 
     pub fn grow_primitive(&mut self, scene: &SceneDrawInfo, primitive: &BvhPrimitive) {

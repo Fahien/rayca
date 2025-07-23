@@ -1,73 +1,15 @@
-// Copyright © 2022-2024
+// Copyright © 2022-2025
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::{marker::PhantomData, ops::Range};
-
 use crate::*;
 
-#[derive(Clone, Copy)]
-pub struct BvhRange<T> {
-    pub offset: u32,
-    pub count: u32,
-    phantom: PhantomData<T>,
-}
-
-impl<T> Default for BvhRange<T> {
-    fn default() -> Self {
-        Self::new(0, 0)
-    }
-}
-
-impl<T> BvhRange<T> {
-    pub fn new(offset: u32, count: u32) -> Self {
-        Self {
-            offset,
-            count,
-            phantom: PhantomData,
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.count == 0
-    }
-
-    pub fn len(&self) -> usize {
-        self.count as usize
-    }
-
-    pub fn split_off(&mut self, offset: usize) -> Self {
-        let o = offset as u32;
-        let right_count = self.count - o;
-        self.count = o;
-        Self::new(self.offset + o, right_count)
-    }
-}
-
-impl<T> IntoIterator for BvhRange<T> {
-    type Item = usize;
-    type IntoIter = Range<usize>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.offset as usize..(self.offset as usize + self.count as usize)
-    }
-}
-
-impl<T> IntoIterator for &BvhRange<T> {
-    type Item = usize;
-    type IntoIter = Range<usize>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.offset as usize..(self.offset as usize + self.count as usize)
-    }
-}
-
+#[derive(Clone)]
+/// If the node has primitives it means it is a leaf.
+/// Left node index is `triangles.offset`, when the node has no primitives.
+/// Right node index is just `left_node_index + 1`.
 pub struct BvhNode {
     pub bounds: AABB,
-
-    /// Index of the left child node.
-    /// Right node index is just `left_node_index + 1`.
-    left_node_index: u32,
 
     primitives: BvhRange<BvhPrimitive>,
 }
@@ -76,73 +18,59 @@ impl Default for BvhNode {
     fn default() -> Self {
         Self {
             bounds: AABB::default(),
-            left_node_index: 1,
             primitives: BvhRange::default(),
         }
     }
 }
 
 impl BvhNode {
-    pub fn get_left_node_index(&self) -> usize {
-        self.left_node_index as usize
+    pub fn new(blas: &Blas, primitives: BvhRange<BvhPrimitive>, scene: &SceneDrawInfo) -> Self {
+        let mut bounds = AABB::new(
+            Point3::new(f32::MAX, f32::MAX, f32::MAX),
+            Point3::new(f32::MIN, f32::MIN, f32::MIN),
+        );
+
+        bounds.grow_range(blas, primitives, scene);
+
+        Self { bounds, primitives }
     }
 
-    pub fn get_right_node_index(&self) -> usize {
-        self.get_left_node_index() + 1
+    pub fn get_left_child_index(&self) -> usize {
+        assert!(!self.is_leaf());
+        self.primitives.offset as usize
     }
 
-    pub fn has_left_child(&self) -> bool {
-        self.left_node_index > 1
+    pub fn get_right_child_index(&self) -> usize {
+        self.get_left_child_index() + 1
     }
 
-    pub fn has_right_child(&self) -> bool {
-        self.get_right_node_index() > 2
+    pub fn set_left_child_index(&mut self, index: u32) {
+        self.primitives.offset = index;
+        self.primitives.count = 0;
     }
 
     pub fn is_leaf(&self) -> bool {
         // 1 is unused, so we use it as a marker for no children
-        self.left_node_index == 1
+        self.has_primitives()
     }
 
-    pub fn set_primitives(
-        &mut self,
-        scene_draw_info: &SceneDrawInfo,
-        primitives_range: BvhRange<BvhPrimitive>,
-        primitives: &mut [BvhPrimitive],
-        max_depth: usize,
-        nodes: &mut Vec<BvhNode>,
-    ) {
-        let mut timer = Timer::new();
-        self.set_primitives_recursive(
-            scene_draw_info,
-            primitives_range,
-            primitives,
-            max_depth,
-            0,
-            nodes,
-        );
-        log::info!("Blas built in {:.2}ms", timer.get_delta().as_millis());
+    pub fn has_primitives(&self) -> bool {
+        !self.primitives.is_empty()
     }
 
     /// Surface Area Heuristics:
     /// The cost of a split is proportional to the summed cost of intersecting the two
     /// resulting boxes, including the triangles they store.
-    fn evaluate_sah(
-        &self,
-        scene: &SceneDrawInfo,
-        axis: Axis3,
-        pos: f32,
-        primitives: &[BvhPrimitive],
-    ) -> f32 {
+    fn evaluate_sah(&self, blas: &Blas, axis: Axis3, pos: f32, scene: &SceneDrawInfo) -> f32 {
         // determine triangle counts and bounds for this split candidate
         let mut left_box = AABB::default();
         let mut right_box = AABB::default();
         let mut left_count = 0;
         let mut right_count = 0;
 
-        for pri_index in &self.primitives {
-            let pri = &primitives[pri_index];
-            let centroid = pri.centroid(scene);
+        for pri_index in self.primitives {
+            let pri = &blas.model.primitives[pri_index];
+            let centroid = pri.get_centroid(scene);
             if centroid[axis] < pos {
                 left_count += 1;
                 left_box.grow_primitive(scene, pri);
@@ -162,11 +90,7 @@ impl BvhNode {
 
     /// Finds the optimal split plane position and axis
     /// - Returns (split axis, split pos, split cost)
-    fn find_best_split_plane(
-        &self,
-        scene: &SceneDrawInfo,
-        primitives: &[BvhPrimitive],
-    ) -> (Axis3, f32, f32) {
+    fn find_best_split_plane(&self, blas: &Blas, scene: &SceneDrawInfo) -> (Axis3, f32, f32) {
         const ALL_AXIS: [Axis3; 3] = [Axis3::X, Axis3::Y, Axis3::Z];
 
         let mut best_cost = f32::MAX;
@@ -186,7 +110,7 @@ impl BvhNode {
 
             for i in 1..AREA_COUNT {
                 let candidate_pos = bounds_min + i as f32 * scale;
-                let cost = self.evaluate_sah(scene, axis, candidate_pos, primitives);
+                let cost = self.evaluate_sah(blas, axis, candidate_pos, scene);
                 if cost < best_cost {
                     best_cost = cost;
                     best_axis = axis;
@@ -200,90 +124,6 @@ impl BvhNode {
 
     fn calculate_cost(&self) -> f32 {
         self.primitives.len() as f32 * self.bounds.area()
-    }
-
-    fn set_primitives_recursive(
-        &mut self,
-        scene: &SceneDrawInfo,
-        primitives_range: BvhRange<BvhPrimitive>,
-        primitives: &mut [BvhPrimitive],
-        max_depth: usize,
-        level: usize,
-        nodes: &mut Vec<BvhNode>,
-    ) {
-        assert!(!primitives.is_empty());
-        self.primitives = primitives_range;
-
-        self.bounds.a = Point3::new(f32::MAX, f32::MAX, f32::MAX);
-        self.bounds.b = Point3::new(f32::MIN, f32::MIN, f32::MIN);
-
-        // Visit each vertex of the primitives to find the lowest and highest x, y, and z
-        for pri_index in &self.primitives {
-            let pri = &primitives[pri_index];
-            self.bounds.a = self.bounds.a.min(pri.min(scene));
-            self.bounds.b = self.bounds.b.max(pri.max(scene));
-        }
-
-        if level >= max_depth {
-            return;
-        }
-
-        // Surface Area Heuristics
-        let (split_axis, split_pos, split_cost) = self.find_best_split_plane(scene, primitives);
-
-        let no_split_cost = self.calculate_cost();
-        if split_cost > no_split_cost {
-            return;
-        }
-
-        // Partition-in-place to obtain two groups of triangles on both sides of the split plane
-        let mut i = 0;
-        let mut j = self.primitives.len();
-        while i < j {
-            let index = self.primitives.offset as usize + i;
-
-            let centroid = primitives[index].centroid(scene);
-            if centroid[split_axis] < split_pos {
-                i += 1;
-            } else {
-                let jndex = self.primitives.offset as usize + j;
-                primitives.swap(index, jndex - 1);
-                j -= 1;
-            }
-        }
-
-        // Create child nodes for each half
-        let left_count = i;
-        let right_count = self.primitives.len() - left_count;
-        if left_count > 0 && right_count > 0 {
-            let right_primitives = self.primitives.split_off(left_count);
-            let left_primitives = self.primitives.split_off(0);
-
-            // Create two nodes
-            let mut left_child = BvhNode::default();
-            left_child.set_primitives_recursive(
-                scene,
-                left_primitives,
-                primitives,
-                max_depth,
-                level + 1,
-                nodes,
-            );
-
-            let mut right_child = BvhNode::default();
-            right_child.set_primitives_recursive(
-                scene,
-                right_primitives,
-                primitives,
-                max_depth,
-                level + 1,
-                nodes,
-            );
-
-            self.left_node_index = nodes.len() as u32;
-            nodes.push(left_child);
-            nodes.push(right_child);
-        }
     }
 
     fn intersects<'b>(
@@ -316,7 +156,7 @@ impl BvhNode {
                 }
             }
         } else {
-            let left_node = &blas.nodes[self.get_left_node_index()];
+            let left_node = &blas.nodes[self.get_left_child_index()];
             if let Some((hit, pri)) = left_node.intersects(scene, ray, blas, triangle_count) {
                 if hit.depth < depth {
                     depth = hit.depth;
@@ -324,7 +164,7 @@ impl BvhNode {
                 }
             }
 
-            let right_node = &blas.nodes[self.get_right_node_index()];
+            let right_node = &blas.nodes[self.get_right_child_index()];
             if let Some((hit, pri)) = right_node.intersects(scene, ray, blas, triangle_count) {
                 if hit.depth < depth {
                     ret = Some((hit, pri));
@@ -338,7 +178,7 @@ impl BvhNode {
 
 pub struct BlasBuilder {
     model: BvhModel,
-    max_depth: usize,
+    max_depth: u8,
 }
 
 impl Default for BlasBuilder {
@@ -351,7 +191,7 @@ impl BlasBuilder {
     pub fn new() -> Self {
         Self {
             model: BvhModel::default(),
-            max_depth: usize::MAX,
+            max_depth: u8::MAX,
         }
     }
 
@@ -360,18 +200,20 @@ impl BlasBuilder {
         self
     }
 
-    pub fn max_depth(mut self, max_depth: usize) -> Self {
+    pub fn max_depth(mut self, max_depth: u8) -> Self {
         self.max_depth = max_depth;
         self
     }
 
     pub fn build(self, scene: &SceneDrawInfo) -> Blas {
-        Blas::new(scene, self.model, self.max_depth)
+        Blas::new(self.max_depth, scene, self.model)
     }
 }
 
 #[derive(Default)]
 pub struct Blas {
+    pub max_depth: u8,
+
     /// First node in the vector is root, second node is unused.
     pub nodes: Vec<BvhNode>,
     pub triangle_count: usize,
@@ -384,24 +226,93 @@ impl Blas {
         BlasBuilder::new()
     }
 
-    pub fn new(scene: &SceneDrawInfo, mut model: BvhModel, max_depth: usize) -> Self {
-        let mut nodes = Vec::new();
-        nodes.resize_with(2, BvhNode::default);
+    fn new(max_depth: u8, scene: &SceneDrawInfo, model: BvhModel) -> Self {
+        let mut timer = Timer::new();
 
-        let mut root = BvhNode::default();
-        root.bounds = AABB::new(
-            Point3::new(f32::MAX, f32::MAX, f32::MAX),
-            Point3::new(f32::MIN, f32::MIN, f32::MIN),
-        );
-        let range = BvhRange::new(0, model.primitives.len() as u32);
-        root.set_primitives(scene, range, &mut model.primitives, max_depth, &mut nodes);
-        nodes[0] = root;
-
-        Self {
-            nodes,
-            triangle_count: 0,
+        let mut ret = Self {
+            max_depth,
             model,
+            ..Default::default()
+        };
+
+        ret.set_primitives(scene);
+
+        log::debug!("Created BLAS in {:.2}s", timer.get_delta().as_secs_f32());
+
+        ret
+    }
+
+    pub fn set_primitives(&mut self, scene: &SceneDrawInfo) {
+        self.nodes.clear();
+
+        let primitive_range = BvhRange::new(0, self.model.primitives.len() as u32);
+
+        // Node at index 0 is root, at the beginning, it contains the whole scene
+        let root_node = BvhNode::new(self, primitive_range, scene);
+        self.nodes.push(root_node);
+
+        // Node at index 1 is unused
+        let dummy_node = BvhNode::default();
+        self.nodes.push(dummy_node);
+
+        self.set_primitives_recursive(0, 0, scene);
+    }
+
+    fn set_primitives_recursive(&mut self, node_index: usize, level: u8, scene: &SceneDrawInfo) {
+        if level >= self.max_depth {
+            return;
         }
+
+        // Clone node to store in self.nodes[node_index] later again
+        let mut node = self.nodes[node_index].clone();
+        assert!(node.has_primitives());
+
+        // Surface Area Heuristics
+        let (split_axis, split_pos, split_cost) = node.find_best_split_plane(self, scene);
+
+        let no_split_cost = node.calculate_cost();
+        if split_cost > no_split_cost {
+            return;
+        }
+
+        // Partition-in-place to obtain two groups of triangles on both sides of the split plane
+        let mut i_tri = node.primitives.get_start();
+        let mut j_tri = node.primitives.get_end();
+        while i_tri < j_tri {
+            let centroid = &self.model.primitives[i_tri].get_centroid(scene);
+            if centroid[split_axis] < split_pos {
+                i_tri += 1;
+            } else {
+                self.model.primitives.swap(i_tri, j_tri - 1);
+                j_tri -= 1;
+            }
+        }
+
+        // Create child nodes for each half
+        let tri_left_count = i_tri as u32 - node.primitives.offset;
+        let tri_right_count = node.primitives.count - tri_left_count;
+
+        if tri_left_count > 0 && tri_right_count > 0 {
+            let left_primitives = BvhRange::new(node.primitives.offset, tri_left_count);
+            let right_primitives =
+                BvhRange::new(node.primitives.offset + tri_left_count, tri_right_count);
+
+            // This node is not a leaf, hence does not contain primitives anymore
+            node.primitives = BvhRange::default();
+            node.set_left_child_index(self.nodes.len() as u32);
+
+            // Create two nodes
+            let left_child = BvhNode::new(self, left_primitives, scene);
+            let right_child = BvhNode::new(self, right_primitives, scene);
+            self.nodes.push(left_child);
+            self.nodes.push(right_child);
+
+            self.set_primitives_recursive(node.get_left_child_index(), level + 1, scene);
+            self.set_primitives_recursive(node.get_right_child_index(), level + 1, scene);
+        }
+
+        // Save current node
+        self.nodes[node_index] = node;
     }
 
     pub fn get_root(&self) -> &BvhNode {
@@ -443,8 +354,8 @@ impl Blas {
                 continue;
             }
 
-            let mut child1 = &self.nodes[node.get_left_node_index()];
-            let mut child2 = &self.nodes[node.get_right_node_index()];
+            let mut child1 = &self.nodes[node.get_left_child_index()];
+            let mut child2 = &self.nodes[node.get_right_child_index()];
             let mut dist1 = child1.bounds.intersects(ray);
             let mut dist2 = child2.bounds.intersects(ray);
 
@@ -518,8 +429,7 @@ mod test {
 
         let blas = Blas::builder().model(model).build(&scene_draw_info);
         assert!(blas.is_empty());
-        assert!(!blas.get_root().has_left_child());
-        assert!(!blas.get_root().has_right_child());
+        assert!(blas.get_root().is_leaf()); // no children
         assert!(!blas.get_root().primitives.is_empty());
     }
 
@@ -575,8 +485,7 @@ mod test {
 
         let blas = Blas::builder().model(model).build(&scene_draw_info);
         assert!(!blas.nodes.is_empty());
-        assert!(blas.get_root().has_left_child());
-        assert!(blas.get_root().has_right_child());
+        assert!(!blas.get_root().is_leaf()); // has children
         assert!(blas.get_root().primitives.is_empty());
     }
 }
