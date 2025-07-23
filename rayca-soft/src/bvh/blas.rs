@@ -62,23 +62,46 @@ impl<T> IntoIterator for &BvhRange<T> {
     }
 }
 
-#[derive(Default)]
 pub struct BvhNode {
     pub bounds: AABB,
 
-    left: Handle<BvhNode>,
-    right: Handle<BvhNode>,
+    /// Index of the left child node.
+    /// Right node index is just `left_node_index + 1`.
+    left_node_index: u32,
 
     primitives: BvhRange<BvhPrimitive>,
 }
 
+impl Default for BvhNode {
+    fn default() -> Self {
+        Self {
+            bounds: AABB::default(),
+            left_node_index: 1,
+            primitives: BvhRange::default(),
+        }
+    }
+}
+
 impl BvhNode {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn get_left_node_index(&self) -> usize {
+        self.left_node_index as usize
+    }
+
+    pub fn get_right_node_index(&self) -> usize {
+        self.get_left_node_index() + 1
+    }
+
+    pub fn has_left_child(&self) -> bool {
+        self.left_node_index > 1
+    }
+
+    pub fn has_right_child(&self) -> bool {
+        self.get_right_node_index() > 2
     }
 
     pub fn is_leaf(&self) -> bool {
-        self.left.is_none() && self.right.is_none()
+        // 1 is unused, so we use it as a marker for no children
+        self.left_node_index == 1
     }
 
     pub fn set_primitives(
@@ -87,7 +110,7 @@ impl BvhNode {
         primitives_range: BvhRange<BvhPrimitive>,
         primitives: &mut [BvhPrimitive],
         max_depth: usize,
-        nodes: &mut Pack<BvhNode>,
+        nodes: &mut Vec<BvhNode>,
     ) {
         let mut timer = Timer::new();
         self.set_primitives_recursive(
@@ -186,7 +209,7 @@ impl BvhNode {
         primitives: &mut [BvhPrimitive],
         max_depth: usize,
         level: usize,
-        nodes: &mut Pack<BvhNode>,
+        nodes: &mut Vec<BvhNode>,
     ) {
         assert!(!primitives.is_empty());
         self.primitives = primitives_range;
@@ -237,7 +260,7 @@ impl BvhNode {
             let left_primitives = self.primitives.split_off(0);
 
             // Create two nodes
-            let mut left_child = BvhNode::new();
+            let mut left_child = BvhNode::default();
             left_child.set_primitives_recursive(
                 scene,
                 left_primitives,
@@ -247,7 +270,7 @@ impl BvhNode {
                 nodes,
             );
 
-            let mut right_child = BvhNode::new();
+            let mut right_child = BvhNode::default();
             right_child.set_primitives_recursive(
                 scene,
                 right_primitives,
@@ -257,8 +280,9 @@ impl BvhNode {
                 nodes,
             );
 
-            self.left = nodes.push(left_child);
-            self.right = nodes.push(right_child);
+            self.left_node_index = nodes.len() as u32;
+            nodes.push(left_child);
+            nodes.push(right_child);
         }
     }
 
@@ -292,20 +316,18 @@ impl BvhNode {
                 }
             }
         } else {
-            if let Some(left_node) = blas.nodes.get(self.left) {
-                if let Some((hit, pri)) = left_node.intersects(scene, ray, blas, triangle_count) {
-                    if hit.depth < depth {
-                        depth = hit.depth;
-                        ret = Some((hit, pri));
-                    }
+            let left_node = &blas.nodes[self.get_left_node_index()];
+            if let Some((hit, pri)) = left_node.intersects(scene, ray, blas, triangle_count) {
+                if hit.depth < depth {
+                    depth = hit.depth;
+                    ret = Some((hit, pri));
                 }
             }
 
-            if let Some(right_node) = blas.nodes.get(self.right) {
-                if let Some((hit, pri)) = right_node.intersects(scene, ray, blas, triangle_count) {
-                    if hit.depth < depth {
-                        ret = Some((hit, pri));
-                    }
+            let right_node = &blas.nodes[self.get_right_node_index()];
+            if let Some((hit, pri)) = right_node.intersects(scene, ray, blas, triangle_count) {
+                if hit.depth < depth {
+                    ret = Some((hit, pri));
                 }
             }
         }
@@ -350,8 +372,8 @@ impl BlasBuilder {
 
 #[derive(Default)]
 pub struct Blas {
-    pub root: BvhNode,
-    pub nodes: Pack<BvhNode>,
+    /// First node in the vector is root, second node is unused.
+    pub nodes: Vec<BvhNode>,
     pub triangle_count: usize,
 
     pub model: BvhModel,
@@ -363,22 +385,31 @@ impl Blas {
     }
 
     pub fn new(scene: &SceneDrawInfo, mut model: BvhModel, max_depth: usize) -> Self {
-        let mut nodes = Pack::new();
+        let mut nodes = Vec::new();
+        nodes.resize_with(2, BvhNode::default);
 
-        let mut root = BvhNode::new();
+        let mut root = BvhNode::default();
         root.bounds = AABB::new(
             Point3::new(f32::MAX, f32::MAX, f32::MAX),
             Point3::new(f32::MIN, f32::MIN, f32::MIN),
         );
         let range = BvhRange::new(0, model.primitives.len() as u32);
         root.set_primitives(scene, range, &mut model.primitives, max_depth, &mut nodes);
+        nodes[0] = root;
 
         Self {
-            root,
             nodes,
             triangle_count: 0,
             model,
         }
+    }
+
+    pub fn get_root(&self) -> &BvhNode {
+        &self.nodes[0]
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.nodes.is_empty() || self.get_root().is_leaf()
     }
 
     pub fn intersects_iter(
@@ -386,7 +417,7 @@ impl Blas {
         scene: &SceneDrawInfo,
         ray: &Ray,
     ) -> Option<(Hit, &BvhPrimitive)> {
-        let mut node = &self.root;
+        let mut node = self.get_root();
         let mut stack = vec![];
 
         let mut ret_hit = None;
@@ -412,8 +443,8 @@ impl Blas {
                 continue;
             }
 
-            let mut child1 = self.nodes.get(node.left).unwrap();
-            let mut child2 = self.nodes.get(node.right).unwrap();
+            let mut child1 = &self.nodes[node.get_left_node_index()];
+            let mut child2 = &self.nodes[node.get_right_node_index()];
             let mut dist1 = child1.bounds.intersects(ray);
             let mut dist2 = child2.bounds.intersects(ray);
 
@@ -440,7 +471,8 @@ impl Blas {
 
     pub fn intersects(&self, scene: &SceneDrawInfo, ray: &Ray) -> Option<(Hit, &BvhPrimitive)> {
         let mut triangle_count = 0;
-        self.root.intersects(scene, ray, self, &mut triangle_count)
+        self.get_root()
+            .intersects(scene, ray, self, &mut triangle_count)
     }
 
     pub fn intersects_stats(
@@ -449,7 +481,7 @@ impl Blas {
         ray: &Ray,
         triangle_count: &mut usize,
     ) -> Option<(Hit, &BvhPrimitive)> {
-        self.root.intersects(scene, ray, self, triangle_count)
+        self.get_root().intersects(scene, ray, self, triangle_count)
     }
 }
 
@@ -485,10 +517,10 @@ mod test {
         );
 
         let blas = Blas::builder().model(model).build(&scene_draw_info);
-        assert!(blas.nodes.is_empty());
-        assert!(!blas.root.left.is_valid());
-        assert!(!blas.root.right.is_valid());
-        assert!(!blas.root.primitives.is_empty());
+        assert!(blas.is_empty());
+        assert!(!blas.get_root().has_left_child());
+        assert!(!blas.get_root().has_right_child());
+        assert!(!blas.get_root().primitives.is_empty());
     }
 
     #[test]
@@ -543,8 +575,8 @@ mod test {
 
         let blas = Blas::builder().model(model).build(&scene_draw_info);
         assert!(!blas.nodes.is_empty());
-        assert!(blas.root.left.is_valid());
-        assert!(blas.root.right.is_valid());
-        assert!(blas.root.primitives.is_empty());
+        assert!(blas.get_root().has_left_child());
+        assert!(blas.get_root().has_right_child());
+        assert!(blas.get_root().primitives.is_empty());
     }
 }

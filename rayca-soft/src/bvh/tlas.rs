@@ -84,8 +84,8 @@ impl TlasNode {
         for i in a..b {
             let blas_node = &tlas.blas_nodes[i as usize];
             let blas = tlas.blass.get(blas_node.blas).unwrap();
-            self.bounds.a = self.bounds.a.min(blas.root.bounds.a);
-            self.bounds.b = self.bounds.b.max(blas.root.bounds.b);
+            self.bounds.a = self.bounds.a.min(blas.get_root().bounds.a);
+            self.bounds.b = self.bounds.b.max(blas.get_root().bounds.b);
         }
 
         // Split AABB along its longest axis
@@ -105,7 +105,7 @@ impl TlasNode {
         while i < j {
             let blas_node = &tlas.blas_nodes[i];
             let bvh = tlas.blass.get(blas_node.blas).unwrap();
-            if bvh.root.bounds.get_centroid()[axis] < split_pos {
+            if bvh.get_root().bounds.get_centroid()[axis] < split_pos {
                 i += 1;
             } else {
                 tlas.blas_nodes.swap(i, j - 1);
