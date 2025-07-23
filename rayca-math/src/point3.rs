@@ -84,6 +84,14 @@ impl Point3 {
         Self::simd(self.simd.simd_min(other.simd))
     }
 
+    pub fn reduce_min(&self) -> f32 {
+        self.simd.reduce_min()
+    }
+
+    pub fn reduce_max(&self) -> f32 {
+        self.simd.reduce_max()
+    }
+
     pub fn max(&self, other: Self) -> Self {
         Self::simd(self.simd.simd_max(other.simd))
     }

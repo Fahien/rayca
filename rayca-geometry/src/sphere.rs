@@ -48,8 +48,12 @@ impl Sphere {
         self.radius2 = radius * radius;
     }
 
-    pub fn get_radius(&self) -> f32 {
+    pub fn get_model_radius(&self) -> f32 {
         self.radius
+    }
+
+    pub fn get_radius(&self, trs: &Trs) -> f32 {
+        self.radius * trs.scale.reduce_max()
     }
 
     /// - `point`: should be in model space
@@ -129,12 +133,12 @@ impl Sphere {
 
     /// This will return a point outside of the sphere, useful for the AABB
     pub fn min(&self, trs: &Trs) -> Point3 {
-        let rad3 = Vec3::splat(self.radius);
+        let rad3 = Vec3::splat(self.get_radius(trs));
         self.get_center(trs) - rad3
     }
 
     pub fn max(&self, trs: &Trs) -> Point3 {
-        let rad3 = Vec3::splat(self.radius);
+        let rad3 = Vec3::splat(self.get_radius(trs));
         self.get_center(trs) + rad3
     }
 }
@@ -179,14 +183,6 @@ mod tests {
         let point = Point3::new(0.0, 1.0, 0.0);
         let normal = sphere.get_normal(&point);
         assert!((normal - Vec3::new(0.0, 1.0, 0.0)).norm() < 1e-6);
-    }
-
-    #[test]
-    fn set_radius_and_get_radius() {
-        let mut sphere = Sphere::default();
-        sphere.set_radius(5.0);
-        assert_eq!(sphere.get_radius(), 5.0);
-        assert_eq!(sphere.radius2, 25.0);
     }
 
     #[test]

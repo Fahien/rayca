@@ -14,12 +14,14 @@ impl Scratcher {
 }
 
 impl Integrator for Scratcher {
-    fn trace(&self, scene: &SceneDrawInfo, ray: Ray, bvh: &Bvh, depth: u32) -> Option<Color> {
+    fn trace(&self, scene: &SceneDrawInfo, ray: Ray, tlas: &Tlas, depth: u32) -> Option<Color> {
         if depth > 1 {
             return None;
         }
 
-        let (hit, primitive) = bvh.intersects_iter(scene, &ray)?;
+        let hit = tlas.intersects(scene, &ray)?;
+        let blas = &tlas.get_blas(hit.blas);
+        let primitive = &blas.model.primitives[hit.primitive as usize];
 
         let n = primitive.get_normal(scene, &hit);
 
@@ -32,7 +34,7 @@ impl Integrator for Scratcher {
         if albedo_color.a < 1.0 {
             let transmit_origin = hit.point + -n * RAY_BIAS;
             let transmit_ray = Ray::new(transmit_origin, ray.dir);
-            let transmit_result = self.trace(scene, transmit_ray, bvh, depth + 1);
+            let transmit_result = self.trace(scene, transmit_ray, tlas, depth + 1);
 
             if let Some(mut transmit_color) = transmit_result {
                 // continue with the rest of the shading?
@@ -53,12 +55,12 @@ impl Integrator for Scratcher {
             let light_dir = light.get_direction(&light_node.trs, &hit.point);
 
             let shadow_ray = Ray::new(next_origin, light_dir);
-            let shadow_result = bvh.intersects_iter(scene, &shadow_ray);
+            let shadow_result = tlas.intersects(scene, &shadow_ray);
 
             // Whether this object is light (verb) by a light (noun)
             let is_light = match shadow_result {
                 None => true,
-                Some((shadow_hit, primitive)) => {
+                Some(shadow_hit) => {
                     // Distance between current surface and the light source
                     let light_distance = light.get_distance(&light_node.trs, &hit.point);
                     // If the obstacle is beyong the light source then the current surface is light
@@ -66,7 +68,10 @@ impl Integrator for Scratcher {
                         true
                     } else {
                         // Check whether the obstacle is a transparent surface
-                        let shadow_color = primitive.get_color(scene, &shadow_hit);
+                        let shadow_blas = &tlas.get_blas(shadow_hit.blas);
+                        let shadow_primitive =
+                            &shadow_blas.model.primitives[shadow_hit.primitive as usize];
+                        let shadow_color = shadow_primitive.get_color(scene, &shadow_hit);
                         shadow_color.a < 1.0
                     }
                 }
@@ -82,7 +87,7 @@ impl Integrator for Scratcher {
         // Reflection component
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
         let reflection_ray = Ray::new(next_origin, reflection_dir);
-        if let Some(reflection_intensity) = self.trace(scene, reflection_ray, bvh, depth + 1) {
+        if let Some(reflection_intensity) = self.trace(scene, reflection_ray, tlas, depth + 1) {
             let ir = Irradiance::new(
                 reflection_intensity,
                 &hit,

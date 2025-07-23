@@ -114,8 +114,16 @@ impl Vec3 {
         Self::simd(self.simd.simd_min(other.simd))
     }
 
+    pub fn reduce_min(&self) -> f32 {
+        self.simd.reduce_min()
+    }
+
     pub fn max(self, other: &Vec3) -> Vec3 {
         Self::simd(self.simd.simd_max(other.simd))
+    }
+
+    pub fn reduce_max(&self) -> f32 {
+        self.simd.reduce_max()
     }
 
     /// [SIMD cross-product](https://geometrian.com/programming/tutorials/cross-product/index.php) method 5

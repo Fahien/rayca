@@ -6,80 +6,10 @@ use std::{marker::PhantomData, ops::Range};
 
 use crate::*;
 
-#[derive(Default)]
-pub struct AABB {
-    pub a: Point3,
-    pub b: Point3,
-}
-
-impl AABB {
-    pub fn new(a: Point3, b: Point3) -> Self {
-        Self { a, b }
-    }
-
-    fn area(&self) -> f32 {
-        let e = self.b - self.a; // box extent
-        e.simd[0] * e.simd[1] + e.simd[1] * e.simd[2] + e.simd[2] * e.simd[0]
-    }
-
-    fn grow(&mut self, p: Point3) {
-        self.a = self.a.min(p);
-        self.b = self.b.max(p);
-    }
-
-    fn grow_triangle(&mut self, triangle: &BvhTriangle, trs: &Trs) {
-        self.grow(triangle.get_vertex(0, trs));
-        self.grow(triangle.get_vertex(1, trs));
-        self.grow(triangle.get_vertex(2, trs));
-    }
-
-    fn grow_sphere(&mut self, sphere: &Sphere, trs: &Trs) {
-        let radius = sphere.get_radius();
-        let center = sphere.get_center(trs);
-        self.grow(center + Vec3::new(-radius, 0.0, 0.0));
-        self.grow(center + Vec3::new(radius, 0.0, 0.0));
-        self.grow(center + Vec3::new(0.0, -radius, 0.0));
-        self.grow(center + Vec3::new(0.0, radius, 0.0));
-        self.grow(center + Vec3::new(0.0, 0.0, -radius));
-        self.grow(center + Vec3::new(0.0, 0.0, radius));
-    }
-
-    fn grow_primitive(&mut self, scene: &SceneDrawInfo, primitive: &BvhPrimitive) {
-        let trs = scene.get_world_trs(primitive.node);
-        match &primitive.geometry {
-            BvhGeometry::Triangle(triangle) => {
-                self.grow_triangle(triangle, &trs.trs);
-            }
-            BvhGeometry::Sphere(sphere) => {
-                self.grow_sphere(sphere, &trs.trs);
-            }
-        }
-    }
-
-    /// Slab test. We do not care where we hit the box; only info we need is a yes/no answer.
-    fn intersects(&self, ray: &Ray) -> f32 {
-        let origin_vec = Vec3::from(ray.origin);
-        let t1 = (self.a - origin_vec) * ray.rdir;
-        let t2 = (self.b - origin_vec) * ray.rdir;
-
-        let vmax = t1.max(t2);
-        let vmin = t1.min(t2);
-
-        let tmax = vmax.simd[0].min(vmax.simd[1].min(vmax.simd[2]));
-        let tmin = vmin.simd[0].max(vmin.simd[1].max(vmin.simd[2]));
-
-        if tmax >= tmin && tmax > 0.0 {
-            tmin
-        } else {
-            f32::MAX
-        }
-    }
-}
-
 #[derive(Clone, Copy)]
 pub struct BvhRange<T> {
-    offset: u32,
-    count: u32,
+    pub offset: u32,
+    pub count: u32,
     phantom: PhantomData<T>,
 }
 
@@ -134,7 +64,7 @@ impl<T> IntoIterator for &BvhRange<T> {
 
 #[derive(Default)]
 pub struct BvhNode {
-    bounds: AABB,
+    pub bounds: AABB,
 
     left: Handle<BvhNode>,
     right: Handle<BvhNode>,
@@ -352,10 +282,11 @@ impl BvhNode {
             *triangle_count += self.primitives.len();
 
             for pri_index in &self.primitives {
-                let pri = &bvh.primitives[pri_index];
-                if let Some(hit) = pri.intersects(scene, ray) {
+                let pri = &bvh.model.primitives[pri_index];
+                if let Some(mut hit) = pri.intersects(scene, ray) {
                     if hit.depth < depth {
                         depth = hit.depth;
+                        hit.primitive = pri_index as u32;
                         ret = Some((hit, pri));
                     }
                 }
@@ -384,7 +315,7 @@ impl BvhNode {
 }
 
 pub struct BvhBuilder {
-    primitives: Vec<BvhPrimitive>,
+    model: BvhModel,
     max_depth: usize,
 }
 
@@ -397,13 +328,13 @@ impl Default for BvhBuilder {
 impl BvhBuilder {
     pub fn new() -> Self {
         Self {
-            primitives: vec![],
+            model: BvhModel::default(),
             max_depth: usize::MAX,
         }
     }
 
-    pub fn primitives(mut self, primitives: Vec<BvhPrimitive>) -> Self {
-        self.primitives = primitives;
+    pub fn model(mut self, model: BvhModel) -> Self {
+        self.model = model;
         self
     }
 
@@ -413,16 +344,17 @@ impl BvhBuilder {
     }
 
     pub fn build(self, scene: &SceneDrawInfo) -> Bvh {
-        Bvh::new(scene, self.primitives, self.max_depth)
+        Bvh::new(scene, self.model, self.max_depth)
     }
 }
 
+#[derive(Default)]
 pub struct Bvh {
     pub root: BvhNode,
     pub nodes: Pack<BvhNode>,
     pub triangle_count: usize,
 
-    pub primitives: Vec<BvhPrimitive>,
+    pub model: BvhModel,
 }
 
 impl Bvh {
@@ -430,7 +362,7 @@ impl Bvh {
         BvhBuilder::new()
     }
 
-    pub fn new(scene: &SceneDrawInfo, mut primitives: Vec<BvhPrimitive>, max_depth: usize) -> Self {
+    pub fn new(scene: &SceneDrawInfo, mut model: BvhModel, max_depth: usize) -> Self {
         let mut nodes = Pack::new();
 
         let mut root = BvhNode::new();
@@ -438,14 +370,14 @@ impl Bvh {
             Point3::new(f32::MAX, f32::MAX, f32::MAX),
             Point3::new(f32::MIN, f32::MIN, f32::MIN),
         );
-        let range = BvhRange::new(0, primitives.len() as u32);
-        root.set_primitives(scene, range, &mut primitives, max_depth, &mut nodes);
+        let range = BvhRange::new(0, model.primitives.len() as u32);
+        root.set_primitives(scene, range, &mut model.primitives, max_depth, &mut nodes);
 
         Self {
             root,
             nodes,
             triangle_count: 0,
-            primitives,
+            model,
         }
     }
 
@@ -463,7 +395,7 @@ impl Bvh {
         loop {
             if node.is_leaf() {
                 for pri_index in &node.primitives {
-                    let pri = &self.primitives[pri_index];
+                    let pri = &self.model.primitives[pri_index];
                     if let Some(hit) = pri.intersects(scene, ray) {
                         if hit.depth < max_depth {
                             max_depth = hit.depth;
@@ -547,11 +479,12 @@ mod test {
 
         let scene_draw_info = SceneDrawInfo::new(&scene);
 
-        let primitives = BvhPrimitive::from_scene(&scene_draw_info);
+        let model = BvhModel::from_model(
+            scene_draw_info.model_draw_infos.values().next().unwrap(),
+            &scene_draw_info,
+        );
 
-        let bvh = Bvh::builder()
-            .primitives(primitives)
-            .build(&scene_draw_info);
+        let bvh = Bvh::builder().model(model).build(&scene_draw_info);
         assert!(bvh.nodes.is_empty());
         assert!(!bvh.root.left.is_valid());
         assert!(!bvh.root.right.is_valid());
@@ -603,11 +536,12 @@ mod test {
 
         let scene_draw_info = SceneDrawInfo::new(&scene);
 
-        let primitives = BvhPrimitive::from_scene(&scene_draw_info);
+        let model = BvhModel::from_model(
+            scene_draw_info.model_draw_infos.values().next().unwrap(),
+            &scene_draw_info,
+        );
 
-        let bvh = Bvh::builder()
-            .primitives(primitives)
-            .build(&scene_draw_info);
+        let bvh = Bvh::builder().model(model).build(&scene_draw_info);
         assert!(!bvh.nodes.is_empty());
         assert!(bvh.root.left.is_valid());
         assert!(bvh.root.right.is_valid());

@@ -83,6 +83,10 @@ impl<T> Handle<T> {
         self.id as usize
     }
 
+    pub fn is_some(&self) -> bool {
+        self.id != u32::MAX
+    }
+
     pub fn is_none(&self) -> bool {
         self.id == u32::MAX
     }

@@ -103,7 +103,8 @@ mod test {
 
         let scene_draw_info = SceneDrawInfo::new(&scene);
 
-        let triangles = BvhPrimitive::from_scene(&scene_draw_info);
+        let triangles =
+            BvhPrimitive::from_mesh(scene_draw_info.mesh_draw_infos[0], &scene_draw_info);
         let triangle_ref = &triangles[0];
 
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));

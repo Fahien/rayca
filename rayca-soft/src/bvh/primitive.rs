@@ -249,7 +249,7 @@ impl BvhPrimitive {
     ) -> Vec<Self> {
         // Transforming a sphere is complicated. The trick is to store transform with sphere,
         // then pre-transform the ray, and post-transform the intersection point.
-        let sphere = Sphere::new(sphere.get_model_center(), sphere.get_radius());
+        let sphere = Sphere::new(sphere.get_model_center(), sphere.get_model_radius());
         let geometry = BvhGeometry::Sphere(sphere);
         let primitive = BvhPrimitive::new(geometry, node, material);
 
@@ -289,15 +289,40 @@ impl BvhPrimitive {
 
         primitives
     }
+}
 
-    pub fn from_scene(scene_draw_info: &SceneDrawInfo) -> Vec<Self> {
+#[derive(Default)]
+pub struct BvhModel {
+    pub primitives: Vec<BvhPrimitive>,
+}
+
+impl BvhModel {
+    pub fn from_model(model_draw_info: &ModelDrawInfo, scene: &SceneDrawInfo) -> Self {
         let mut primitives = vec![];
 
-        for mesh_draw_info in scene_draw_info.mesh_draw_infos.iter().copied() {
-            let model_primitives = Self::from_mesh(mesh_draw_info, scene_draw_info);
-            primitives.extend(model_primitives);
+        for mesh_draw_info in model_draw_info.mesh_draw_infos.iter().copied() {
+            let mesh_primitives = BvhPrimitive::from_mesh(mesh_draw_info, scene);
+            primitives.extend(mesh_primitives);
         }
 
-        primitives
+        Self { primitives }
+    }
+}
+
+#[derive(Default)]
+pub struct BvhScene {
+    pub models: Vec<BvhModel>,
+}
+
+impl BvhScene {
+    pub fn from_scene(scene_draw_info: &SceneDrawInfo) -> Self {
+        let mut models = vec![];
+
+        for model_draw_info in scene_draw_info.model_draw_infos.values() {
+            let bvh_model = BvhModel::from_model(model_draw_info, scene_draw_info);
+            models.push(bvh_model);
+        }
+
+        Self { models }
     }
 }

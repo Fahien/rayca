@@ -82,11 +82,11 @@ fn draw_pixel<I: AsRef<dyn Integrator>>(
     integrator: &I,
     scene: &SceneDrawInfo,
     ray: Ray,
-    bvh: &Bvh,
+    tlas: &Tlas,
     pixel: &mut RGBA8,
 ) -> usize {
     let triangle_count = 0;
-    if let Some(pixel_color) = integrator.as_ref().trace(scene, ray, bvh, 0) {
+    if let Some(pixel_color) = integrator.as_ref().trace(scene, ray, tlas, 0) {
         // No over operation here as transparency should be handled by the lighting model
         *pixel = pixel_color.into();
     }
@@ -97,10 +97,10 @@ impl Draw for SoftRenderer {
     fn draw(&mut self, scene: &Scene, image: &mut Image) {
         let scene_draw_info = SceneDrawInfo::new(scene);
 
-        let primitives = BvhPrimitive::from_scene(&scene_draw_info);
+        let scene = BvhScene::from_scene(&scene_draw_info);
 
         // Build BVH
-        let mut bvh_builder = Bvh::builder().primitives(primitives);
+        let mut bvh_builder = Tlas::builder().scene(scene);
         if !self.config.bvh {
             bvh_builder = bvh_builder.max_depth(0);
         }
@@ -150,11 +150,20 @@ impl Draw for SoftRenderer {
     }
 }
 
+#[derive(Default, Clone)]
+pub struct ModelDrawInfo {
+    pub mesh_draw_infos: Vec<MeshDrawInfo>,
+}
+
 pub struct SceneDrawInfo<'a> {
     /// World transforms for each node that can be used by a renderer. This is a map because the
     /// renderer may not need all nodes. Some nodes do not have cameras, lights, or meshes, so we
     /// only store the transforms for the nodes that are actually used.
     pub world_trss: HashMap<NodeDrawInfo, WorldTrs>,
+
+    /// Map of model handles to their draw info, this is useful for building the TLAS.
+    /// This has to be a hash map so that the `traverse` function knows which draw info to update.
+    pub model_draw_infos: HashMap<Handle<Model>, ModelDrawInfo>,
 
     /// List of nodes with meshes
     pub mesh_draw_infos: Vec<MeshDrawInfo>,
@@ -178,6 +187,7 @@ impl<'a> SceneDrawInfo<'a> {
     pub fn new(scene: &'a Scene) -> Self {
         let mut ret = Self {
             world_trss: HashMap::new(),
+            model_draw_infos: HashMap::new(),
             mesh_draw_infos: Vec::new(),
             camera_draw_infos: Vec::new(),
             light_draw_infos: Vec::new(),
@@ -238,6 +248,11 @@ impl<'a> SceneDrawInfo<'a> {
         if current_node.mesh.is_some() {
             let mesh_draw_info = MeshDrawInfo::new(node, model_handle);
             self.mesh_draw_infos.push(mesh_draw_info);
+            self.model_draw_infos
+                .entry(model_handle)
+                .or_default()
+                .mesh_draw_infos
+                .push(mesh_draw_info);
         }
         if current_node.light.is_some() {
             let light_draw_info = LightDrawInfo::new(node, model_handle);
