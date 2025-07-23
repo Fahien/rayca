@@ -213,6 +213,12 @@ impl Vec3 {
     }
 }
 
+impl From<f32> for Vec3 {
+    fn from(value: f32) -> Self {
+        Self::splat(value)
+    }
+}
+
 impl Dot<Vec3> for Vec3 {
     fn dot(self, rhs: Vec3) -> f32 {
         self.dot(&rhs)

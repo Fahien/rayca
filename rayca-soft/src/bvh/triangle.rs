@@ -82,19 +82,33 @@ mod test {
 
     #[test]
     fn intersect() {
-        let mut model = Model::new();
-        let triangle_prim = model.primitives.push(Primitive::unit_triangle());
+        let mut model = Model::default();
+        let geometry_handle = model
+            .geometries
+            .push(Geometry::TriangleMesh(TriangleMesh::unit()));
+        let triangle_prim = model
+            .primitives
+            .push(Primitive::builder().geometry(geometry_handle).build());
         let mesh = model
             .meshes
-            .push(Mesh::builder().primitives(vec![triangle_prim]).build());
+            .push(Mesh::builder().primitive(triangle_prim).build());
         let node = model.nodes.push(Node::builder().mesh(mesh).build());
         model.root.children.push(node);
-        let triangles = model.collect();
+
+        let mut scene = Scene::default();
+        let model_handle = scene.models.push(model);
+        let node = Node::builder().model(model_handle).build();
+        let node_handle = scene.nodes.push(node);
+        scene.root.children.push(node_handle);
+
+        let scene_draw_info = SceneDrawInfo::new(&scene);
+
+        let triangles = BvhPrimitive::from_scene(&scene_draw_info);
         let triangle_ref = &triangles[0];
 
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, -1.0));
-        assert!(triangle_ref.intersects(&model, &ray).is_some());
+        assert!(triangle_ref.intersects(&scene_draw_info, &ray).is_some());
         let ray = Ray::new(Point3::new(0.0, 0.0, 1.0), Vec3::new(0.0, 0.0, 1.0));
-        assert!(triangle_ref.intersects(&model, &ray).is_none());
+        assert!(triangle_ref.intersects(&scene_draw_info, &ray).is_none());
     }
 }

@@ -66,18 +66,16 @@ async fn get_model() -> Result<Model, JsValue> {
     let array = Uint8Array::new(&buffer);
     let bytes = array.to_vec();
 
-    let model = Model::builder()
-        .data(&bytes)
-        .expect("Failed to load data")
-        .build()
-        .expect("Failed to build model");
+    let assets = Assets::new();
+    let model = Model::load_gltf_data(&bytes, &assets).expect("Failed to load data");
 
     Ok(model)
 }
 
 fn tweak_box_scene(model: &mut Model) {
-    let mut blue_material = Material::new();
-    blue_material.color = Color::new(0.1, 0.2, 0.7, 1.0);
+    let blue_material = Material::builder()
+        .color(Color::new(0.1, 0.2, 0.7, 1.0))
+        .build();
     let blue_material_handle = model.materials.push(blue_material);
 
     let mut blue_primitive_handles = vec![];
@@ -88,7 +86,7 @@ fn tweak_box_scene(model: &mut Model) {
         blue_primitive_handles.push(blue_primitive_handle);
     }
 
-    let blue_mesh = Mesh::new(blue_primitive_handles);
+    let blue_mesh = Mesh::builder().primitives(blue_primitive_handles).build();
     let blue_mesh_handle = model.meshes.push(blue_mesh);
 
     let mut box_node = model.nodes.get(1.into()).unwrap().clone();
@@ -97,8 +95,7 @@ fn tweak_box_scene(model: &mut Model) {
         .trs
         .translation
         .set_y(box_node.trs.translation.get_y() - 0.75);
-    box_node.mesh = blue_mesh_handle;
-    box_node.id = model.nodes.len();
+    box_node.mesh.replace(blue_mesh_handle);
 
     model.nodes.get_mut(0.into()).unwrap().trs.rotation =
         Quat::new(0.0, FRAC_PI_8.sin(), 0.0, FRAC_PI_8.cos());
@@ -110,6 +107,7 @@ fn tweak_box_scene(model: &mut Model) {
 pub struct Context {
     canvas_context: CanvasRenderingContext2d,
     image: Image,
+    renderer: SoftRenderer,
     scene: Scene,
     image_data: ImageData,
     timer: Timer,
@@ -129,12 +127,14 @@ impl Context {
         let mut image = Image::new(WIDTH, WIDTH, ColorType::RGBA8);
         image.clear(RGBA8::black());
 
+        let renderer = SoftRenderer::default();
+
         let mut model = get_model().await.unwrap();
         tweak_box_scene(&mut model);
 
-        let mut scene = Scene::new();
-        scene.push(model);
-        scene.push(Scene::create_default_model());
+        let mut scene = Scene::default();
+        scene.push_model(model);
+        scene.push_model(SoftRenderer::create_default_model());
 
         let data = Clamped(image.bytes());
 
@@ -144,6 +144,7 @@ impl Context {
         Ok(Self {
             canvas_context,
             image,
+            renderer,
             scene,
             image_data,
             timer: Timer::new(),
@@ -153,19 +154,14 @@ impl Context {
     pub fn rotate_box(&mut self) {
         let delta = self.timer.get_delta().as_secs_f32();
         let angle = FRAC_PI_8 * delta;
-        self.scene
-            .model
-            .nodes
-            .get_mut(2.into())
-            .unwrap()
-            .trs
-            .rotation *= Quat::new(0.0, angle.sin(), 0.0, angle.cos());
+        self.scene.nodes.get_mut(0.into()).unwrap().trs.rotation *=
+            Quat::new(0.0, angle.sin(), 0.0, angle.cos());
     }
 
     pub fn draw(&mut self) -> Result<(), JsValue> {
         self.rotate_box();
         self.image.clear(RGBA8::black());
-        self.scene.draw(&mut self.image);
+        self.renderer.draw(&self.scene, &mut self.image);
 
         self.canvas_context
             .put_image_data(&self.image_data, 0.0, 0.0)?;

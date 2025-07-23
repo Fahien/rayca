@@ -10,7 +10,13 @@ rayca-math = { path = "../rayca-math" }
 rayca-util = { path = "../rayca-util" }
 rayca-geometry = { path = "../rayca-geometry" }
 gltf = "1.4.*"
-base64 = "0.22.1"
+base64 = "0.22.*"
 serde_json = "1.0.*"
 serde = { version = "1.0.*", features = [ "serde_derive" ] }
 bon = "3.6.*"
+image = "0.25.*"
+rayon = { version = "1.10.*", optional = true }
+
+[features]
+default = ["parallel"]
+parallel = ["rayon"]

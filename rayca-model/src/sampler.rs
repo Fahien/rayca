@@ -4,14 +4,10 @@
 
 use super::*;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Sampler {}
 
 impl Sampler {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     pub fn sample(&self, image: &Image, uv: &Vec2) -> Color {
         let width = image.width() as f32;
         let height = image.height() as f32;

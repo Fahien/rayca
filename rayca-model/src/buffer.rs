@@ -221,39 +221,6 @@ impl std::fmt::Display for Accessor {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-#[repr(u32)]
-pub enum ComponentType {
-    /// Byte
-    I8 = 5120,
-
-    #[default]
-    /// Unsigned byte
-    U8 = 5121,
-
-    /// Short
-    I16 = 5122,
-
-    /// Unsigned short
-    U16 = 5123,
-
-    /// Unsigned int
-    U32 = 5125,
-
-    /// Float
-    F32 = 5126,
-}
-
-impl ComponentType {
-    pub fn get_size(self) -> usize {
-        match self {
-            ComponentType::I8 | ComponentType::U8 => 1,
-            ComponentType::I16 | ComponentType::U16 => 2,
-            ComponentType::U32 | ComponentType::F32 => 4,
-        }
-    }
-}
-
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum AccessorType {
     #[default]

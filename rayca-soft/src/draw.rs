@@ -5,5 +5,5 @@
 use super::*;
 
 pub trait Draw {
-    fn draw(&mut self, image: &mut Image);
+    fn draw(&mut self, scene: &Scene, image: &mut Image);
 }

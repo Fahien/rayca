@@ -15,3 +15,13 @@ impl Default for Geometry {
         Self::TriangleMesh(TriangleMesh::default())
     }
 }
+
+impl Geometry {
+    pub fn as_triangle_mesh(&self) -> Option<&TriangleMesh> {
+        if let Geometry::TriangleMesh(mesh) = self {
+            Some(mesh)
+        } else {
+            None
+        }
+    }
+}

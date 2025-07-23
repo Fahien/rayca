@@ -26,6 +26,10 @@ impl Sphere {
         }
     }
 
+    pub fn unit() -> Self {
+        Self::new(Point3::default(), 1.0)
+    }
+
     /// Returns the center of the sphere in model space.
     pub fn get_model_center(&self) -> Point3 {
         self.center

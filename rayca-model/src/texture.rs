@@ -4,11 +4,7 @@
 
 use crate::*;
 
-#[derive(Debug, Default)]
-pub struct Sampler {}
-
 #[derive(Default)]
-
 pub struct TextureBuilder {
     pub image: Handle<Image>,
     pub sampler: Handle<Sampler>,

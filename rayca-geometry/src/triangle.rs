@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use bon::Builder;
+
 use crate::*;
 
 pub struct TriangleBuilder {
@@ -173,29 +175,292 @@ impl Triangle {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(u32)]
+pub enum ComponentType {
+    /// Byte
+    I8 = 5120,
+
+    #[default]
+    /// Unsigned byte
+    U8 = 5121,
+
+    /// Short
+    I16 = 5122,
+
+    /// Unsigned short
+    U16 = 5123,
+
+    /// Unsigned int
+    U32 = 5125,
+
+    /// Float
+    F32 = 5126,
+}
+
+impl ComponentType {
+    pub fn get_size(self) -> usize {
+        match self {
+            ComponentType::I8 | ComponentType::U8 => 1,
+            ComponentType::I16 | ComponentType::U16 => 2,
+            ComponentType::U32 | ComponentType::F32 => 4,
+        }
+    }
+}
+
+#[derive(Builder, Debug, Clone, Default)]
+
+pub struct TriangleIndices {
+    pub indices: Vec<u8>,
+    #[builder(default)]
+    pub index_type: ComponentType,
+}
+
+impl TriangleIndices {
+    pub fn get_index_count(&self) -> usize {
+        self.indices.len() / self.index_type.get_size()
+    }
+}
+
 /// Collection of triangles defined by vertices and indices.
-#[derive(Debug, Clone)]
+#[derive(Builder, Debug, Clone)]
 pub struct TriangleMesh {
     pub vertices: Vec<Vertex>,
-    pub indices: Vec<u8>,
-
-    /// Index size in bytes. This is not index count
-    pub index_size_in_bytes: usize,
+    pub indices: TriangleIndices,
 }
 
 impl Default for TriangleMesh {
     fn default() -> Self {
-        Self::new(vec![], vec![])
+        Self::new(vec![], TriangleIndices::default())
     }
 }
 
 impl TriangleMesh {
-    pub fn new(vertices: Vec<Vertex>, indices: Vec<u8>) -> Self {
-        Self {
-            vertices,
-            indices,
-            index_size_in_bytes: 1,
-        }
+    pub fn new(vertices: Vec<Vertex>, indices: TriangleIndices) -> Self {
+        Self { vertices, indices }
+    }
+
+    pub fn unit() -> Self {
+        Self::builder()
+            .vertices(vec![
+                Vertex::builder()
+                    .position(Point3::new(-1.0, 0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(1.0, 0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.0, 1.0, 0.0))
+                    .build(),
+            ])
+            .indices(TriangleIndices::builder().indices(vec![0, 1, 2]).build())
+            .build()
+    }
+
+    pub fn quad(uv_scale: Vec2) -> Self {
+        Self::builder()
+            .vertices(vec![
+                Vertex::builder()
+                    .position(Point3::new(-0.5, -0.5, 0.0))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Z_AXIS)
+                    .uv(Vec2::new(0.0, 1.0) * uv_scale)
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, -0.5, 0.0))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Z_AXIS)
+                    .uv(Vec2::new(1.0, 1.0) * uv_scale)
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, 0.5, 0.0))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Z_AXIS)
+                    .uv(Vec2::new(1.0, 0.0) * uv_scale)
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, 0.5, 0.0))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Z_AXIS)
+                    .uv(Vec2::new(0.0, 0.0) * uv_scale)
+                    .build(),
+            ])
+            .indices(
+                TriangleIndices::builder()
+                    .indices(vec![0, 1, 2, 2, 3, 0])
+                    .build(),
+            )
+            .build()
+    }
+
+    pub fn cube(self) -> Self {
+        Self::builder()
+            .vertices(vec![
+                // Front
+                Vertex::builder()
+                    .position(Point3::new(-0.5, -0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Z_AXIS)
+                    .uv(Vec2::new(0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, -0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Z_AXIS)
+                    .uv(Vec2::new(1.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, 0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Z_AXIS)
+                    .uv(Vec2::new(1.0, 1.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, 0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Z_AXIS)
+                    .uv(Vec2::new(0.0, 1.0))
+                    .build(),
+                // Right
+                Vertex::builder()
+                    .position(Point3::new(0.5, -0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::X_AXIS)
+                    .uv(Vec2::new(0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, -0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::X_AXIS)
+                    .uv(Vec2::new(1.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, 0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::X_AXIS)
+                    .uv(Vec2::new(1.0, 1.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, 0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::X_AXIS)
+                    .uv(Vec2::new(0.0, 1.0))
+                    .build(),
+                // Back
+                Vertex::builder()
+                    .position(Point3::new(0.5, -0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::Z_AXIS)
+                    .uv(Vec2::new(0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, -0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::Z_AXIS)
+                    .uv(Vec2::new(1.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, 0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::Z_AXIS)
+                    .uv(Vec2::new(1.0, 1.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, 0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::Z_AXIS)
+                    .uv(Vec2::new(0.0, 1.0))
+                    .build(),
+                // Left
+                Vertex::builder()
+                    .position(Point3::new(-0.5, -0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::X_AXIS)
+                    .uv(Vec2::new(0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, -0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::X_AXIS)
+                    .uv(Vec2::new(1.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, 0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::X_AXIS)
+                    .uv(Vec2::new(1.0, 1.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, 0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::X_AXIS)
+                    .uv(Vec2::new(0.0, 1.0))
+                    .build(),
+                // Top
+                Vertex::builder()
+                    .position(Point3::new(-0.5, 0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Y_AXIS)
+                    .uv(Vec2::new(0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, 0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Y_AXIS)
+                    .uv(Vec2::new(1.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, 0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Y_AXIS)
+                    .uv(Vec2::new(1.0, 1.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, 0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(Vec3::Y_AXIS)
+                    .uv(Vec2::new(0.0, 1.0))
+                    .build(),
+                // Bottom
+                Vertex::builder()
+                    .position(Point3::new(-0.5, -0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::Y_AXIS)
+                    .uv(Vec2::new(0.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, -0.5, -0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::Y_AXIS)
+                    .uv(Vec2::new(1.0, 0.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(0.5, -0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::Y_AXIS)
+                    .uv(Vec2::new(1.0, 1.0))
+                    .build(),
+                Vertex::builder()
+                    .position(Point3::new(-0.5, -0.5, 0.5))
+                    .color(Color::WHITE)
+                    .normal(-Vec3::Y_AXIS)
+                    .uv(Vec2::new(0.0, 1.0))
+                    .build(),
+            ])
+            .indices(
+                TriangleIndices::builder()
+                    .indices(vec![
+                        0, 1, 2, 0, 2, 3, // front face
+                        4, 5, 6, 4, 6, 7, // right
+                        8, 9, 10, 8, 10, 11, // back
+                        12, 13, 14, 12, 14, 15, // left
+                        16, 17, 18, 16, 18, 19, // top
+                        20, 21, 22, 20, 22, 23, // bottom
+                    ])
+                    .index_type(ComponentType::U8)
+                    .build(),
+            )
+            .build()
     }
 }
 

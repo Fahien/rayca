@@ -4,7 +4,7 @@
 
 use crate::*;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Scratcher {}
 
 impl Scratcher {
@@ -14,16 +14,16 @@ impl Scratcher {
 }
 
 impl Integrator for Scratcher {
-    fn trace(&self, model: &Model, ray: Ray, bvh: &Bvh, depth: u32) -> Option<Color> {
+    fn trace(&self, scene: &SceneDrawInfo, ray: Ray, bvh: &Bvh, depth: u32) -> Option<Color> {
         if depth > 1 {
             return None;
         }
 
-        let (hit, primitive) = bvh.intersects_iter(model, &ray)?;
+        let (hit, primitive) = bvh.intersects_iter(scene, &ray)?;
 
-        let n = primitive.get_normal(model, &hit);
+        let n = primitive.get_normal(scene, &hit);
 
-        let albedo_color = primitive.get_color(model, &hit);
+        let albedo_color = primitive.get_color(scene, &hit);
 
         // Ambient?
         let mut pixel_color = Color::black() + albedo_color / 8.0;
@@ -32,7 +32,7 @@ impl Integrator for Scratcher {
         if albedo_color.a < 1.0 {
             let transmit_origin = hit.point + -n * RAY_BIAS;
             let transmit_ray = Ray::new(transmit_origin, ray.dir);
-            let transmit_result = self.trace(model, transmit_ray, bvh, depth + 1);
+            let transmit_result = self.trace(scene, transmit_ray, bvh, depth + 1);
 
             if let Some(mut transmit_color) = transmit_result {
                 // continue with the rest of the shading?
@@ -47,13 +47,13 @@ impl Integrator for Scratcher {
         let uv = primitive.geometry.get_uv(&hit);
 
         // Direct component
-        for light_node_handle in &model.light_nodes {
-            let light_node = model.nodes.get(*light_node_handle).unwrap();
-            let light = model.lights.get(light_node.light).unwrap();
+        for light_draw_info in scene.light_draw_infos.iter().copied() {
+            let light_node = scene.get_node(light_draw_info);
+            let light = scene.get_light(light_draw_info);
             let light_dir = light.get_direction(&light_node.trs, &hit.point);
 
             let shadow_ray = Ray::new(next_origin, light_dir);
-            let shadow_result = bvh.intersects_iter(model, &shadow_ray);
+            let shadow_result = bvh.intersects_iter(scene, &shadow_ray);
 
             // Whether this object is light (verb) by a light (noun)
             let is_light = match shadow_result {
@@ -66,7 +66,7 @@ impl Integrator for Scratcher {
                         true
                     } else {
                         // Check whether the obstacle is a transparent surface
-                        let shadow_color = primitive.get_color(model, &shadow_hit);
+                        let shadow_color = primitive.get_color(scene, &shadow_hit);
                         shadow_color.a < 1.0
                     }
                 }
@@ -75,14 +75,14 @@ impl Integrator for Scratcher {
             if is_light {
                 let intensity = light.get_intensity(&light_node.trs, &hit.point);
                 let ir = Irradiance::new(intensity, &hit, light_dir, n, -ray.dir, albedo_color, uv);
-                pixel_color += primitive.get_radiance(model, &ir);
+                pixel_color += primitive.get_radiance(scene, &ir);
             }
         } // end iterate light
 
         // Reflection component
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
         let reflection_ray = Ray::new(next_origin, reflection_dir);
-        if let Some(reflection_intensity) = self.trace(model, reflection_ray, bvh, depth + 1) {
+        if let Some(reflection_intensity) = self.trace(scene, reflection_ray, bvh, depth + 1) {
             let ir = Irradiance::new(
                 reflection_intensity,
                 &hit,
@@ -92,7 +92,7 @@ impl Integrator for Scratcher {
                 albedo_color,
                 uv,
             );
-            pixel_color += primitive.get_radiance(model, &ir);
+            pixel_color += primitive.get_radiance(scene, &ir);
         }
 
         Some(pixel_color)

@@ -42,16 +42,14 @@ fn get_stride(accessor: &gltf::Accessor) -> usize {
     data_type_as_size(accessor.data_type()) * dimensions_as_size(accessor.dimensions())
 }
 
-impl From<gltf::accessor::DataType> for ComponentType {
-    fn from(value: gltf::accessor::DataType) -> Self {
-        match value {
-            gltf::accessor::DataType::I8 => ComponentType::I8,
-            gltf::accessor::DataType::U8 => ComponentType::U8,
-            gltf::accessor::DataType::I16 => ComponentType::I16,
-            gltf::accessor::DataType::U16 => ComponentType::U16,
-            gltf::accessor::DataType::U32 => ComponentType::U32,
-            gltf::accessor::DataType::F32 => ComponentType::F32,
-        }
+fn data_type_to_component_type(data_type: gltf::accessor::DataType) -> ComponentType {
+    match data_type {
+        gltf::accessor::DataType::I8 => ComponentType::I8,
+        gltf::accessor::DataType::U8 => ComponentType::U8,
+        gltf::accessor::DataType::I16 => ComponentType::I16,
+        gltf::accessor::DataType::U16 => ComponentType::U16,
+        gltf::accessor::DataType::U32 => ComponentType::U32,
+        gltf::accessor::DataType::F32 => ComponentType::F32,
     }
 }
 
@@ -106,7 +104,7 @@ impl UriBuffers {
 
         if let Some(accessor) = gprimitive.indices() {
             let data_type = accessor.data_type();
-            index_type = data_type.into();
+            index_type = data_type_to_component_type(data_type);
 
             // Data type can vary
             let data = self.get_data_start(&accessor);
@@ -275,7 +273,7 @@ impl Model {
         };
 
         let mut ret = Self::default();
-        ret.load_images(&gltf, parent_dir);
+        ret.load_images(&gltf, parent_dir, assets);
         ret.load_textures(&gltf);
         ret.load_materials(&gltf)?;
         let uri_buffers = UriBuffers::new(&gltf, parent_dir, assets)?;
@@ -305,46 +303,54 @@ impl Model {
         Self::load_gltf(gltf, None, assets)
     }
 
-    pub fn load_images(&mut self, gltf: &gltf::Gltf, parent_dir: Option<&Path>) {
+    pub fn load_images(&mut self, gltf: &gltf::Gltf, parent_dir: Option<&Path>, assets: &Assets) {
         let mut timer = Timer::new();
 
-        let mut vec: Vec<Image> = vec![];
+        #[cfg(feature = "parallel")]
+        use rayon::prelude::{ParallelBridge, ParallelIterator};
+        #[cfg(feature = "parallel")]
+        let images_iter = gltf.images().enumerate().par_bridge();
+        #[cfg(not(feature = "parallel"))]
+        let images_iter = gltf.images().enumerate();
 
-        for image in gltf.images() {
-            match image.source() {
-                gltf::image::Source::View { .. } => todo!("Implement image source view"),
-                gltf::image::Source::Uri { uri, .. } => {
-                    const DATA_URI: &str = "data:image/png;base64,";
+        let image_map: HashMap<usize, Image> = images_iter
+            .map(|(id, image)| {
+                match image.source() {
+                    gltf::image::Source::View { .. } => todo!("Implement image source view"),
+                    gltf::image::Source::Uri { uri, .. } => {
+                        const DATA_URI: &str = "data:image/png;base64,";
 
-                    let image = if uri.starts_with(DATA_URI) {
-                        let (_, data_base64) = uri.split_at(DATA_URI.len());
-                        let _data = base64::engine::general_purpose::STANDARD
-                            .decode(data_base64)
-                            .expect("Failed to decode base64 image data");
-                        unimplemented!("Add support for data uri");
-                        //  TODO: what ? buffer.load_png_data(&data)
-                    } else if let Some(parent_dir) = &parent_dir {
-                        // Join gltf parent dir to URI
-                        let path = parent_dir.join(uri);
-                        Image::builder().uri(path.to_string_lossy()).build()
-                    } else {
-                        Image::builder().uri(uri.to_string()).build()
-                    };
+                        let image = if uri.starts_with(DATA_URI) {
+                            let (_, data_base64) = uri.split_at(DATA_URI.len());
+                            let data = base64::engine::general_purpose::STANDARD
+                                .decode(data_base64)
+                                .expect("Failed to decode base64 image data");
+                            Image::load_data(&data)
+                        } else if let Some(parent_dir) = parent_dir {
+                            // Join gltf parent dir to URI
+                            let path = parent_dir.join(uri);
+                            Image::load_file(path, assets).expect("Failed to load image file")
+                        } else {
+                            Image::load_file(uri, assets).expect("Failed to load image file")
+                        };
 
-                    //image.id = id;
-                    vec.push(image)
+                        (id, image)
+                    }
                 }
-            }
-        }
+            })
+            .collect();
 
-        //vec.sort_by_key(|image| image.id);
+        // The images at this point are not sorted by ID, so we need to sort them
+        let mut pairs: Vec<(usize, Image)> = image_map.into_iter().collect();
+        pairs.sort_by_key(|(id, _)| *id);
+        let sorted_images: Vec<Image> = pairs.into_iter().map(|(_, image)| image).collect();
 
-        println!(
+        log::info!(
             "Loaded images from file in {:.2}s",
             timer.get_delta().as_secs_f32()
         );
 
-        self.images = Pack::from(vec);
+        self.images = Pack::from(sorted_images);
     }
 
     pub fn load_textures(&mut self, gltf: &gltf::Gltf) {
@@ -449,6 +455,21 @@ impl Model {
         let vertices = self.load_vertices(uri_buffers, gprimitive)?;
         let (indices, index_size) = uri_buffers.load_indices(gprimitive);
 
+        // All glTF primitives are triangles, so we can create a geometry with a triangle mesh
+        let triangle_mesh = TriangleMesh::builder()
+            .vertices(vertices)
+            .indices(
+                TriangleIndices::builder()
+                    .indices(indices)
+                    .index_type(index_size.into())
+                    .build(),
+            )
+            .build();
+
+        // Triangle mesh are wrapped in a geometry
+        let geometry = Geometry::TriangleMesh(triangle_mesh);
+        let geometry_handle = self.geometries.push(geometry);
+
         let material = if let Some(index) = gprimitive.material().index() {
             index as usize
         } else {
@@ -456,13 +477,7 @@ impl Model {
         };
 
         let primitive = Primitive::builder()
-            .vertices(vertices)
-            .indices(
-                PrimitiveIndices::builder()
-                    .indices(indices)
-                    .index_type(index_size.into())
-                    .build(),
-            )
+            .geometry(geometry_handle)
             .material(material.into())
             .build();
 
@@ -526,8 +541,11 @@ impl Model {
         let scale = &transform.2;
         let scale = Vec3::new(scale[0], scale[1], scale[2]);
 
-        let mut node_builder = Node::builder()
-            .name(gnode.name().unwrap_or("Unknown"))
+        let mesh = gnode.mesh().map(|m| Handle::from(m.index()));
+        let camera = gnode.camera().map(|c| Handle::from(c.index()));
+
+        Node::builder()
+            .name(gnode.name().unwrap_or("Unknown").to_string())
             .children(
                 gnode
                     .children()
@@ -540,23 +558,16 @@ impl Model {
                     .rotation(rotation)
                     .scale(scale)
                     .build(),
-            );
-
-        if let Some(mesh) = gnode.mesh() {
-            node_builder = node_builder.mesh(Handle::from(mesh.index()));
-        }
-
-        if let Some(camera) = gnode.camera() {
-            node_builder = node_builder.camera(Handle::from(camera.index()));
-        }
-
-        node_builder.build()
+            )
+            .maybe_mesh(mesh)
+            .maybe_camera(camera)
+            .build()
     }
 
     fn load_nodes(&mut self, gltf: &gltf::Gltf) {
         // Load scene
         let gscene = gltf.scenes().next().unwrap();
-        self.scene.children = gscene
+        self.root.children = gscene
             .nodes()
             .into_iter()
             .map(|n| n.index().into())
@@ -635,7 +646,7 @@ impl Model {
 
         write!(&mut json_string, "]")?;
         write!(&mut json_string, ", \"scenes\": [ {{ \"nodes\": [")?;
-        for (i, child) in self.scene.children.iter().enumerate() {
+        for (i, child) in self.root.children.iter().enumerate() {
             if i > 0 {
                 write!(&mut json_string, ",")?;
             }
@@ -707,16 +718,19 @@ impl StoreModel {
             let mut store_primitive = StorePrimitive::default();
             store_primitive.material = primitive.material;
 
+            let geometry = model.geometries.get(primitive.geometry).unwrap();
+            let triangle_mesh = geometry.as_triangle_mesh().unwrap();
+
             // Buffer views should be created for vertices and indices
             let buffer_view = store_model.buffer.extend_from_bytes(
-                &primitive.vertices,
+                &triangle_mesh.vertices,
                 std::mem::size_of::<Vertex>(),
                 BufferViewTarget::ArrayBuffer,
             );
             let vertex_buffer_handle = store_model.buffer_views.push(buffer_view);
 
             // Accessors are generated here
-            let vertex_count = primitive.vertices.len();
+            let vertex_count = triangle_mesh.vertices.len();
             let mut position_accessor = Accessor::builder()
                 .buffer_view(vertex_buffer_handle)
                 .offset(0)
@@ -777,24 +791,22 @@ impl StoreModel {
                 .attributes
                 .insert(gltf::mesh::Semantic::TexCoords(0), uv_accessor_handle);
 
-            if let Some(indices) = &primitive.indices {
-                let buffer_view = store_model.buffer.extend_from_bytes(
-                    &indices.indices,
-                    0,
-                    BufferViewTarget::ElementArrayBuffer,
-                );
-                let index_buffer_handle = store_model.buffer_views.push(buffer_view);
+            let buffer_view = store_model.buffer.extend_from_bytes(
+                &triangle_mesh.indices.indices,
+                0,
+                BufferViewTarget::ElementArrayBuffer,
+            );
+            let index_buffer_handle = store_model.buffer_views.push(buffer_view);
 
-                let index_accessor = Accessor::new(
-                    index_buffer_handle,
-                    0,
-                    indices.index_type.into(),
-                    indices.get_index_count(),
-                    AccessorType::Scalar,
-                );
-                let index_accessor_handle = store_model.accessors.push(index_accessor);
-                store_primitive.indices = index_accessor_handle;
-            }
+            let index_accessor = Accessor::new(
+                index_buffer_handle,
+                0,
+                triangle_mesh.indices.index_type.into(),
+                triangle_mesh.indices.get_index_count(),
+                AccessorType::Scalar,
+            );
+            let index_accessor_handle = store_model.accessors.push(index_accessor);
+            store_primitive.indices = index_accessor_handle;
 
             store_model.primitives.push(store_primitive);
         }
@@ -880,7 +892,7 @@ impl From<gltf::buffer::View<'_>> for BufferView {
     }
 }
 
-impl Scene {
+impl StoreScene {
     pub fn load_glx_file<P: AsRef<Path>>(file_path: P) -> std::io::Result<Self> {
         let uri = file_path.as_ref();
         let file = std::fs::File::open(uri)?;
@@ -918,7 +930,7 @@ mod test {
         let model_path = tests::get_model_path().join("suzanne/suzanne.gltf");
         let model = Model::load_gltf_path(model_path, &assets).unwrap();
         assert_eq!(model.images.len(), 2);
-        assert!(!model.scene.children.is_empty());
+        assert!(!model.root.children.is_empty());
     }
 
     #[test]
@@ -931,15 +943,17 @@ mod test {
 
     #[test]
     fn store_scene() {
-        let mut scene = Scene::new("TestScene");
+        let mut scene = StoreScene::new("TestScene");
         let hmodel = scene.models.push(ModelSource::new("TestModel"));
-        scene.nodes.push(Node::builder().model(hmodel).build());
+        scene
+            .nodes
+            .push(Node::builder().model(hmodel.id.into()).build());
 
         let glx_path = tests::get_artifact_path().join("test-scene.glx");
         scene
             .store_glx_file(&glx_path)
             .expect("Failed to store scene");
-        let loaded_scene = Scene::load_glx_file(glx_path).expect("Failed to load scene");
+        let loaded_scene = StoreScene::load_glx_file(glx_path).expect("Failed to load scene");
         assert_eq!(scene.name, loaded_scene.name);
         assert_eq!(scene.models[0].uri, loaded_scene.models[0].uri);
     }

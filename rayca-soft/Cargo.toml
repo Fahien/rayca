@@ -17,6 +17,7 @@ wasm-bindgen-test = "0.3.33"
 rayca-util = { path = "../rayca-util" }
 rayca-math = { path = "../rayca-math" }
 rayca-geometry = { path = "../rayca-geometry" }
+rayca-model = { path = "../rayca-model" }
 gltf = "1.0.0"
 num-traits = "0.2.15"
 png = "0.17.7"

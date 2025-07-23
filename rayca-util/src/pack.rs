@@ -28,6 +28,9 @@ pub struct Handle<T> {
     phantom: PhantomData<T>,
 }
 
+unsafe impl<T> Send for Handle<T> {}
+unsafe impl<T> Sync for Handle<T> {}
+
 impl<T> Default for Handle<T> {
     fn default() -> Self {
         Self::NONE
