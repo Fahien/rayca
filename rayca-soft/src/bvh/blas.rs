@@ -98,7 +98,7 @@ impl BvhNode {
             0,
             nodes,
         );
-        log::info!("BVH built in {:.2}ms", timer.get_delta().as_millis());
+        log::info!("Blas built in {:.2}ms", timer.get_delta().as_millis());
     }
 
     /// Surface Area Heuristics:
@@ -266,7 +266,7 @@ impl BvhNode {
         &'b self,
         scene: &SceneDrawInfo,
         ray: &Ray,
-        bvh: &'b Bvh,
+        blas: &'b Blas,
         triangle_count: &mut usize,
     ) -> Option<(Hit, &'b BvhPrimitive)> {
         let d = self.bounds.intersects(ray);
@@ -282,7 +282,7 @@ impl BvhNode {
             *triangle_count += self.primitives.len();
 
             for pri_index in &self.primitives {
-                let pri = &bvh.model.primitives[pri_index];
+                let pri = &blas.model.primitives[pri_index];
                 if let Some(mut hit) = pri.intersects(scene, ray) {
                     if hit.depth < depth {
                         depth = hit.depth;
@@ -292,8 +292,8 @@ impl BvhNode {
                 }
             }
         } else {
-            if let Some(left_node) = bvh.nodes.get(self.left) {
-                if let Some((hit, pri)) = left_node.intersects(scene, ray, bvh, triangle_count) {
+            if let Some(left_node) = blas.nodes.get(self.left) {
+                if let Some((hit, pri)) = left_node.intersects(scene, ray, blas, triangle_count) {
                     if hit.depth < depth {
                         depth = hit.depth;
                         ret = Some((hit, pri));
@@ -301,8 +301,8 @@ impl BvhNode {
                 }
             }
 
-            if let Some(right_node) = bvh.nodes.get(self.right) {
-                if let Some((hit, pri)) = right_node.intersects(scene, ray, bvh, triangle_count) {
+            if let Some(right_node) = blas.nodes.get(self.right) {
+                if let Some((hit, pri)) = right_node.intersects(scene, ray, blas, triangle_count) {
                     if hit.depth < depth {
                         ret = Some((hit, pri));
                     }
@@ -314,18 +314,18 @@ impl BvhNode {
     }
 }
 
-pub struct BvhBuilder {
+pub struct BlasBuilder {
     model: BvhModel,
     max_depth: usize,
 }
 
-impl Default for BvhBuilder {
+impl Default for BlasBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl BvhBuilder {
+impl BlasBuilder {
     pub fn new() -> Self {
         Self {
             model: BvhModel::default(),
@@ -343,13 +343,13 @@ impl BvhBuilder {
         self
     }
 
-    pub fn build(self, scene: &SceneDrawInfo) -> Bvh {
-        Bvh::new(scene, self.model, self.max_depth)
+    pub fn build(self, scene: &SceneDrawInfo) -> Blas {
+        Blas::new(scene, self.model, self.max_depth)
     }
 }
 
 #[derive(Default)]
-pub struct Bvh {
+pub struct Blas {
     pub root: BvhNode,
     pub nodes: Pack<BvhNode>,
     pub triangle_count: usize,
@@ -357,9 +357,9 @@ pub struct Bvh {
     pub model: BvhModel,
 }
 
-impl Bvh {
-    pub fn builder() -> BvhBuilder {
-        BvhBuilder::new()
+impl Blas {
+    pub fn builder() -> BlasBuilder {
+        BlasBuilder::new()
     }
 
     pub fn new(scene: &SceneDrawInfo, mut model: BvhModel, max_depth: usize) -> Self {
@@ -484,11 +484,11 @@ mod test {
             &scene_draw_info,
         );
 
-        let bvh = Bvh::builder().model(model).build(&scene_draw_info);
-        assert!(bvh.nodes.is_empty());
-        assert!(!bvh.root.left.is_valid());
-        assert!(!bvh.root.right.is_valid());
-        assert!(!bvh.root.primitives.is_empty());
+        let blas = Blas::builder().model(model).build(&scene_draw_info);
+        assert!(blas.nodes.is_empty());
+        assert!(!blas.root.left.is_valid());
+        assert!(!blas.root.right.is_valid());
+        assert!(!blas.root.primitives.is_empty());
     }
 
     #[test]
@@ -541,10 +541,10 @@ mod test {
             &scene_draw_info,
         );
 
-        let bvh = Bvh::builder().model(model).build(&scene_draw_info);
-        assert!(!bvh.nodes.is_empty());
-        assert!(bvh.root.left.is_valid());
-        assert!(bvh.root.right.is_valid());
-        assert!(bvh.root.primitives.is_empty());
+        let blas = Blas::builder().model(model).build(&scene_draw_info);
+        assert!(!blas.nodes.is_empty());
+        assert!(blas.root.left.is_valid());
+        assert!(blas.root.right.is_valid());
+        assert!(blas.root.primitives.is_empty());
     }
 }

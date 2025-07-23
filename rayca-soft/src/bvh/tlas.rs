@@ -83,7 +83,7 @@ impl TlasNode {
         let b = a + blas_range.count;
         for i in a..b {
             let blas_node = &tlas.blas_nodes[i as usize];
-            let blas = tlas.bvhs.get(blas_node.bvh).unwrap();
+            let blas = tlas.blass.get(blas_node.blas).unwrap();
             self.bounds.a = self.bounds.a.min(blas.root.bounds.a);
             self.bounds.b = self.bounds.b.max(blas.root.bounds.b);
         }
@@ -104,7 +104,7 @@ impl TlasNode {
         let mut j = (blas_range.offset + blas_range.count) as usize;
         while i < j {
             let blas_node = &tlas.blas_nodes[i];
-            let bvh = tlas.bvhs.get(blas_node.bvh).unwrap();
+            let bvh = tlas.blass.get(blas_node.blas).unwrap();
             if bvh.root.bounds.get_centroid()[axis] < split_pos {
                 i += 1;
             } else {
@@ -147,7 +147,7 @@ impl TlasNode {
             let b = a + self.blas.count;
             for i in a..b {
                 let blas_node = &tlas.blas_nodes[i as usize];
-                let bvh = tlas.bvhs.get(blas_node.bvh)?;
+                let bvh = tlas.blass.get(blas_node.blas)?;
                 if let Some((mut hit, _)) = bvh.intersects(scene, ray) {
                     if hit.depth < depth {
                         depth = hit.depth;
@@ -181,16 +181,16 @@ impl TlasNode {
 }
 
 /// The idea of a BLAS node is that we can reorder them in their vector container
-/// while keeping the BVH and its model in their place.
+/// while keeping the BLAS and its model in their place.
 #[derive(Copy, Clone)]
 pub struct BlasNode {
-    pub bvh: Handle<Bvh>,
+    pub blas: Handle<Blas>,
     pub model: Handle<Model>,
 }
 
 impl BlasNode {
-    pub fn new(bvh: Handle<Bvh>, model: Handle<Model>) -> Self {
-        Self { bvh, model }
+    pub fn new(blas: Handle<Blas>, model: Handle<Model>) -> Self {
+        Self { blas, model }
     }
 }
 
@@ -237,7 +237,7 @@ pub struct Tlas {
 
     /// Bounding Volume Hierarchies should have a 1-1 mapping with model geometries
     /// Bottom Level Acceleration Structures refer a BVH and a Model
-    pub bvhs: Pack<Bvh>,
+    pub blass: Pack<Blas>,
 }
 
 impl Tlas {
@@ -250,14 +250,14 @@ impl Tlas {
 
         let model_count = scene.models.len();
         for (i, model) in scene.models.into_iter().enumerate() {
-            let bvh_handle = ret.bvhs.push(
-                Bvh::builder()
+            let blas_handle = ret.blass.push(
+                Blas::builder()
                     .model(model)
                     .max_depth(max_depth)
                     .build(scene_draw_info),
             );
             ret.blas_nodes
-                .push(BlasNode::new(bvh_handle, Handle::from(i)))
+                .push(BlasNode::new(blas_handle, Handle::from(i)))
         }
 
         // TODO: make a function which returns a range of handles from a pack
@@ -273,8 +273,8 @@ impl Tlas {
         self.root.intersects(scene, ray, self)
     }
 
-    pub fn get_blas(&self, blas: u32) -> &Bvh {
+    pub fn get_blas(&self, blas: u32) -> &Blas {
         let blas_node = &self.blas_nodes[blas as usize];
-        self.bvhs.get(blas_node.bvh).unwrap()
+        self.blass.get(blas_node.blas).unwrap()
     }
 }
