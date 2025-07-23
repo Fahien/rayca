@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - uses: actions/cache@v4
       with:
@@ -22,6 +22,12 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - uses: jetli/wasm-pack-action@v0.4.0
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
 
     - name: Check
       run: cargo check --release
@@ -38,17 +44,14 @@ jobs:
         sudo sysctl -w kernel.kptr_restrict=0
         sudo chmod 666 /proc/kallsyms
         mkdir rayca-soft/www/static
-        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --no-default-features \
-          --package rayca-soft --test test --output rayca-soft/www/static/flamegraph.svg -- cube_over_plane
+        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --package rayca-soft --test test \
+          --output rayca-soft/www/static/flamegraph.svg -- cube_over_plane
 
     - name: Web
       run: |
-        cargo install wasm-pack
-        cd rayca-soft
-        wasm-pack build -- --no-default-features
-        cd www
+        cd rayca-soft/www
         npm install
-        npm run build
+        npm run release
         cp ../../tests/artifact/*.png dist
 
     - name: Deploy

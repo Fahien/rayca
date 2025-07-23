@@ -306,12 +306,8 @@ impl Model {
     pub fn load_images(&mut self, gltf: &gltf::Gltf, parent_dir: Option<&Path>, assets: &Assets) {
         let mut timer = Timer::new();
 
-        #[cfg(feature = "parallel")]
         use rayon::prelude::{ParallelBridge, ParallelIterator};
-        #[cfg(feature = "parallel")]
         let images_iter = gltf.images().enumerate().par_bridge();
-        #[cfg(not(feature = "parallel"))]
-        let images_iter = gltf.images().enumerate();
 
         let image_map: HashMap<usize, Image> = images_iter
             .map(|(id, image)| {

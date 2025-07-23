@@ -4,7 +4,6 @@
 
 use std::{collections::HashMap, error::Error, path::Path};
 
-#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use super::*;
@@ -122,16 +121,10 @@ impl Draw for SoftRenderer {
         let aspectratio = width / height;
         let angle = camera.get_angle();
 
-        #[cfg(feature = "parallel")]
         let row_iter = image.pixels_mut().into_par_iter();
-        #[cfg(not(feature = "parallel"))]
-        let row_iter = image.pixels_mut().into_iter();
 
         row_iter.enumerate().for_each(|(y, row)| {
-            #[cfg(feature = "parallel")]
             let pixel_iter = row.into_par_iter();
-            #[cfg(not(feature = "parallel"))]
-            let pixel_iter = row.into_iter();
 
             pixel_iter.enumerate().for_each(|(x, pixel)| {
                 // Generate primary ray
