@@ -25,9 +25,16 @@ jobs:
 
     - uses: jetli/wasm-pack-action@v0.4.0
 
-    - uses: actions-rs/toolchain@v1
+    - uses: actions-rs/toolchain@v1.0.7
       with:
         toolchain: nightly
+        components: rust-src
+
+    - uses: actions-rs/install@v0.1
+      with:
+        crate: flamegraph
+        version: latest
+        use-tool-cache: true
 
     - name: Check
       run: cargo check --release
@@ -39,13 +46,12 @@ jobs:
 
     - name: Profile
       run: |
-        cargo install flamegraph
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
         sudo chmod 666 /proc/kallsyms
         mkdir rayca-soft/www/static
-        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --package rayca-soft --test test \
-          --output rayca-soft/www/static/flamegraph.svg -- cube_over_plane
+        CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --release --package rayca-soft \
+          --test test --output rayca-soft/www/static/flamegraph.svg -- cube_over_plane
 
     - name: Web
       run: |
