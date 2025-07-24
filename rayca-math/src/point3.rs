@@ -190,7 +190,7 @@ impl Sub<&Vec3> for Point3 {
     type Output = Point3;
 
     fn sub(self, rhs: &Vec3) -> Self::Output {
-        self + (-rhs)
+        Self::Output::simd(self.simd - rhs.simd)
     }
 }
 
@@ -206,7 +206,7 @@ impl Sub<&Vec3> for &Point3 {
     type Output = Point3;
 
     fn sub(self, rhs: &Vec3) -> Self::Output {
-        *self + (-rhs)
+        Self::Output::simd(self.simd - rhs.simd)
     }
 }
 
