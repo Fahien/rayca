@@ -10,11 +10,23 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - uses: actions-rs/toolchain@v1.0.7
+      with:
+        toolchain: nightly
+    - name: Check
+      run: cargo check --release
 
+  test:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
     - uses: actions/cache@v4
       with:
         path: |
@@ -22,27 +34,39 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - uses: jetli/wasm-pack-action@v0.4.0
-
     - uses: actions-rs/toolchain@v1.0.7
       with:
         toolchain: nightly
-        components: rust-src
 
+    - name: Test
+      run: cargo test --release
+    - uses: actions/upload-artifact@v4
+      with:
+        name: tests
+        path: tests/artifact/*.png
+
+  profile:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - uses: actions-rs/toolchain@v1.0.7
+      with:
+        toolchain: nightly
     - uses: actions-rs/install@v0.1
       with:
         crate: flamegraph
         version: latest
         use-tool-cache: true
-
-    - name: Check
-      run: cargo check --release
-
-    - name: Test
-      run: |
-        git submodule update --init
-        cargo test --release
 
     - name: Profile
       run: |
@@ -50,12 +74,45 @@ jobs:
         sudo sysctl -w kernel.kptr_restrict=0
         sudo chmod 666 /proc/kallsyms
         CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --release --package rayca-soft \
-          --test test --output rayca-soft/www/static/flamegraph.svg -- cube_over_plane
+          --post-process "sed -re 's/(.*);(.*rayon.*)/\2/g'" \
+          --test test --output tests/artifact/flamegraph.svg -- cube_over_plane
+    - uses: actions/upload-artifact@v4
+      with:
+        name: flamegraph
+        path: tests/artifact/flamegraph.svg
 
+  web:
+    needs:
+    - test
+    - profile
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - uses: actions-rs/toolchain@v1.0.7
+      with:
+        toolchain: nightly
+        components: rust-src
+    - uses: jetli/wasm-pack-action@v0.4.0
+    - uses: actions/download-artifact@v4
+      with:
+        name: tests
+        path: rayca-soft/www/static
+    - uses: actions/download-artifact@v4
+      with:
+        name: flamegraph
+        path: rayca-soft/www/static
     - name: Web
       run: |
         bash ./scripts/download-web-assets.sh
-        cp tests/artifact/*.png rayca-soft/www/static
         cd rayca-soft/www
         npm install
         npm run release
