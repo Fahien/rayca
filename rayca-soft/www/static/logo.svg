@@ -1,0 +1,15 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Full background -->
+  <rect width="128" height="128" fill="#181A2A"/>
+  <!-- Futuristic symmetrical spaceship body -->
+  <polygon points="64,28 84,60 74,100 54,100 44,60" fill="#F5F5F5" stroke="#B8C4E6" stroke-width="4"/>
+  <!-- Central cockpit: aggressive polygon window, lighter color, lighter outline, moved further down and wider -->
+  <polygon points="54,64 64,54 74,64 64,70" fill="#B8C4E6" stroke="#F5F5F5" stroke-width="2"/>
+  <!-- Left wing: longer, geometric, lighter outline, lighter color -->
+  <polygon points="44,60 16,104 54,100" fill="#E3E8F7" stroke="#B8C4E6" stroke-width="2"/>
+  <!-- Right wing: longer, geometric, lighter outline, lighter color -->
+  <polygon points="84,60 112,104 74,100" fill="#E3E8F7" stroke="#B8C4E6" stroke-width="2"/>
+  <!-- Engine glow: stylized, flat color -->
+  <ellipse cx="64" cy="110" rx="10" ry="4" fill="#FFB300" opacity="0.8"/>
+  <ellipse cx="64" cy="116" rx="6" ry="2" fill="#FF6F00" opacity="0.7"/>
+</svg>

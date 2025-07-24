@@ -49,16 +49,16 @@ jobs:
         sudo sysctl -w kernel.perf_event_paranoid=-1
         sudo sysctl -w kernel.kptr_restrict=0
         sudo chmod 666 /proc/kallsyms
-        mkdir rayca-soft/www/static
         CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --release --package rayca-soft \
           --test test --output rayca-soft/www/static/flamegraph.svg -- cube_over_plane
 
     - name: Web
       run: |
+        bash ./scripts/download-web-assets.sh
+        cp tests/artifact/*.png rayca-soft/www/static
         cd rayca-soft/www
         npm install
         npm run release
-        cp ../../tests/artifact/*.png dist
 
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v4
