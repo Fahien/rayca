@@ -31,7 +31,7 @@ impl Integrator for Scratcher {
         let mut pixel_color = Color::black() + albedo_color / 8.0;
         const RAY_BIAS: f32 = 1e-3;
 
-        if albedo_color.a < 1.0 {
+        if albedo_color.is_transparent() {
             let transmit_origin = hit.point + -n * RAY_BIAS;
             let transmit_ray = Ray::new(transmit_origin, ray.dir);
             let transmit_result = self.trace(scene, transmit_ray, tlas, depth + 1);
