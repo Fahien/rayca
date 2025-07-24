@@ -148,7 +148,7 @@ impl TlasNode {
             for i in a..b {
                 let blas_node = &tlas.blas_nodes[i as usize];
                 let bvh = tlas.blass.get(blas_node.blas)?;
-                if let Some((mut hit, _)) = bvh.intersects(scene, ray) {
+                if let Some(mut hit) = bvh.intersects(scene, ray) {
                     if hit.depth < depth {
                         depth = hit.depth;
                         hit.blas = i;

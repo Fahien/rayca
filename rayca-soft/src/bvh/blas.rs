@@ -126,13 +126,13 @@ impl BvhNode {
         self.primitives.len() as f32 * self.bounds.area()
     }
 
-    fn intersects<'b>(
-        &'b self,
+    fn intersects(
+        &self,
         scene: &SceneDrawInfo,
         ray: &Ray,
-        blas: &'b Blas,
+        blas: &Blas,
         triangle_count: &mut usize,
-    ) -> Option<(Hit, &'b BvhPrimitive)> {
+    ) -> Option<Hit> {
         let d = self.bounds.intersects(ray);
         if d == f32::MAX {
             return None;
@@ -151,23 +151,23 @@ impl BvhNode {
                     if hit.depth < depth {
                         depth = hit.depth;
                         hit.primitive = pri_index as u32;
-                        ret = Some((hit, pri));
+                        ret.replace(hit);
                     }
                 }
             }
         } else {
             let left_node = &blas.nodes[self.get_left_child_index()];
-            if let Some((hit, pri)) = left_node.intersects(scene, ray, blas, triangle_count) {
+            if let Some(hit) = left_node.intersects(scene, ray, blas, triangle_count) {
                 if hit.depth < depth {
                     depth = hit.depth;
-                    ret = Some((hit, pri));
+                    ret.replace(hit);
                 }
             }
 
             let right_node = &blas.nodes[self.get_right_child_index()];
-            if let Some((hit, pri)) = right_node.intersects(scene, ray, blas, triangle_count) {
+            if let Some(hit) = right_node.intersects(scene, ray, blas, triangle_count) {
                 if hit.depth < depth {
-                    ret = Some((hit, pri));
+                    ret.replace(hit);
                 }
             }
         }
@@ -380,7 +380,7 @@ impl Blas {
         ret_hit
     }
 
-    pub fn intersects(&self, scene: &SceneDrawInfo, ray: &Ray) -> Option<(Hit, &BvhPrimitive)> {
+    pub fn intersects(&self, scene: &SceneDrawInfo, ray: &Ray) -> Option<Hit> {
         let mut triangle_count = 0;
         self.get_root()
             .intersects(scene, ray, self, &mut triangle_count)
@@ -391,7 +391,7 @@ impl Blas {
         scene: &SceneDrawInfo,
         ray: &Ray,
         triangle_count: &mut usize,
-    ) -> Option<(Hit, &BvhPrimitive)> {
+    ) -> Option<Hit> {
         self.get_root().intersects(scene, ray, self, triangle_count)
     }
 }
