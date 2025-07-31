@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use bon::Builder;
 use serde::*;
 
+use crate::loader::sdtf::SdtfConfig;
 use crate::*;
 
 /// Represents a scene that can be serialized and deserialized
@@ -111,6 +112,18 @@ impl Scene {
     ) -> Result<Handle<Node>, Box<dyn Error>> {
         let model = Model::load_gltf_path(path, assets)?;
         Ok(self.push_model(model))
+    }
+
+    pub fn push_sdtf_from_path<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+    ) -> Result<(Handle<Node>, SdtfConfig), Box<dyn Error>> {
+        let (model, config) = Model::load_sdtf_path(path)?;
+        let model_handle = self.models.push(model);
+        let node = Node::builder().model(model_handle).build();
+        let node_handle = self.nodes.push(node);
+        self.root.children.push(node_handle);
+        Ok((node_handle, config))
     }
 }
 

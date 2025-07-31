@@ -64,7 +64,7 @@ impl MaterialBuilder {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Material {
     pub shader: u32,
     pub color: Color,

@@ -220,6 +220,13 @@ impl TriangleIndices {
     pub fn get_index_count(&self) -> usize {
         self.indices.len() / self.index_type.get_size()
     }
+
+    pub fn push(&mut self, index_bytes: &[u8]) {
+        if index_bytes.len() != self.index_type.get_size() {
+            panic!("Index size does not match the component type size");
+        }
+        self.indices.extend_from_slice(index_bytes);
+    }
 }
 
 /// Collection of triangles defined by vertices and indices.

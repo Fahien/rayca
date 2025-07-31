@@ -4,6 +4,37 @@
 
 use rayca_math::*;
 
+pub struct SphereBuilder {
+    center: Point3,
+    radius: f32,
+}
+
+impl SphereBuilder {
+    pub fn new() -> Self {
+        Self {
+            center: Point3::default(),
+            radius: 1.0,
+        }
+    }
+
+    pub fn center(mut self, center: Point3) -> Self {
+        self.center = center;
+        self
+    }
+
+    pub fn radius(mut self, radius: f32) -> Self {
+        if radius < 0.0 {
+            panic!("Sphere radius cannot be negative");
+        }
+        self.radius = radius;
+        self
+    }
+
+    pub fn build(self) -> Sphere {
+        Sphere::new(self.center, self.radius)
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct Sphere {
@@ -13,6 +44,10 @@ pub struct Sphere {
 }
 
 impl Sphere {
+    pub fn builder() -> SphereBuilder {
+        SphereBuilder::new()
+    }
+
     pub fn new(center: Point3, radius: f32) -> Self {
         if radius < 0.0 {
             panic!("Sphere radius cannot be negative");

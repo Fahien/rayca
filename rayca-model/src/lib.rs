@@ -4,9 +4,9 @@
 
 mod buffer;
 mod camera;
-mod gltf_loader;
 mod image;
 mod light;
+mod loader;
 mod material;
 mod mesh;
 mod model;

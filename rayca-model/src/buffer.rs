@@ -4,7 +4,7 @@
 
 use bon::Builder;
 
-use crate::{gltf_loader::StoreModel, *};
+use crate::{loader::gltf::StoreModel, *};
 
 #[derive(Default, Clone)]
 pub struct Buffer {

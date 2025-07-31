@@ -96,6 +96,10 @@ impl Model {
         self.geometries.get(handle)
     }
 
+    pub fn get_geometry_mut(&mut self, handle: Handle<Geometry>) -> Option<&mut Geometry> {
+        self.geometries.get_mut(handle)
+    }
+
     pub fn get_mesh(&self, handle: Handle<Mesh>) -> Option<&Mesh> {
         self.meshes.get(handle)
     }
@@ -104,11 +108,27 @@ impl Model {
         self.primitives.get(handle)
     }
 
+    pub fn get_primitive_mut(&mut self, handle: Handle<Primitive>) -> Option<&mut Primitive> {
+        self.primitives.get_mut(handle)
+    }
+
     pub fn get_camera(&self, handle: Handle<Camera>) -> Option<&Camera> {
         self.cameras.get(handle)
     }
 
     pub fn get_light(&self, handle: Handle<Light>) -> Option<&Light> {
         self.lights.get(handle)
+    }
+
+    pub fn push_primitive(&mut self, primitive: Primitive) -> Handle<Primitive> {
+        self.primitives.push(primitive)
+    }
+
+    pub fn push_camera(&mut self, camera: Camera) -> Handle<Camera> {
+        self.cameras.push(camera)
+    }
+
+    pub fn push_node(&mut self, node: Node) -> Handle<Node> {
+        self.nodes.push(node)
     }
 }
