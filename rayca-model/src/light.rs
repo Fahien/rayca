@@ -2,6 +2,8 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use std::simd::num::SimdFloat;
+
 use crate::*;
 
 pub enum Light {
@@ -99,8 +101,9 @@ impl Default for DirectionalLight {
 }
 
 pub struct PointLight {
-    color: Color,
-    intensity: f32,
+    pub color: Color,
+    pub intensity: f32,
+    pub attenuation: Vec3,
 }
 
 impl PointLight {
@@ -108,6 +111,7 @@ impl PointLight {
         Self {
             color: Color::new(1.0, 1.0, 1.0, 1.0),
             intensity: 1.0,
+            attenuation: Vec3::new(0.0, 0.0, 1.0),
         }
     }
 
@@ -127,8 +131,10 @@ impl PointLight {
     pub fn get_fallof(&self, light_trs: &Trs, frag_pos: &Point3) -> f32 {
         let dist = Vec3::from(frag_pos) - light_trs.get_translation();
         let r2 = dist.norm();
-        // Square fallof
-        1.0 * std::f32::consts::PI * r2
+        let r = r2.sqrt();
+
+        let rhs = Vec3::new(1.0, r, r2);
+        (self.attenuation.simd * rhs.simd).reduce_sum()
     }
 
     pub fn get_direction(&self, light_trs: &Trs, frag_pos: &Point3) -> Vec3 {

@@ -23,6 +23,7 @@ struct SdtfBuilder {
     vertices: Pack<Vertex>,
     transform: Vec<Trs>,
     temp_material: PhongMaterial,
+    attenuation: Vec3,
     temp_model: Model,
     config: SdtfConfig,
 }
@@ -35,6 +36,7 @@ impl SdtfBuilder {
             vertices: Pack::new(),
             transform: Vec::new(),
             temp_material: PhongMaterial::default(),
+            attenuation: Vec3::new(1.0, 0.0, 0.0),
             temp_model: Model::default(),
             config: SdtfConfig::default(),
         }
@@ -177,9 +179,21 @@ impl SdtfBuilder {
             triangle_mesh.indices.push(&[last_vertex_index + 1]);
             triangle_mesh.indices.push(&[last_vertex_index + 2]);
 
-            triangle_mesh.vertices.push(self.vertices[a_index].clone());
-            triangle_mesh.vertices.push(self.vertices[b_index].clone());
-            triangle_mesh.vertices.push(self.vertices[c_index].clone());
+            let mut a = self.vertices[a_index].clone();
+            let mut b = self.vertices[b_index].clone();
+            let mut c = self.vertices[c_index].clone();
+
+            let ab = b.pos - a.pos;
+            let ac = c.pos - a.pos;
+            let n = ab.cross(&ac).get_normalized();
+
+            a.ext.normal = n;
+            b.ext.normal = n;
+            c.ext.normal = n;
+
+            triangle_mesh.vertices.push(a);
+            triangle_mesh.vertices.push(b);
+            triangle_mesh.vertices.push(c);
         }
 
         Ok(())
@@ -281,7 +295,6 @@ impl SdtfBuilder {
         let y = words.next().expect("Failed to read scale y").parse()?;
         let z = words.next().expect("Failed to read scale z").parse()?;
 
-        log::info!("Scale {} {} {}", x, y, z);
         let trs = Trs::builder().scale(Vec3::new(x, y, z)).build();
 
         let curr = self.transform.last_mut().unwrap();
@@ -354,6 +367,62 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_point<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        let x = words
+            .next()
+            .expect("Failed to read point light x")
+            .parse()?;
+        let y = words
+            .next()
+            .expect("Failed to read point light y")
+            .parse()?;
+        let z = words
+            .next()
+            .expect("Failed to read point light z")
+            .parse()?;
+        let r = words
+            .next()
+            .expect("Failed to read point light r")
+            .parse()?;
+        let g = words
+            .next()
+            .expect("Failed to read point light g")
+            .parse()?;
+        let b = words
+            .next()
+            .expect("Failed to read point light b")
+            .parse()?;
+
+        let mut light = PointLight::new();
+        light.color = Color::new(r, g, b, 1.0);
+        light.attenuation = self.attenuation;
+        let light = Light::Point(light);
+        let light_handle = model.lights.push(light);
+        let point_node = Node::builder()
+            .trs(Trs::builder().translation(Vec3::new(x, y, z)).build())
+            .light(light_handle)
+            .build();
+        let node_handle = model.nodes.push(point_node);
+        model.root.children.push(node_handle);
+
+        Ok(())
+    }
+
+    fn parse_attenuation<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        let c = words.next().expect("Failed to read attenuation").parse()?;
+        let l = words.next().expect("Failed to read attenuation").parse()?;
+        let q = words.next().expect("Failed to read attenuation").parse()?;
+        self.attenuation = Vec3::new(c, l, q);
+        Ok(())
+    }
+
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
         if line.starts_with('#') {
@@ -391,6 +460,8 @@ impl SdtfBuilder {
             Some("diffuse") => self.parse_diffuse(words, model)?,
             Some("specular") => self.parse_specular(words, model)?,
             Some("shininess") => self.parse_shininess(words, model)?,
+            Some("point") => self.parse_point(words, model)?,
+            Some("attenuation") => self.parse_attenuation(words)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 

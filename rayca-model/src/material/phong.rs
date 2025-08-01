@@ -29,21 +29,14 @@ pub struct PhongMaterial {
 
 impl Default for PhongMaterial {
     fn default() -> Self {
-        PhongMaterial {
-            shader: 0,
-            ambient: Color::WHITE,
-            emission: Color::BLACK,
-            diffuse: Color::BLACK,
-            specular: Color::BLACK,
-            shininess: 0.0,
-        }
+        Self::WHITE
     }
 }
 
 impl PhongMaterial {
     pub const WHITE: PhongMaterial = PhongMaterial {
         shader: 0,
-        ambient: Color::WHITE,
+        ambient: Color::new(0.2, 0.2, 0.2, 1.0),
         emission: Color::BLACK,
         diffuse: Color::BLACK,
         specular: Color::BLACK,
