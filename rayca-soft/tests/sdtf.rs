@@ -91,8 +91,8 @@ fn scene6() {
     );
 }
 
-// TODO: enable this test when the scene is fixed
-fn _scene7() {
+#[test]
+fn scene7() {
     run_test(
         "sdtf/1/scene7.sdtf",
         "sdtf/1/scene7.png",

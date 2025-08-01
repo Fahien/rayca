@@ -17,7 +17,7 @@ impl Buffer {
         Self { uri, data }
     }
 
-    pub fn extend_from_bytes<B: AsBytes>(
+    pub fn extend_from_bytes<B: AsBytes + ?Sized>(
         &mut self,
         bytes: &B,
         stride: usize,

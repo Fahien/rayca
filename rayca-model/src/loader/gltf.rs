@@ -789,7 +789,7 @@ impl StoreModel {
                 .insert(gltf::mesh::Semantic::TexCoords(0), uv_accessor_handle);
 
             let buffer_view = store_model.buffer.extend_from_bytes(
-                &triangle_mesh.indices.indices,
+                triangle_mesh.indices.get_indices::<u8>(),
                 0,
                 BufferViewTarget::ElementArrayBuffer,
             );

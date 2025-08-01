@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 use bon::Builder;
+use num_traits::NumCast;
 
 use crate::*;
 
@@ -211,7 +212,7 @@ impl ComponentType {
 #[derive(Builder, Debug, Clone, Default)]
 
 pub struct TriangleIndices {
-    pub indices: Vec<u8>,
+    indices: Vec<u8>,
     #[builder(default)]
     pub index_type: ComponentType,
 }
@@ -226,6 +227,81 @@ impl TriangleIndices {
             panic!("Index size does not match the component type size");
         }
         self.indices.extend_from_slice(index_bytes);
+    }
+
+    pub fn expand_index_size(&mut self) {
+        match self.index_type {
+            ComponentType::U8 => {
+                self.index_type = ComponentType::U16;
+                let expanded_indices: Vec<u16> =
+                    self.indices.clone().into_iter().map(|i| i as u16).collect();
+                self.indices = Vec::from(unsafe {
+                    std::slice::from_raw_parts(
+                        expanded_indices.as_ptr() as *const u8,
+                        expanded_indices.len() * 2,
+                    )
+                });
+            }
+            ComponentType::U16 => {
+                self.index_type = ComponentType::U32;
+
+                let indices16 = unsafe {
+                    std::slice::from_raw_parts(
+                        self.indices.as_ptr() as *const u16,
+                        self.indices.len() / 2,
+                    )
+                };
+
+                let expanded_indices: Vec<u32> = indices16.iter().map(|i| *i as u32).collect();
+                self.indices = Vec::from(unsafe {
+                    std::slice::from_raw_parts(
+                        expanded_indices.as_ptr() as *const u8,
+                        expanded_indices.len() * 4,
+                    )
+                });
+            }
+            _ => (),
+        }
+    }
+
+    pub fn add_index(&mut self, last_index: usize) {
+        // Check whether we need more bits for indices
+        match self.index_type {
+            ComponentType::U8 if last_index == std::u8::MAX as usize + 1 => {
+                self.expand_index_size()
+            }
+            ComponentType::U16 if last_index == std::u16::MAX as usize + 1 => {
+                self.expand_index_size()
+            }
+            _ if last_index == std::usize::MAX => {
+                panic!("Yeah, you know, I can't really handle all these vertices..")
+            }
+            _ => (), // you good
+        }
+
+        match self.index_type {
+            ComponentType::U8 => {
+                self.indices.push(last_index as u8);
+            }
+            ComponentType::U16 => {
+                let last_index: [u8; 2] = (last_index as u16).to_ne_bytes();
+                self.indices.extend(last_index);
+            }
+            _ => {
+                let last_index: [u8; 4] = (last_index as u32).to_ne_bytes();
+                self.indices.extend(last_index);
+            }
+        }
+    }
+
+    pub fn set_indices(&mut self, indices: Vec<u8>) {
+        self.indices = indices;
+    }
+
+    pub fn get_indices<Index: NumCast>(&self) -> &[Index] {
+        let index_count = self.get_index_count();
+        assert_eq!(std::mem::size_of::<Index>(), self.index_type.get_size());
+        unsafe { std::slice::from_raw_parts(self.indices.as_ptr() as *const Index, index_count) }
     }
 }
 
@@ -506,5 +582,24 @@ mod tests {
     fn get_vertex_out_of_bounds() {
         let triangle = Triangle::default();
         let _ = triangle.get_vertex(3, &Trs::IDENTITY);
+    }
+
+    #[test]
+    fn expand() {
+        let mut indices = TriangleIndices::builder()
+            .indices(vec![0, 1, 2])
+            .index_type(ComponentType::U8)
+            .build();
+        assert_eq!(indices.indices, vec![0, 1, 2]);
+        assert_eq!(indices.index_type, ComponentType::U8);
+
+        indices.expand_index_size();
+        assert_eq!(indices.index_type, ComponentType::U16);
+
+        let indices_len = indices.get_index_count();
+        let indices = unsafe {
+            std::slice::from_raw_parts(indices.indices.as_ptr() as *const u16, indices_len)
+        };
+        assert_eq!(indices, vec![0, 1, 2]);
     }
 }

@@ -172,12 +172,10 @@ impl SdtfBuilder {
         let geometry_handle = self.temp_model.primitives[0].geometry;
         let geometry = self.temp_model.get_geometry_mut(geometry_handle).unwrap();
         if let Geometry::TriangleMesh(triangle_mesh) = geometry {
-            // TODO: Here I only support 255 indices. I should find a way to convert
-            // u8 indices to u16 indices if needed..
-            let last_vertex_index = triangle_mesh.vertices.len() as u8;
-            triangle_mesh.indices.push(&[last_vertex_index]);
-            triangle_mesh.indices.push(&[last_vertex_index + 1]);
-            triangle_mesh.indices.push(&[last_vertex_index + 2]);
+            let last_vertex_index = triangle_mesh.vertices.len();
+            triangle_mesh.indices.add_index(last_vertex_index);
+            triangle_mesh.indices.add_index(last_vertex_index + 1);
+            triangle_mesh.indices.add_index(last_vertex_index + 2);
 
             let mut a = self.vertices[a_index].clone();
             let mut b = self.vertices[b_index].clone();

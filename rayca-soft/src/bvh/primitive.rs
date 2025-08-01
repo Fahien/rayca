@@ -209,34 +209,17 @@ impl BvhPrimitive {
         material: Handle<Material>,
         scene: &SceneDrawInfo,
     ) -> Vec<BvhPrimitive> {
-        let index_count = triangles.indices.get_index_count();
-
         match triangles.indices.index_type {
-            ComponentType::I8 | ComponentType::U8 => Self::from_triangle_mesh_impl(
-                triangles,
-                node,
-                material,
-                scene,
-                &triangles.indices.indices,
-            ),
+            ComponentType::I8 | ComponentType::U8 => {
+                let indices = triangles.indices.get_indices::<u8>();
+                Self::from_triangle_mesh_impl(triangles, node, material, scene, indices)
+            }
             ComponentType::I16 | ComponentType::U16 => {
-                let indices = unsafe {
-                    std::slice::from_raw_parts(
-                        triangles.indices.indices.as_ptr() as *const u16,
-                        index_count,
-                    )
-                };
-
+                let indices = triangles.indices.get_indices::<u16>();
                 Self::from_triangle_mesh_impl(triangles, node, material, scene, indices)
             }
             ComponentType::U32 => {
-                let indices = unsafe {
-                    std::slice::from_raw_parts(
-                        triangles.indices.indices.as_ptr() as *const u32,
-                        index_count,
-                    )
-                };
-
+                let indices = triangles.indices.get_indices::<u32>();
                 Self::from_triangle_mesh_impl(triangles, node, material, scene, indices)
             }
             _ => panic!("Index type not supported"),
