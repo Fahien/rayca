@@ -14,8 +14,15 @@ impl Scratcher {
 }
 
 impl Integrator for Scratcher {
-    fn trace(&self, scene: &SceneDrawInfo, ray: Ray, tlas: &Tlas, depth: u32) -> Option<Color> {
-        if depth > 1 {
+    fn trace(
+        &self,
+        config: &Config,
+        scene: &SceneDrawInfo,
+        ray: Ray,
+        tlas: &Tlas,
+        depth: u32,
+    ) -> Option<Color> {
+        if depth > config.max_depth {
             return None;
         }
 
@@ -34,7 +41,7 @@ impl Integrator for Scratcher {
         if albedo_color.is_transparent() {
             let transmit_origin = hit.point + -n * RAY_BIAS;
             let transmit_ray = Ray::new(transmit_origin, ray.dir);
-            let transmit_result = self.trace(scene, transmit_ray, tlas, depth + 1);
+            let transmit_result = self.trace(config, scene, transmit_ray, tlas, depth + 1);
 
             if let Some(mut transmit_color) = transmit_result {
                 // continue with the rest of the shading?
@@ -87,7 +94,9 @@ impl Integrator for Scratcher {
         // Reflection component
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
         let reflection_ray = Ray::new(next_origin, reflection_dir);
-        if let Some(reflection_intensity) = self.trace(scene, reflection_ray, tlas, depth + 1) {
+        if let Some(reflection_intensity) =
+            self.trace(config, scene, reflection_ray, tlas, depth + 1)
+        {
             let ir = Irradiance::new(
                 reflection_intensity,
                 &hit,

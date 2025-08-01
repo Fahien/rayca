@@ -2,22 +2,25 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+use bon::Builder;
+
 use crate::IntegratorType;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Builder)]
 pub struct Config {
+    #[builder(default = true)]
     pub bvh: bool,
+
+    #[builder(default = IntegratorType::Scratcher)]
     pub integrator: IntegratorType,
+
+    #[builder(default = 5)]
+    /// Maximum recursion depth for ray tracing.
+    pub max_depth: u32,
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Self::new(true, IntegratorType::Scratcher)
-    }
-}
-
-impl Config {
-    pub fn new(bvh: bool, integrator: IntegratorType) -> Self {
-        Self { bvh, integrator }
+        Self::builder().build()
     }
 }

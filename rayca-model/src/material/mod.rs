@@ -94,4 +94,11 @@ impl Material {
             Material::Phong(_) => normal,
         }
     }
+
+    pub fn get_specular(&self, model: &Model) -> Color {
+        match &self {
+            Material::Phong(_) => self.get_phong_material(model).unwrap().specular,
+            Material::Pbr(_) => todo!(),
+        }
+    }
 }

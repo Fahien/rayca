@@ -1808,6 +1808,7 @@ name = "rayca-soft"
 version = "0.4.1"
 dependencies = [
  "base64 0.13.1",
+ "bon",
  "console_error_panic_hook",
  "gltf",
  "instant",

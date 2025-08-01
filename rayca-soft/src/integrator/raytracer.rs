@@ -14,8 +14,15 @@ impl Raytracer {
 }
 
 impl Integrator for Raytracer {
-    fn trace(&self, scene: &SceneDrawInfo, ray: Ray, tlas: &Tlas, depth: u32) -> Option<Color> {
-        if depth > 1 {
+    fn trace(
+        &self,
+        config: &Config,
+        scene: &SceneDrawInfo,
+        ray: Ray,
+        tlas: &Tlas,
+        depth: u32,
+    ) -> Option<Color> {
+        if depth > config.max_depth {
             return None;
         }
 
@@ -28,7 +35,7 @@ impl Integrator for Raytracer {
         let uv = primitive.get_uv(&hit);
 
         const RAY_BIAS: f32 = 1e-4;
-        let shadow_origin = hit.point + n * RAY_BIAS;
+        let next_origin = hit.point + n * RAY_BIAS;
 
         let ambient_emissive = albedo_color;
 
@@ -40,7 +47,7 @@ impl Integrator for Raytracer {
             let light = scene.get_light(light_draw_info);
             let light_dir = light.get_direction(&light_node.trs, &hit.point);
 
-            let shadow_ray = Ray::new(shadow_origin, light_dir);
+            let shadow_ray = Ray::new(next_origin, light_dir);
             let shadow_result = tlas.intersects(scene, &shadow_ray);
 
             // Whether this object is light (verb) by a light (noun)
@@ -64,6 +71,17 @@ impl Integrator for Raytracer {
                 light_contribution += primitive.get_radiance(scene, &ir);
             }
         } // end iterate light
+
+        let reflection_dir = ray.dir.reflect(&n).get_normalized();
+        let reflection_ray = Ray::new(next_origin, reflection_dir);
+        if let Some(reflection_color) = self.trace(config, scene, reflection_ray, tlas, depth + 1) {
+            // Cosine-law should apply here as well
+            let n_dot_r = 1.0; //n.dot(&reflection_dir);
+            let blas = tlas.get_blas(hit.blas);
+            let primitive = blas.model.get_primitive(hit.primitive);
+            let specular = primitive.get_specular(scene);
+            light_contribution += reflection_color * specular * n_dot_r;
+        }
 
         Some(ambient_emissive + light_contribution)
     }

@@ -11,10 +11,21 @@ use std::{
 
 use crate::*;
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct SdtfConfig {
     pub width: u32,
     pub height: u32,
+    pub max_depth: i32,
+}
+
+impl Default for SdtfConfig {
+    fn default() -> Self {
+        Self {
+            width: 0,
+            height: 0,
+            max_depth: 5,
+        }
+    }
 }
 
 struct SdtfBuilder {
@@ -421,6 +432,14 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_maxdepth<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.config.max_depth = words.next().expect("Failed to read maxdepth").parse()?;
+        Ok(())
+    }
+
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
         if line.starts_with('#') {
@@ -460,6 +479,7 @@ impl SdtfBuilder {
             Some("shininess") => self.parse_shininess(words, model)?,
             Some("point") => self.parse_point(words, model)?,
             Some("attenuation") => self.parse_attenuation(words)?,
+            Some("maxdepth") => self.parse_maxdepth(words)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 

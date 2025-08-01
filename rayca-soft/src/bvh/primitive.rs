@@ -117,6 +117,11 @@ impl BvhPrimitive {
         geometry_color * material_color
     }
 
+    pub fn get_specular(&self, scene: &SceneDrawInfo) -> Color {
+        let model = scene.get_model(self.node.model);
+        self.get_material(scene).get_specular(model)
+    }
+
     pub fn get_uv(&self, hit: &Hit) -> Vec2 {
         self.geometry.get_uv(hit)
     }

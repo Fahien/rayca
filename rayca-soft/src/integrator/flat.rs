@@ -14,7 +14,14 @@ impl Flat {
 }
 
 impl Integrator for Flat {
-    fn trace(&self, scene: &SceneDrawInfo, ray: Ray, tlas: &Tlas, _depth: u32) -> Option<Color> {
+    fn trace(
+        &self,
+        _config: &Config,
+        scene: &SceneDrawInfo,
+        ray: Ray,
+        tlas: &Tlas,
+        _depth: u32,
+    ) -> Option<Color> {
         let hit = tlas.intersects(scene, &ray)?;
         let blas = tlas.get_blas(hit.blas);
         let primitive = blas.model.get_primitive(hit.primitive);
