@@ -3,9 +3,11 @@
 // SPDX-License-Identifier: MIT
 
 mod flat;
+mod raytracer;
 mod scratcher;
 
 pub use flat::*;
+pub use raytracer::*;
 pub use scratcher::*;
 
 use crate::*;
@@ -18,6 +20,7 @@ pub trait Integrator: Sync {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum IntegratorType {
     Scratcher,
+    Raytracer,
     Flat,
 }
 
@@ -27,6 +30,10 @@ impl IntegratorType {
             IntegratorType::Scratcher => {
                 static SCRATCHER: Scratcher = Scratcher::new();
                 &SCRATCHER
+            }
+            IntegratorType::Raytracer => {
+                static RAYTRACER: Raytracer = Raytracer::new();
+                &RAYTRACER
             }
             IntegratorType::Flat => {
                 static FLAT: Flat = Flat::new();

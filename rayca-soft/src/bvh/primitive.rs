@@ -117,6 +117,10 @@ impl BvhPrimitive {
         geometry_color * material_color
     }
 
+    pub fn get_uv(&self, hit: &Hit) -> Vec2 {
+        self.geometry.get_uv(hit)
+    }
+
     pub fn get_normal(&self, scene_draw_info: &SceneDrawInfo, hit: &Hit) -> Vec3 {
         match &self.geometry {
             BvhGeometry::Triangle(_) => {

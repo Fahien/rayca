@@ -54,7 +54,22 @@ fn scene4() {
     run_test(
         "sdtf/1/scene4-ambient.sdtf",
         "sdtf/1/scene4-ambient.png",
-        Config::new(false, IntegratorType::Flat),
+        Config::new(false, IntegratorType::Raytracer),
+    );
+    run_test(
+        "sdtf/1/scene4-diffuse.sdtf",
+        "sdtf/1/scene4-diffuse.png",
+        Config::new(false, IntegratorType::Raytracer),
+    );
+    run_test(
+        "sdtf/1/scene4-emission.sdtf",
+        "sdtf/1/scene4-emission.png",
+        Config::new(false, IntegratorType::Raytracer),
+    );
+    run_test(
+        "sdtf/1/scene4-specular.sdtf",
+        "sdtf/1/scene4-specular.png",
+        Config::new(false, IntegratorType::Raytracer),
     );
 }
 
@@ -63,7 +78,7 @@ fn scene5() {
     run_test(
         "sdtf/1/scene5.sdtf",
         "sdtf/1/scene5.png",
-        Config::new(false, IntegratorType::Flat),
+        Config::new(false, IntegratorType::Raytracer),
     );
 }
 
@@ -72,7 +87,7 @@ fn scene6() {
     run_test(
         "sdtf/1/scene6.sdtf",
         "sdtf/1/scene6.png",
-        Config::new(false, IntegratorType::Flat),
+        Config::new(false, IntegratorType::Raytracer),
     );
 }
 
@@ -81,6 +96,6 @@ fn _scene7() {
     run_test(
         "sdtf/1/scene7.sdtf",
         "sdtf/1/scene7.png",
-        Config::new(false, IntegratorType::Flat),
+        Config::new(false, IntegratorType::Raytracer),
     );
 }
