@@ -1,11 +1,11 @@
-// Copyright © 2021-2024
+// Copyright © 2021-2025
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
 use crate::*;
 
 #[derive(Default)]
-pub struct MaterialBuilder {
+pub struct PbrMaterialBuilder {
     shader: u32,
     color: Color,
     albedo: Handle<Texture>,
@@ -15,7 +15,7 @@ pub struct MaterialBuilder {
     metallic_roughness: Handle<Texture>,
 }
 
-impl MaterialBuilder {
+impl PbrMaterialBuilder {
     pub fn shader(mut self, shader: u32) -> Self {
         self.shader = shader;
         self
@@ -51,8 +51,8 @@ impl MaterialBuilder {
         self
     }
 
-    pub fn build(self) -> Material {
-        Material {
+    pub fn build(self) -> PbrMaterial {
+        PbrMaterial {
             shader: self.shader,
             color: self.color,
             albedo: self.albedo,
@@ -65,7 +65,7 @@ impl MaterialBuilder {
 }
 
 #[derive(Clone, Default, Debug)]
-pub struct Material {
+pub struct PbrMaterial {
     pub shader: u32,
     pub color: Color,
     pub albedo: Handle<Texture>,
@@ -75,7 +75,7 @@ pub struct Material {
     pub metallic_roughness: Handle<Texture>,
 }
 
-impl Material {
+impl PbrMaterial {
     pub const WHITE: Self = Self {
         shader: 0,
         color: Color::WHITE,
@@ -86,11 +86,11 @@ impl Material {
         metallic_roughness: Handle::NONE,
     };
 
-    pub fn builder() -> MaterialBuilder {
-        MaterialBuilder::default()
+    pub fn builder() -> PbrMaterialBuilder {
+        PbrMaterialBuilder::default()
     }
 
-    pub fn get_color(&self, model: &Model, uv: &Vec2) -> Color {
+    pub fn get_color(&self, model: &Model, uv: Vec2) -> Color {
         if let Some(albedo_texture) = model.textures.get(self.albedo) {
             let sampler = Sampler::default();
             let image = model.images.get(albedo_texture.image).unwrap();
@@ -103,7 +103,7 @@ impl Material {
     pub fn get_normal(
         &self,
         model: &Model,
-        uv: &Vec2,
+        uv: Vec2,
         normal: Vec3,
         tangent: Vec3,
         bitangent: Vec3,
@@ -121,7 +121,7 @@ impl Material {
         }
     }
 
-    pub fn get_metallic_roughness(&self, model: &Model, uv: &Vec2) -> (f32, f32) {
+    pub fn get_metallic_roughness(&self, model: &Model, uv: Vec2) -> (f32, f32) {
         if let Some(mr_texture) = model.textures.get(self.metallic_roughness) {
             let sampler = Sampler::default();
             let image = model.images.get(mr_texture.image).unwrap();
@@ -135,7 +135,7 @@ impl Material {
     }
 }
 
-impl std::fmt::Display for Material {
+impl std::fmt::Display for PbrMaterial {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

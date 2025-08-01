@@ -105,7 +105,7 @@ impl BvhPrimitive {
         let material = model
             .materials
             .get(self.material)
-            .unwrap_or(&Material::WHITE);
+            .unwrap_or(&Material::DEFAULT);
         material
     }
 
@@ -113,7 +113,7 @@ impl BvhPrimitive {
         let geometry_color = self.geometry.get_color(hit);
         let uv = self.geometry.get_uv(hit);
         let model = scene.get_model(self.node.model);
-        let material_color = self.get_material(scene).get_color(model, &uv);
+        let material_color = self.get_material(scene).get_color(model, uv);
         geometry_color * material_color
     }
 
@@ -130,7 +130,7 @@ impl BvhPrimitive {
                 let bitangent = self.geometry.get_bitangent(hit);
                 let material = self.get_material(scene_draw_info);
                 let model = scene_draw_info.get_model(self.node.model);
-                material.get_normal(model, &uv, normal, tangent, bitangent)
+                material.get_normal(model, uv, normal, tangent, bitangent)
             }
             BvhGeometry::Sphere(sphere) => {
                 let trs = scene_draw_info.get_world_trs(self.node);
@@ -143,23 +143,17 @@ impl BvhPrimitive {
         }
     }
 
-    pub fn get_metallic_roughness(&self, scene: &SceneDrawInfo, hit: &Hit) -> (f32, f32) {
-        match &self.geometry {
-            BvhGeometry::Triangle(_) => {
-                let material = self.get_material(scene);
-                let uv = self.geometry.get_uv(hit);
-                let model = scene.get_model(self.node.model);
-                material.get_metallic_roughness(model, &uv)
-            }
-            // TODO remember to transform hit point into model sphere
-            BvhGeometry::Sphere(_) => (1.0, 1.0),
-        }
-    }
-
     /// Calculates the light coming out towards the viewer at a certain intersection
     pub fn get_radiance(&self, scene: &SceneDrawInfo, ir: &Irradiance) -> Color {
         let model = scene.get_model(self.node.model);
-        ggx::get_radiance(self.get_material(scene), ir, model)
+        let material = self.get_material(scene);
+        match material {
+            Material::Pbr(_) => {
+                let pbr_material = material.get_pbr_material(model).unwrap();
+                ggx::get_radiance(pbr_material, ir, model)
+            }
+            Material::Phong(_) => unimplemented!("Phong material radiance not implemented"),
+        }
     }
 
     fn from_triangle_mesh_impl<'m, Index: NumCast>(

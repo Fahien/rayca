@@ -29,8 +29,8 @@ fn geometry_smith_ggx(n_dot_v: f32, n_dot_l: f32, roughness: f32) -> f32 {
     0.5 / (ggxv + ggxl)
 }
 
-pub fn get_radiance(material: &Material, ir: &Irradiance, model: &Model) -> Color {
-    let (metallic, roughness) = material.get_metallic_roughness(model, &ir.uv);
+pub fn get_radiance(material: &PbrMaterial, ir: &Irradiance, model: &Model) -> Color {
+    let (metallic, roughness) = material.get_metallic_roughness(model, ir.uv);
 
     let d = distribution_ggx(ir.n_dot_h, roughness);
 

@@ -191,11 +191,16 @@ impl SdtfBuilder {
         // Process any pending primitive before starting working on a new one
         self.process_primitive(model);
 
-        let r = words.next().expect("Failed to read vertex x").parse()?;
-        let g = words.next().expect("Failed to read vertex x").parse()?;
-        let b = words.next().expect("Failed to read vertex x").parse()?;
+        let r = words.next().expect("Failed to read ambient r").parse()?;
+        let g = words.next().expect("Failed to read ambient g").parse()?;
+        let b = words.next().expect("Failed to read ambient b").parse()?;
 
-        let material = Material::builder().color(Color::new(r, g, b, 1.0)).build();
+        let phong_material = PhongMaterial::builder()
+            .color(Color::new(r, g, b, 1.0))
+            .build();
+        let phong_material_handle = self.temp_model.phong_materials.push(phong_material);
+
+        let material = Material::Phong(phong_material_handle);
         self.temp_model.materials.push(material);
 
         Ok(())
@@ -333,6 +338,10 @@ impl SdtfBuilder {
         if let Some(mut primitive) = self.temp_model.primitives.pop() {
             if let Some(geometry) = self.temp_model.geometries.get(primitive.geometry) {
                 primitive.geometry = model.geometries.push(geometry.clone());
+            }
+
+            if let Some(phong_material) = self.temp_model.phong_materials.last() {
+                model.phong_materials.push(phong_material.clone());
             }
 
             if let Some(material) = self.temp_model.materials.last() {

@@ -371,8 +371,8 @@ impl Model {
             //     }
             // }
 
-            // Default behaviour is parsing a GGX material
-            let mut material = Material::builder();
+            // Default behaviour is parsing a Pbr material
+            let mut material = PbrMaterial::builder();
 
             let pbr = gmaterial.pbr_metallic_roughness();
 
@@ -398,7 +398,8 @@ impl Model {
                 material = material.metallic_roughness(Handle::from(gtexture.texture().index()));
             }
 
-            self.materials.push(material.build());
+            let pbr_material_handle = self.pbr_materials.push(material.build());
+            self.materials.push(Material::Pbr(pbr_material_handle));
         }
 
         Ok(())
@@ -624,7 +625,7 @@ impl Model {
 
         // Materials
         write!(&mut json_string, ", \"materials\": [")?;
-        for (i, material) in self.materials.iter().enumerate() {
+        for (i, material) in self.pbr_materials.iter().enumerate() {
             if i > 0 {
                 write!(&mut json_string, ",")?;
             }

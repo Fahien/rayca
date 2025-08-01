@@ -105,9 +105,14 @@ fn cube_over_plane() -> Result<(), Box<dyn Error>> {
         let child = model.nodes.get_mut(1.into()).unwrap();
         child.trs.rotation = Quat::default();
         {
-            let blue_mat = model.materials.get_mut(0.into()).unwrap();
-            blue_mat.color = Color::new(0.1, 0.2, 0.7, 1.0);
-            blue_mat.metallic_factor = 1.0;
+            let blue_mat_handle = model
+                .materials
+                .get(0.into())
+                .unwrap()
+                .get_pbr_material_handle();
+            let pbr_material = model.get_pbr_material_mut(blue_mat_handle).unwrap();
+            pbr_material.color = Color::new(0.1, 0.2, 0.7, 1.0);
+            pbr_material.metallic_factor = 1.0;
         }
     }
 

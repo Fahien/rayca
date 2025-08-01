@@ -8,7 +8,7 @@ use super::*;
 pub struct Sampler {}
 
 impl Sampler {
-    pub fn sample(&self, image: &Image, uv: &Vec2) -> Color {
+    pub fn sample(&self, image: &Image, uv: Vec2) -> Color {
         let width = image.width() as f32;
         let height = image.height() as f32;
         let x = (uv.x - uv.x.floor() + 1.0) * width;
@@ -41,11 +41,11 @@ mod test {
         image.clear::<RGBA8>(color.into());
 
         let uv = Vec2::default();
-        let pixel = sampler.sample(&image, &uv);
+        let pixel = sampler.sample(&image, uv);
         assert!(pixel == color);
 
         let uv = Vec2::new(1.0, 1.0);
-        let pixel = sampler.sample(&image, &uv);
+        let pixel = sampler.sample(&image, uv);
         assert!(pixel == color);
     }
 }

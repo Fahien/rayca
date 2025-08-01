@@ -37,6 +37,8 @@ pub struct Model {
     pub meshes: Pack<Mesh>,
     pub primitives: Pack<Primitive>,
     pub geometries: Pack<Geometry>,
+    pub pbr_materials: Pack<PbrMaterial>,
+    pub phong_materials: Pack<PhongMaterial>,
     pub materials: Pack<Material>,
     pub textures: Pack<Texture>,
     pub images: Pack<Image>,
@@ -58,6 +60,8 @@ impl Default for Model {
             meshes: Pack::default(),
             primitives: Pack::default(),
             geometries: Pack::default(),
+            pbr_materials: Pack::default(),
+            phong_materials: Pack::default(),
             materials: Pack::default(),
             textures: Pack::default(),
             images: Pack::default(),
@@ -98,6 +102,32 @@ impl Model {
 
     pub fn get_geometry_mut(&mut self, handle: Handle<Geometry>) -> Option<&mut Geometry> {
         self.geometries.get_mut(handle)
+    }
+
+    pub fn get_material(&self, handle: Handle<Material>) -> Option<&Material> {
+        self.materials.get(handle)
+    }
+
+    pub fn get_pbr_material(&self, handle: Handle<PbrMaterial>) -> Option<&PbrMaterial> {
+        self.pbr_materials.get(handle)
+    }
+
+    pub fn get_pbr_material_mut(
+        &mut self,
+        handle: Handle<PbrMaterial>,
+    ) -> Option<&mut PbrMaterial> {
+        self.pbr_materials.get_mut(handle)
+    }
+
+    pub fn get_phong_material(&self, handle: Handle<PhongMaterial>) -> Option<&PhongMaterial> {
+        self.phong_materials.get(handle)
+    }
+
+    pub fn get_phong_material_mut(
+        &mut self,
+        handle: Handle<PhongMaterial>,
+    ) -> Option<&mut PhongMaterial> {
+        self.phong_materials.get_mut(handle)
     }
 
     pub fn get_mesh(&self, handle: Handle<Mesh>) -> Option<&Mesh> {
