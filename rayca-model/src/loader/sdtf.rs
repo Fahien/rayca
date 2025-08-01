@@ -22,6 +22,7 @@ struct SdtfBuilder {
     string: Option<String>,
     vertices: Pack<Vertex>,
     transform: Vec<Trs>,
+    temp_material: PhongMaterial,
     temp_model: Model,
     config: SdtfConfig,
 }
@@ -33,6 +34,7 @@ impl SdtfBuilder {
             string: None,
             vertices: Pack::new(),
             transform: Vec::new(),
+            temp_material: PhongMaterial::default(),
             temp_model: Model::default(),
             config: SdtfConfig::default(),
         }
@@ -195,13 +197,7 @@ impl SdtfBuilder {
         let g = words.next().expect("Failed to read ambient g").parse()?;
         let b = words.next().expect("Failed to read ambient b").parse()?;
 
-        let phong_material = PhongMaterial::builder()
-            .color(Color::new(r, g, b, 1.0))
-            .build();
-        let phong_material_handle = self.temp_model.phong_materials.push(phong_material);
-
-        let material = Material::Phong(phong_material_handle);
-        self.temp_model.materials.push(material);
+        self.temp_material.ambient = Color::new(r, g, b, 1.0);
 
         Ok(())
     }
@@ -294,6 +290,70 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_emission<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        // Process any pending primitive before editing current material
+        self.process_primitive(model);
+
+        let r = words.next().expect("Failed to read emission r").parse()?;
+        let g = words.next().expect("Failed to read emission g").parse()?;
+        let b = words.next().expect("Failed to read emission b").parse()?;
+
+        self.temp_material.emission = Color::new(r, g, b, 1.0);
+
+        Ok(())
+    }
+
+    fn parse_diffuse<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        // Process any pending primitive before editing current material
+        self.process_primitive(model);
+
+        let r = words.next().expect("Failed to read diffuse r").parse()?;
+        let g = words.next().expect("Failed to read diffuse g").parse()?;
+        let b = words.next().expect("Failed to read diffuse b").parse()?;
+
+        self.temp_material.diffuse = Color::new(r, g, b, 1.0);
+
+        Ok(())
+    }
+
+    fn parse_specular<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        // Process any pending primitive before editing current material
+        self.process_primitive(model);
+
+        let r = words.next().expect("Failed to read specular r").parse()?;
+        let g = words.next().expect("Failed to read specular g").parse()?;
+        let b = words.next().expect("Failed to read specular b").parse()?;
+
+        self.temp_material.specular = Color::new(r, g, b, 1.0);
+
+        Ok(())
+    }
+
+    fn parse_shininess<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        // Process any pending primitive before editing current material
+        self.process_primitive(model);
+
+        self.temp_material.shininess = words.next().expect("Failed to read shininess").parse()?;
+
+        Ok(())
+    }
+
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
         if line.starts_with('#') {
@@ -327,6 +387,10 @@ impl SdtfBuilder {
                     _ = self.transform.pop().unwrap()
                 }
             }
+            Some("emission") => self.parse_emission(words, model)?,
+            Some("diffuse") => self.parse_diffuse(words, model)?,
+            Some("specular") => self.parse_specular(words, model)?,
+            Some("shininess") => self.parse_shininess(words, model)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 
@@ -340,13 +404,9 @@ impl SdtfBuilder {
                 primitive.geometry = model.geometries.push(geometry.clone());
             }
 
-            if let Some(phong_material) = self.temp_model.phong_materials.last() {
-                model.phong_materials.push(phong_material.clone());
-            }
-
-            if let Some(material) = self.temp_model.materials.last() {
-                primitive.material = model.materials.push(material.clone());
-            }
+            let phong_material_handle = model.phong_materials.push(self.temp_material.clone());
+            let material = Material::Phong(phong_material_handle);
+            primitive.material = model.materials.push(material);
 
             let primitive_handle = model.primitives.push(primitive);
             let mesh = Mesh::builder().primitive(primitive_handle).build();

@@ -12,9 +12,15 @@ pub struct PhongMaterial {
     pub shader: u32,
 
     #[builder(default = Color::WHITE)]
-    pub color: Color,
+    pub ambient: Color,
 
-    #[builder(default = Color::WHITE)]
+    #[builder(default = Color::BLACK)]
+    pub emission: Color,
+
+    #[builder(default = Color::BLACK)]
+    pub diffuse: Color,
+
+    #[builder(default = Color::BLACK)]
     pub specular: Color,
 
     #[builder(default = 0.0)]
@@ -25,8 +31,10 @@ impl Default for PhongMaterial {
     fn default() -> Self {
         PhongMaterial {
             shader: 0,
-            color: Color::WHITE,
-            specular: Color::WHITE,
+            ambient: Color::WHITE,
+            emission: Color::BLACK,
+            diffuse: Color::BLACK,
+            specular: Color::BLACK,
             shininess: 0.0,
         }
     }
@@ -35,12 +43,14 @@ impl Default for PhongMaterial {
 impl PhongMaterial {
     pub const WHITE: PhongMaterial = PhongMaterial {
         shader: 0,
-        color: Color::WHITE,
-        specular: Color::WHITE,
+        ambient: Color::WHITE,
+        emission: Color::BLACK,
+        diffuse: Color::BLACK,
+        specular: Color::BLACK,
         shininess: 0.0,
     };
 
     pub fn get_color(&self) -> Color {
-        self.color
+        self.ambient + self.emission
     }
 }
