@@ -4,19 +4,19 @@
 
 #![feature(portable_simd)]
 
+pub mod brdf;
 pub mod bvh;
 pub mod config;
 pub mod draw;
-pub mod ggx;
 pub mod integrator;
 pub mod scene;
 #[cfg(target_arch = "wasm32")]
 pub mod www;
 
+pub use brdf::*;
 pub use bvh::*;
 pub use config::*;
 pub use draw::*;
-pub use ggx::*;
 pub use integrator::*;
 pub use scene::*;
 #[cfg(target_arch = "wasm32")]

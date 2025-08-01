@@ -1,8 +1,8 @@
-// Copyright © 2022-2024
+// Copyright © 2022-2025
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use super::*;
+use crate::*;
 
 /// Models the distribution of the microfacet
 /// Surfaces are not smooth at the micro level, but made of a

@@ -152,7 +152,10 @@ impl BvhPrimitive {
                 let pbr_material = material.get_pbr_material(model).unwrap();
                 ggx::get_radiance(pbr_material, ir, model)
             }
-            Material::Phong(_) => unimplemented!("Phong material radiance not implemented"),
+            Material::Phong(_) => {
+                let phong_material = material.get_phong_material(model).unwrap();
+                lambertian::get_radiance(phong_material, ir)
+            }
         }
     }
 
