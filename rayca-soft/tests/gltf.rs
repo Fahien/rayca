@@ -9,8 +9,7 @@ use rayca_soft::*;
 #[test]
 fn sphere() -> Result<(), Box<dyn Error>> {
     let mut image = Image::new(256, 256, ColorType::RGBA8);
-    let mut renderer =
-        SoftRenderer::new_with_config(Config::new(false, Box::new(Scratcher::new())));
+    let mut renderer = SoftRenderer::new_with_config(Config::new(false, IntegratorType::Scratcher));
 
     let mut model = Model::default();
     let geometry_handle = model.geometries.push(Geometry::Sphere(Sphere::unit()));

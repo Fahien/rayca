@@ -77,15 +77,15 @@ impl SoftRenderer {
     }
 }
 
-fn draw_pixel<I: AsRef<dyn Integrator>>(
-    integrator: &I,
+fn draw_pixel(
+    integrator: IntegratorType,
     scene: &SceneDrawInfo,
     ray: Ray,
     tlas: &Tlas,
     pixel: &mut RGBA8,
 ) -> usize {
     let triangle_count = 0;
-    if let Some(pixel_color) = integrator.as_ref().trace(scene, ray, tlas, 0) {
+    if let Some(pixel_color) = integrator.get_integrator().trace(scene, ray, tlas, 0) {
         // No over operation here as transparency should be handled by the lighting model
         *pixel = pixel_color.into();
     }
@@ -135,7 +135,7 @@ impl Draw for SoftRenderer {
                 let origin = Point3::new(0.0, 0.0, 0.0);
                 let ray = &camera_trs.trs * Ray::new(origin, dir);
 
-                draw_pixel(&self.config.integrator, &scene_draw_info, ray, &bvh, pixel);
+                draw_pixel(self.config.integrator, &scene_draw_info, ray, &bvh, pixel);
             });
         });
 

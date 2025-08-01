@@ -307,6 +307,12 @@ impl BvhModel {
 
         Self { primitives }
     }
+
+    pub fn get_primitive(&self, index: u32) -> &BvhPrimitive {
+        self.primitives
+            .get(index as usize)
+            .expect("Primitive index out of bounds")
+    }
 }
 
 #[derive(Default)]
