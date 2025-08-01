@@ -41,10 +41,13 @@ impl Material {
         }
     }
 
-    pub fn get_pbr_material<'m>(&self, model: &'m Model) -> Option<&'m PbrMaterial> {
+    pub fn get_pbr_material<'m>(&self, model: &'m Model) -> &'m PbrMaterial {
         match self {
-            Material::Pbr(handle) => model.pbr_materials.get(*handle),
-            _ => None,
+            Material::Pbr(handle) => model
+                .pbr_materials
+                .get(*handle)
+                .unwrap_or(&PbrMaterial::WHITE),
+            _ => panic!("Expected PbrMaterial, found different material type"),
         }
     }
 
@@ -72,7 +75,7 @@ impl Material {
     /// Returns the base color of the material.
     pub fn get_color(&self, model: &Model, uv: Vec2) -> Color {
         match self {
-            Material::Pbr(_) => self.get_pbr_material(model).unwrap().get_color(model, uv),
+            Material::Pbr(_) => self.get_pbr_material(model).get_color(model, uv),
             Material::Phong(_) => self.get_phong_material(model).unwrap().get_color(),
         }
     }
@@ -89,7 +92,6 @@ impl Material {
         match self {
             Material::Pbr(_) => self
                 .get_pbr_material(model)
-                .unwrap()
                 .get_normal(model, uv, normal, tangent, bitangent),
             Material::Phong(_) => normal,
         }

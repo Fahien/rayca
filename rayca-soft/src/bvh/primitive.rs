@@ -154,7 +154,7 @@ impl BvhPrimitive {
         let material = self.get_material(scene);
         match material {
             Material::Pbr(_) => {
-                let pbr_material = material.get_pbr_material(model).unwrap();
+                let pbr_material = material.get_pbr_material(model);
                 ggx::get_radiance(pbr_material, ir, model)
             }
             Material::Phong(_) => {
