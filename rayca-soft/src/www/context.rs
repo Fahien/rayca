@@ -79,10 +79,11 @@ fn add_camera(model: &mut Model) {
 }
 
 fn tweak_box_scene(model: &mut Model) {
-    let blue_material = Material::builder()
+    let blue_material = PbrMaterial::builder()
         .color(Color::new(0.1, 0.2, 0.7, 1.0))
         .build();
-    let blue_material_handle = model.materials.push(blue_material);
+    let blue_material_handle = model.pbr_materials.push(blue_material);
+    let blue_material_handle = model.materials.push(Material::Pbr(blue_material_handle));
 
     let mut blue_primitive_handles = vec![];
     let primitive_clones: Vec<_> = model.primitives.iter().cloned().collect();
