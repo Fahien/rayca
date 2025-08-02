@@ -172,6 +172,14 @@ impl Image {
         let data = assets.load(path)?.into_bytes();
         Ok(Self::load_data(&data))
     }
+
+    pub fn fill<Col: ColorTyped>(&mut self, value: Col) {
+        for x in 0..self.width {
+            for y in 0..self.height {
+                self.set(x, y, value);
+            }
+        }
+    }
 }
 
 fn to_image_color_type(color_type: ColorType) -> ::image::ColorType {

@@ -13,6 +13,7 @@ fn run_test(in_path: &str, out_path: &str, mut config: Config) {
     assert!(!scene.root.children.is_empty());
 
     let mut image = Image::new(sdtf_config.width, sdtf_config.height, ColorType::RGBA8);
+    image.fill(RGBA8::BLACK);
     config.max_depth = sdtf_config.max_depth as u32;
     config.integrator = sdtf_config.integrator.into();
     let mut renderer = SoftRenderer::new_with_config(config);
