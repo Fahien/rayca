@@ -11,18 +11,23 @@ pub struct PhongMaterial {
     #[builder(default = 0)]
     pub shader: u32,
 
+    /// The ambient color, representing constant background light reflected by the material.
     #[builder(default = Color::WHITE)]
     pub ambient: Color,
 
+    /// The emission color, representing light emitted by the material.
     #[builder(default = Color::BLACK)]
     pub emission: Color,
 
+    /// The diffuse color, representing light reflected in all directions.
     #[builder(default = Color::BLACK)]
     pub diffuse: Color,
 
+    /// The specular color, representing the color and intensity of highlights caused by mirror-like reflections.
     #[builder(default = Color::BLACK)]
     pub specular: Color,
 
+    /// The shininess factor, controlling the size and sharpness of specular highlights.
     #[builder(default = 0.0)]
     pub shininess: f32,
 }

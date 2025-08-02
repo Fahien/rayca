@@ -12,7 +12,7 @@ fn sphere() -> Result<(), Box<dyn Error>> {
     let mut renderer = SoftRenderer::new_with_config(
         Config::builder()
             .bvh(false)
-            .integrator(IntegratorType::Scratcher)
+            .integrator(IntegratorStrategy::Scratcher)
             .build(),
     );
 

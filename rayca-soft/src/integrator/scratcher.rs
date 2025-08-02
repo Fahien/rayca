@@ -85,7 +85,7 @@ impl Integrator for Scratcher {
             };
 
             if is_light {
-                let intensity = light.get_intensity(&light_node.trs, &hit.point);
+                let intensity = light.get_intensity(&light_node.trs, hit.point, n);
                 let ir = Irradiance::new(intensity, &hit, light_dir, n, -ray.dir, albedo_color, uv);
                 pixel_color += primitive.get_radiance(scene, &ir);
             }

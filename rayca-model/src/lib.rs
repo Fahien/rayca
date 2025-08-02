@@ -8,7 +8,7 @@ mod buffer;
 mod camera;
 mod image;
 mod light;
-mod loader;
+pub mod loader;
 mod material;
 mod mesh;
 mod model;

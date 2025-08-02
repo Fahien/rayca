@@ -80,6 +80,14 @@ impl Material {
         }
     }
 
+    /// Returns the diffuse color.
+    pub fn get_diffuse(&self, model: &Model, uv: Vec2) -> Color {
+        match self {
+            Material::Pbr(_) => self.get_pbr_material(model).get_color(model, uv),
+            Material::Phong(_) => self.get_phong_material(model).unwrap().diffuse,
+        }
+    }
+
     /// Returns the normal vector based on the material.
     pub fn get_normal(
         &self,

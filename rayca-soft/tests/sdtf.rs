@@ -14,6 +14,7 @@ fn run_test(in_path: &str, out_path: &str, mut config: Config) {
 
     let mut image = Image::new(sdtf_config.width, sdtf_config.height, ColorType::RGBA8);
     config.max_depth = sdtf_config.max_depth as u32;
+    config.integrator = sdtf_config.integrator.into();
     let mut renderer = SoftRenderer::new_with_config(config);
     renderer.draw(&scene, &mut image);
 
@@ -28,10 +29,7 @@ fn scene1() {
     run_test(
         "sdtf/1/scene1.sdtf",
         "sdtf/1/scene1.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
 }
 
@@ -40,10 +38,7 @@ fn scene2() {
     run_test(
         "sdtf/1/scene2.sdtf",
         "sdtf/1/scene2.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
 }
 
@@ -52,10 +47,7 @@ fn scene3() {
     run_test(
         "sdtf/1/scene3.sdtf",
         "sdtf/1/scene3.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
 }
 
@@ -64,34 +56,22 @@ fn scene4() {
     run_test(
         "sdtf/1/scene4-ambient.sdtf",
         "sdtf/1/scene4-ambient.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
     run_test(
         "sdtf/1/scene4-diffuse.sdtf",
         "sdtf/1/scene4-diffuse.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
     run_test(
         "sdtf/1/scene4-emission.sdtf",
         "sdtf/1/scene4-emission.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
     run_test(
         "sdtf/1/scene4-specular.sdtf",
         "sdtf/1/scene4-specular.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
 }
 
@@ -100,10 +80,7 @@ fn scene5() {
     run_test(
         "sdtf/1/scene5.sdtf",
         "sdtf/1/scene5.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
 }
 
@@ -112,10 +89,7 @@ fn scene6() {
     run_test(
         "sdtf/1/scene6.sdtf",
         "sdtf/1/scene6.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
     );
 }
 
@@ -125,9 +99,16 @@ fn scene7() {
     run_test(
         "sdtf/1/scene7.sdtf",
         "sdtf/1/scene7.png",
-        Config::builder()
-            .bvh(false)
-            .integrator(IntegratorType::Raytracer)
-            .build(),
+        Config::builder().bvh(false).build(),
+    );
+}
+
+#[test]
+
+fn analytic() {
+    run_test(
+        "sdtf/2/analytic.sdtf",
+        "sdtf/2/analytic.png",
+        Config::builder().bvh(false).build(),
     );
 }

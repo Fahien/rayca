@@ -2,10 +2,12 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+mod analyticdirect;
 mod flat;
 mod raytracer;
 mod scratcher;
 
+pub use analyticdirect::*;
 pub use flat::*;
 pub use raytracer::*;
 pub use scratcher::*;
@@ -25,26 +27,42 @@ pub trait Integrator: Sync {
 
 #[repr(u32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum IntegratorType {
+pub enum IntegratorStrategy {
     Scratcher,
     Raytracer,
     Flat,
+    AnalyticDirect,
 }
 
-impl IntegratorType {
+impl IntegratorStrategy {
     pub fn get_integrator(&self) -> &'static dyn Integrator {
         match self {
-            IntegratorType::Scratcher => {
+            Self::Scratcher => {
                 static SCRATCHER: Scratcher = Scratcher::new();
                 &SCRATCHER
             }
-            IntegratorType::Raytracer => {
+            Self::Raytracer => {
                 static RAYTRACER: Raytracer = Raytracer::new();
                 &RAYTRACER
             }
-            IntegratorType::Flat => {
+            Self::Flat => {
                 static FLAT: Flat = Flat::new();
                 &FLAT
+            }
+            Self::AnalyticDirect => {
+                static ANALYTIC_DIRECT: AnalyticDirect = AnalyticDirect::new();
+                &ANALYTIC_DIRECT
+            }
+        }
+    }
+}
+
+impl From<loader::sdtf::SdtfIntegratorStrategy> for IntegratorStrategy {
+    fn from(value: loader::sdtf::SdtfIntegratorStrategy) -> Self {
+        match value {
+            loader::sdtf::SdtfIntegratorStrategy::Raytracer => IntegratorStrategy::Raytracer,
+            loader::sdtf::SdtfIntegratorStrategy::AnalyticDirect => {
+                IntegratorStrategy::AnalyticDirect
             }
         }
     }

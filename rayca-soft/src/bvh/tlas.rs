@@ -277,4 +277,9 @@ impl Tlas {
         let blas_node = &self.blas_nodes[blas as usize];
         self.blass.get(blas_node.blas).unwrap()
     }
+
+    pub fn get_primitive(&self, hit: &Hit) -> &BvhPrimitive {
+        let blas = self.get_blas(hit.blas);
+        blas.model.get_primitive(hit.primitive)
+    }
 }

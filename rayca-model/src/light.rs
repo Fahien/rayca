@@ -37,19 +37,27 @@ impl Light {
         }
     }
 
-    pub fn get_intensity(&self, light_trs: &Trs, frag_pos: &Point3) -> Color {
+    pub fn get_intensity(&self, light_trs: &Trs, frag_pos: Point3, frag_n: Vec3) -> Color {
         match self {
             Light::Directional(light) => light.get_intensity(),
-            Light::Point(light) => light.get_intensity(light_trs, frag_pos),
-            Light::Quad(_) => todo!(),
+            Light::Point(light) => light.get_intensity(light_trs, frag_pos, frag_n),
+            Light::Quad(light) => light.get_intensity(light_trs, frag_pos, frag_n),
         }
     }
 
-    pub fn get_fallof(&self, light_trs: &Trs, frag_pos: &Point3) -> f32 {
+    pub fn get_radiance(&self, light_trs: &Trs, frag_pos: Point3) -> Vec3 {
+        match self {
+            Light::Directional(light) => light.get_radiance(),
+            Light::Point(light) => light.get_radiance(),
+            Light::Quad(light) => light.get_radiance(light_trs, frag_pos),
+        }
+    }
+
+    pub fn get_fallof(&self, light_trs: &Trs, frag_pos: Point3) -> f32 {
         match self {
             Light::Directional(light) => light.get_fallof(),
             Light::Point(light) => light.get_fallof(light_trs, frag_pos),
-            Light::Quad(_) => todo!(),
+            Light::Quad(light) => light.get_fallof(),
         }
     }
 
@@ -80,6 +88,10 @@ impl Default for DirectionalLight {
 impl DirectionalLight {
     pub fn new(color: Color, intensity: f32) -> Self {
         Self { color, intensity }
+    }
+
+    pub fn get_radiance(&self) -> Vec3 {
+        self.intensity * Vec3::from(self.color)
     }
 
     pub fn set_intensity(&mut self, intensity: f32) {
@@ -121,6 +133,10 @@ impl PointLight {
         }
     }
 
+    pub fn get_radiance(&self) -> Vec3 {
+        self.intensity * Vec3::from(self.color)
+    }
+
     pub fn set_intensity(&mut self, intensity: f32) {
         self.intensity = intensity;
     }
@@ -130,11 +146,11 @@ impl PointLight {
         Vec3::from(dist).len()
     }
 
-    pub fn get_intensity(&self, light_trs: &Trs, frag_pos: &Point3) -> Color {
+    pub fn get_intensity(&self, light_trs: &Trs, frag_pos: Point3, _frag_n: Vec3) -> Color {
         (self.intensity * self.color) / self.get_fallof(light_trs, frag_pos)
     }
 
-    pub fn get_fallof(&self, light_trs: &Trs, frag_pos: &Point3) -> f32 {
+    pub fn get_fallof(&self, light_trs: &Trs, frag_pos: Point3) -> f32 {
         let dist = Vec3::from(frag_pos) - light_trs.get_translation();
         let r2 = dist.norm();
         let r = r2.sqrt();
@@ -180,6 +196,63 @@ impl QuadLight {
             color,
             intensity: 1.0,
         }
+    }
+
+    pub fn get_a(&self, trs: &Trs, edge_index: u32) -> Point3 {
+        let a: Point3 = trs.get_translation().into();
+        match edge_index {
+            0 => a,
+            1 => a + self.ab,
+            2 => a + self.ab + self.ac,
+            3 => a + self.ac,
+            _ => panic!("Quad light edge index out of bounds"),
+        }
+    }
+
+    pub fn get_b(&self, trs: &Trs, edge_index: u32) -> Point3 {
+        let a: Point3 = trs.get_translation().into();
+        match edge_index {
+            0 => a + self.ab,
+            1 => a + self.ab + self.ac,
+            2 => a + self.ac,
+            3 => a,
+            _ => panic!("Quad light edge index out of bounds"),
+        }
+    }
+
+    /// Returns the angle subtended by the `i`th edge of the quad as seen by `frag_pos`
+    pub fn theta(&self, trs: &Trs, edge_index: u32, frag_pos: Point3) -> f32 {
+        // Frag pos is `r`, `ra` is unit vector from `r` to `a`.
+        let ra = (self.get_a(trs, edge_index) - frag_pos).get_normalized();
+        // Frag pos is `r`, `rb` is unit vector from `r` to `b`.
+        let rb = (self.get_b(trs, edge_index) - frag_pos).get_normalized();
+        (ra.dot(rb)).acos()
+    }
+
+    /// Returns the unit normal of the polygonal cone with cross section this quad and apex at `frag_pos`
+    pub fn gamma(&self, trs: &Trs, edge_index: u32, frag_pos: Point3) -> Vec3 {
+        let ra = self.get_a(trs, edge_index) - frag_pos;
+        let rb = self.get_b(trs, edge_index) - frag_pos;
+        ra.cross(&rb).get_normalized()
+    }
+
+    pub fn get_intensity(&self, trs: &Trs, frag_pos: Point3, frag_n: Vec3) -> Color {
+        let omega = self.get_radiance(trs, frag_pos);
+        let irradiance = omega.dot(frag_n);
+        self.intensity * self.color * irradiance
+    }
+
+    pub fn get_radiance(&self, trs: &Trs, frag_pos: Point3) -> Vec3 {
+        let mut ret = Vec3::default();
+        for edge_index in 0..4 {
+            ret += self.theta(trs, edge_index, frag_pos) * self.gamma(trs, edge_index, frag_pos);
+        }
+        ret /= 2.0;
+        ret
+    }
+
+    pub fn get_fallof(&self) -> f32 {
+        1.0
     }
 }
 

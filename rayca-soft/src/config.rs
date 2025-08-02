@@ -4,15 +4,15 @@
 
 use bon::Builder;
 
-use crate::IntegratorType;
+use crate::*;
 
 #[derive(Copy, Clone, Builder)]
 pub struct Config {
     #[builder(default = true)]
     pub bvh: bool,
 
-    #[builder(default = IntegratorType::Scratcher)]
-    pub integrator: IntegratorType,
+    #[builder(default = IntegratorStrategy::Scratcher)]
+    pub integrator: IntegratorStrategy,
 
     #[builder(default = 5)]
     /// Maximum recursion depth for ray tracing.

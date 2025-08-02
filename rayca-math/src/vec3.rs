@@ -4,7 +4,7 @@
 
 use core::simd::*;
 use std::{
-    ops::{Add, AddAssign, Div, Index, Mul, MulAssign, Neg, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Neg, Sub, SubAssign},
     simd::{StdFloat, num::SimdFloat},
 };
 
@@ -371,6 +371,13 @@ impl Mul<Vec3> for f32 {
     fn mul(self, mut rhs: Vec3) -> Self::Output {
         rhs.simd *= f32x4::splat(self);
         rhs
+    }
+}
+
+impl DivAssign<f32> for Vec3 {
+    fn div_assign(&mut self, rhs: f32) {
+        assert_ne!(rhs, 0.0, "Division by zero in Vec3::DivAssign<f32>");
+        self.simd /= f32x4::splat(rhs);
     }
 }
 
