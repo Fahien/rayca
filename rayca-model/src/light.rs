@@ -13,7 +13,7 @@ pub enum Light {
 
 impl Light {
     pub fn directional() -> Self {
-        Self::Directional(DirectionalLight::new())
+        Self::Directional(DirectionalLight::default())
     }
 
     pub fn point() -> Self {
@@ -62,12 +62,18 @@ pub struct DirectionalLight {
     intensity: f32,
 }
 
-impl DirectionalLight {
-    pub fn new() -> Self {
+impl Default for DirectionalLight {
+    fn default() -> Self {
         Self {
             color: Color::new(1.0, 1.0, 1.0, 1.0),
             intensity: 1.0,
         }
+    }
+}
+
+impl DirectionalLight {
+    pub fn new(color: Color, intensity: f32) -> Self {
+        Self { color, intensity }
     }
 
     pub fn set_intensity(&mut self, intensity: f32) {
@@ -91,12 +97,6 @@ impl DirectionalLight {
         let mut light_dir = Vec3::new(1.0, 0.0, 0.0);
         light_dir.rotate(light_trs.rotation);
         -light_dir
-    }
-}
-
-impl Default for DirectionalLight {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -152,7 +152,7 @@ impl Default for PointLight {
 
 impl Default for Light {
     fn default() -> Self {
-        Self::Directional(DirectionalLight::new())
+        Self::Directional(DirectionalLight::default())
     }
 }
 

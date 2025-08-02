@@ -421,6 +421,55 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_directional<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        let x = words
+            .next()
+            .expect("Failed to read light direction x")
+            .parse()?;
+        let y = words
+            .next()
+            .expect("Failed to read light direction y")
+            .parse()?;
+        let z = words
+            .next()
+            .expect("Failed to read light direction z")
+            .parse()?;
+        let r = words
+            .next()
+            .expect("Failed to read directional light r")
+            .parse()?;
+        let g = words
+            .next()
+            .expect("Failed to read directional light g")
+            .parse()?;
+        let b = words
+            .next()
+            .expect("Failed to read directional light b")
+            .parse()?;
+
+        let light_color = Color::new(r, g, b, 1.0);
+        let light = DirectionalLight::new(light_color, 1.0);
+        let light = Light::Directional(light);
+        let light_handle = model.lights.push(light);
+        let point_node = Node::builder()
+            .trs(
+                Trs::builder()
+                    .rotation(Quat::angle_between(Vec3::X_AXIS, -Vec3::new(x, y, z)))
+                    .build(),
+            )
+            .light(light_handle)
+            .build();
+
+        let node_handle = model.nodes.push(point_node);
+        model.root.children.push(node_handle);
+
+        Ok(())
+    }
+
     fn parse_attenuation<'w>(
         &mut self,
         mut words: impl Iterator<Item = &'w str>,
@@ -478,6 +527,7 @@ impl SdtfBuilder {
             Some("specular") => self.parse_specular(words, model)?,
             Some("shininess") => self.parse_shininess(words, model)?,
             Some("point") => self.parse_point(words, model)?,
+            Some("directional") => self.parse_directional(words, model)?,
             Some("attenuation") => self.parse_attenuation(words)?,
             Some("maxdepth") => self.parse_maxdepth(words)?,
             _ => log::warn!("Skipping command: {}", line),

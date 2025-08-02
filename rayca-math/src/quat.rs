@@ -114,6 +114,16 @@ impl Quat {
     pub fn to_array(self) -> [f32; 4] {
         self.simd.to_array()
     }
+
+    pub fn angle_between(a: Vec3, b: Vec3) -> Self {
+        let c = a.cross(&b);
+        let w = (a.norm() * b.norm()).sqrt() + a.dot(&b);
+        // TODO: return an identity quat for parallel vectors,
+        // or return a 180 degree rotation for opposite vectors
+        let mut q = Self::new(c.get_x(), c.get_y(), c.get_z(), w);
+        q.normalize();
+        q
+    }
 }
 
 impl Default for Quat {
