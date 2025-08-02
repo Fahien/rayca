@@ -27,25 +27,27 @@ impl Integrator for AnalyticDirect {
         }
 
         let hit = tlas.intersects(scene, &ray)?;
-
         let primitive = tlas.get_primitive(&hit);
-        let n = primitive.get_normal(scene, &hit);
 
         // This is the color of the primitive with no light
         let ambient_and_emission = primitive.get_color(scene, &hit);
+        if primitive.is_emissive(scene) {
+            return Some(ambient_and_emission);
+        }
 
+        let n = primitive.get_normal(scene, &hit);
         let model = scene.get_model(primitive.node.model);
         let uv = primitive.get_uv(&hit);
-        let f = primitive.get_material(scene).get_diffuse(model, uv) * std::f32::consts::FRAC_1_PI;
 
         let mut light_contribution = Color::black();
 
         for light_draw_info in scene.light_draw_infos.iter().copied() {
             let light_node = scene.get_node(light_draw_info);
             let light = scene.get_light(light_draw_info);
-            light_contribution += f * light.get_intensity(&light_node.trs, hit.point, n);
+            light_contribution += light.get_intensity(&light_node.trs, hit.point, n);
         }
 
-        Some(ambient_and_emission + light_contribution)
+        let f = primitive.get_material(scene).get_diffuse(model, uv) * std::f32::consts::FRAC_1_PI;
+        Some(f * light_contribution)
     }
 }

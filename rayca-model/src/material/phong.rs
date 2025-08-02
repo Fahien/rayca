@@ -48,6 +48,10 @@ impl PhongMaterial {
         shininess: 0.0,
     };
 
+    pub fn is_emissive(&self) -> bool {
+        self.emission != Color::BLACK
+    }
+
     pub fn get_color(&self) -> Color {
         self.ambient + self.emission
     }

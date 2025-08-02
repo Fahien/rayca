@@ -90,6 +90,10 @@ impl PbrMaterial {
         PbrMaterialBuilder::default()
     }
 
+    pub fn is_emissive(&self) -> bool {
+        false
+    }
+
     pub fn get_color(&self, model: &Model, uv: Vec2) -> Color {
         if let Some(albedo_texture) = model.textures.get(self.albedo) {
             let sampler = Sampler::default();

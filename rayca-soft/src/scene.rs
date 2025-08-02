@@ -147,6 +147,7 @@ impl Draw for SoftRenderer {
 #[derive(Default, Clone)]
 pub struct ModelDrawInfo {
     pub mesh_draw_infos: Vec<MeshDrawInfo>,
+    pub light_draw_infos: Vec<LightDrawInfo>,
 }
 
 pub struct SceneDrawInfo<'a> {
@@ -251,6 +252,15 @@ impl<'a> SceneDrawInfo<'a> {
         if current_node.light.is_some() {
             let light_draw_info = LightDrawInfo::new(node, model_handle);
             self.light_draw_infos.push(light_draw_info);
+
+            // If the light is a quad light, we need to add it to the model draw info
+            if self.get_light(light_draw_info).is_quad() {
+                self.model_draw_infos
+                    .entry(model_handle)
+                    .or_default()
+                    .light_draw_infos
+                    .push(light_draw_info);
+            }
         }
         if current_node.camera.is_some() {
             let camera_draw_info = CameraDrawInfo::new(node, model_handle);
@@ -294,6 +304,15 @@ impl<'a> SceneDrawInfo<'a> {
         self.get_model(light_draw_info.model)
             .get_light(node.light.unwrap())
             .unwrap()
+    }
+
+    pub fn get_quad_light(&self, light_draw_info: LightDrawInfo) -> &QuadLight {
+        let light = self.get_light(light_draw_info);
+        if let Light::Quad(quad_light) = light {
+            quad_light
+        } else {
+            panic!("Expected a QuadLight, but found a different type of light.");
+        }
     }
 }
 

@@ -589,7 +589,12 @@ impl SdtfBuilder {
             1.0,
         );
 
-        let light = Light::Quad(QuadLight::new(ab, ac, color));
+        let material_handle = model
+            .phong_materials
+            .push(PhongMaterial::builder().emission(color).build());
+        let material_handle = model.materials.push(Material::Phong(material_handle));
+
+        let light = Light::Quad(QuadLight::new(ab, ac, color, material_handle));
         let light_handle = model.lights.push(light);
         let point_node = Node::builder()
             .trs(Trs::builder().translation(a).build())

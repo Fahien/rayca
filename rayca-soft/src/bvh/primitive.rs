@@ -1,4 +1,4 @@
-// Copyright © 2022
+// Copyright © 2022-2025
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
@@ -107,6 +107,15 @@ impl BvhPrimitive {
             .get(self.material)
             .unwrap_or(&Material::DEFAULT);
         material
+    }
+
+    pub fn is_emissive(&self, scene: &SceneDrawInfo) -> bool {
+        let model = scene.get_model(self.node.model);
+        let material = self.get_material(scene);
+        match material {
+            Material::Pbr(handle) => model.pbr_materials.get(*handle).unwrap().is_emissive(),
+            Material::Phong(handle) => model.phong_materials.get(*handle).unwrap().is_emissive(),
+        }
     }
 
     pub fn get_color(&self, scene: &SceneDrawInfo, hit: &Hit) -> Color {
@@ -278,6 +287,51 @@ impl BvhPrimitive {
 
         primitives
     }
+
+    pub fn from_quad_light(light_draw_info: LightDrawInfo, scene: &SceneDrawInfo) -> Vec<Self> {
+        let quad_light = scene.get_quad_light(light_draw_info);
+
+        let quad_a: Point3 = Point3::default();
+        let normal = quad_light.get_normal();
+
+        let a = Vertex::builder()
+            .color(quad_light.color)
+            .position(quad_a)
+            .normal(normal)
+            .build();
+        let b = Vertex::builder()
+            .color(quad_light.color)
+            .position(quad_a + quad_light.ab)
+            .normal(normal)
+            .build();
+        let d = Vertex::builder()
+            .color(quad_light.color)
+            .position(quad_a + quad_light.ab + quad_light.ac)
+            .normal(normal)
+            .build();
+        let c = Vertex::builder()
+            .color(quad_light.color)
+            .position(quad_a + quad_light.ac)
+            .normal(normal)
+            .build();
+
+        let triangle1 = Triangle::new([a.pos, d.pos, b.pos]);
+        let triangle2 = Triangle::new([a.pos, c.pos, d.pos]);
+
+        let ext1 = [a.ext, d.ext, b.ext];
+        let ext2 = [a.ext, c.ext, d.ext];
+
+        let t1 = BvhTriangle::new(triangle1, ext1);
+        let t2 = BvhTriangle::new(triangle2, ext2);
+
+        let geometry1 = BvhGeometry::Triangle(t1);
+        let geometry2 = BvhGeometry::Triangle(t2);
+
+        let primitive1 = BvhPrimitive::new(geometry1, light_draw_info, quad_light.material);
+        let primitive2 = BvhPrimitive::new(geometry2, light_draw_info, quad_light.material);
+
+        vec![primitive1, primitive2]
+    }
 }
 
 #[derive(Default)]
@@ -292,6 +346,12 @@ impl BvhModel {
         for mesh_draw_info in model_draw_info.mesh_draw_infos.iter().copied() {
             let mesh_primitives = BvhPrimitive::from_mesh(mesh_draw_info, scene);
             primitives.extend(mesh_primitives);
+        }
+
+        // We also consider area lights, as they should be detected by primary rays
+        for light_draw_info in model_draw_info.light_draw_infos.iter().copied() {
+            let light_primitives = BvhPrimitive::from_quad_light(light_draw_info, scene);
+            primitives.extend(light_primitives);
         }
 
         Self { primitives }

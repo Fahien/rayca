@@ -21,6 +21,14 @@ impl Light {
         Self::Point(PointLight::new())
     }
 
+    pub fn is_quad(&self) -> bool {
+        matches!(self, Light::Quad(_))
+    }
+
+    /// Returns the intensity of light, which is affected by the distance of the
+    /// observer from the source, as well as other factors such as the angle at
+    /// which the light hits the observer and the amount of light that is absorbed
+    /// or scattered by objects in the environment.
     pub fn set_intensity(&mut self, intensity: f32) {
         match self {
             Light::Directional(light) => light.set_intensity(intensity),
@@ -186,16 +194,23 @@ pub struct QuadLight {
     pub ac: Vec3,
     pub color: Color,
     pub intensity: f32,
+    pub material: Handle<Material>,
 }
 
 impl QuadLight {
-    pub fn new(ab: Vec3, ac: Vec3, color: Color) -> Self {
+    pub fn new(ab: Vec3, ac: Vec3, color: Color, material: Handle<Material>) -> Self {
         Self {
             ab,
             ac,
             color,
             intensity: 1.0,
+            material,
         }
+    }
+
+    /// Returns the normal of the quad light in model space.
+    pub fn get_normal(&self) -> Vec3 {
+        self.ab.cross(&self.ac).get_normalized()
     }
 
     pub fn get_a(&self, trs: &Trs, edge_index: u32) -> Point3 {
@@ -236,6 +251,7 @@ impl QuadLight {
         ra.cross(&rb).get_normalized()
     }
 
+    /// Returns the intensity of quad light reaching that point, at a certain angle.
     pub fn get_intensity(&self, trs: &Trs, frag_pos: Point3, frag_n: Vec3) -> Color {
         let omega = self.get_radiance(trs, frag_pos);
         let irradiance = omega.dot(frag_n);
