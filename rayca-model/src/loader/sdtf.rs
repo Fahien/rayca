@@ -7,15 +7,39 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use crate::*;
+
+/// Strategy for performing integration of the rendering equation and decide a pixel color
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SdtfIntegratorStrategy {
+    /// Very roughly approximates the rendering equation using raytracing
+    Raytracer,
+
+    /// Analytic solution of direct lighting for simple scenes
+    AnalyticDirect,
+}
+
+impl FromStr for SdtfIntegratorStrategy {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "raytracer" => Ok(Self::Raytracer),
+            "analyticdirect" => Ok(Self::AnalyticDirect),
+            _ => Err(format!("Failed to find an integrator for `{}`", s)),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct SdtfConfig {
     pub width: u32,
     pub height: u32,
     pub max_depth: i32,
+    pub integrator: SdtfIntegratorStrategy,
 }
 
 impl Default for SdtfConfig {
@@ -24,6 +48,7 @@ impl Default for SdtfConfig {
             width: 0,
             height: 0,
             max_depth: 5,
+            integrator: SdtfIntegratorStrategy::Raytracer,
         }
     }
 }
@@ -489,6 +514,93 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_integrator<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.config.integrator = words.next().expect("Failed to read integrator").parse()?;
+        Ok(())
+    }
+
+    fn parse_quadlight<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        // Quad light translation
+        let a = Vec3::new(
+            words
+                .next()
+                .expect("Failed to read quad light a.x")
+                .parse()?,
+            words
+                .next()
+                .expect("Failed to read quad light a.y")
+                .parse()?,
+            words
+                .next()
+                .expect("Failed to read quad light a.z")
+                .parse()?,
+        );
+
+        let ab = Vec3::new(
+            words
+                .next()
+                .expect("Failed to read quad light ab.x")
+                .parse()?,
+            words
+                .next()
+                .expect("Failed to read quad light ab.y")
+                .parse()?,
+            words
+                .next()
+                .expect("Failed to read quad light ab.z")
+                .parse()?,
+        );
+
+        let ac = Vec3::new(
+            words
+                .next()
+                .expect("Failed to read quad light ac.x")
+                .parse()?,
+            words
+                .next()
+                .expect("Failed to read quad light ac.y")
+                .parse()?,
+            words
+                .next()
+                .expect("Failed to read quad light ac.z")
+                .parse()?,
+        );
+
+        let color = Color::new(
+            words
+                .next()
+                .expect("Failed to read quad light color.r")
+                .parse()?,
+            words
+                .next()
+                .expect("Failed to read quad light color.g")
+                .parse()?,
+            words
+                .next()
+                .expect("Failed to read quad light color.b")
+                .parse()?,
+            1.0,
+        );
+
+        let light = Light::Quad(QuadLight::new(ab, ac, color));
+        let light_handle = model.lights.push(light);
+        let point_node = Node::builder()
+            .trs(Trs::builder().translation(a).build())
+            .light(light_handle)
+            .build();
+        let node_handle = model.nodes.push(point_node);
+        model.root.children.push(node_handle);
+
+        Ok(())
+    }
+
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
         if line.starts_with('#') {
@@ -530,6 +642,8 @@ impl SdtfBuilder {
             Some("directional") => self.parse_directional(words, model)?,
             Some("attenuation") => self.parse_attenuation(words)?,
             Some("maxdepth") => self.parse_maxdepth(words)?,
+            Some("integrator") => self.parse_integrator(words)?,
+            Some("quadLight") => self.parse_quadlight(words, model)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 

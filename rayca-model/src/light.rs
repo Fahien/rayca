@@ -9,6 +9,7 @@ use crate::*;
 pub enum Light {
     Directional(DirectionalLight),
     Point(PointLight),
+    Quad(QuadLight),
 }
 
 impl Light {
@@ -24,6 +25,7 @@ impl Light {
         match self {
             Light::Directional(light) => light.set_intensity(intensity),
             Light::Point(light) => light.set_intensity(intensity),
+            Light::Quad(_) => todo!(),
         }
     }
 
@@ -31,6 +33,7 @@ impl Light {
         match self {
             Light::Directional(light) => light.get_distance(light_trs, frag_pos),
             Light::Point(light) => light.get_distance(light_trs, frag_pos),
+            Light::Quad(_) => todo!(),
         }
     }
 
@@ -38,6 +41,7 @@ impl Light {
         match self {
             Light::Directional(light) => light.get_intensity(),
             Light::Point(light) => light.get_intensity(light_trs, frag_pos),
+            Light::Quad(_) => todo!(),
         }
     }
 
@@ -45,6 +49,7 @@ impl Light {
         match self {
             Light::Directional(light) => light.get_fallof(),
             Light::Point(light) => light.get_fallof(light_trs, frag_pos),
+            Light::Quad(_) => todo!(),
         }
     }
 
@@ -53,6 +58,7 @@ impl Light {
         match self {
             Light::Directional(light) => light.get_direction(light_trs),
             Light::Point(light) => light.get_direction(light_trs, frag_pos),
+            Light::Quad(_) => todo!(),
         }
     }
 }
@@ -147,6 +153,33 @@ impl PointLight {
 impl Default for PointLight {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// ```text
+///    c  /‾‾‾‾‾/ d
+///      /     /
+///  ac /     /
+///    /     /
+/// a /_____/ b
+///     ab
+/// ```
+#[derive(Default)]
+pub struct QuadLight {
+    pub ab: Vec3,
+    pub ac: Vec3,
+    pub color: Color,
+    pub intensity: f32,
+}
+
+impl QuadLight {
+    pub fn new(ab: Vec3, ac: Vec3, color: Color) -> Self {
+        Self {
+            ab,
+            ac,
+            color,
+            intensity: 1.0,
+        }
     }
 }
 

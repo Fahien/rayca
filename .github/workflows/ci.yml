@@ -75,7 +75,7 @@ jobs:
         sudo chmod 666 /proc/kallsyms
         CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --release --package rayca-soft \
           --post-process "sed -re 's/(.*);(.*rayon.*)/\2/g'" \
-          --test test --output tests/artifact/flamegraph.svg -- cube_over_plane
+          --test gltf --output tests/artifact/flamegraph.svg -- cube_over_plane
     - uses: actions/upload-artifact@v4
       with:
         name: flamegraph

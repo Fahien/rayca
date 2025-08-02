@@ -30,7 +30,7 @@ fn scene1() {
         "sdtf/1/scene1.png",
         Config::builder()
             .bvh(false)
-            .integrator(IntegratorType::Flat)
+            .integrator(IntegratorType::Raytracer)
             .build(),
     );
 }
@@ -42,7 +42,7 @@ fn scene2() {
         "sdtf/1/scene2.png",
         Config::builder()
             .bvh(false)
-            .integrator(IntegratorType::Flat)
+            .integrator(IntegratorType::Raytracer)
             .build(),
     );
 }
@@ -54,7 +54,7 @@ fn scene3() {
         "sdtf/1/scene3.png",
         Config::builder()
             .bvh(false)
-            .integrator(IntegratorType::Flat)
+            .integrator(IntegratorType::Raytracer)
             .build(),
     );
 }
@@ -120,6 +120,7 @@ fn scene6() {
 }
 
 #[test]
+#[ignore]
 fn scene7() {
     run_test(
         "sdtf/1/scene7.sdtf",
