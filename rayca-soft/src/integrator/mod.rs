@@ -3,11 +3,13 @@
 // SPDX-License-Identifier: MIT
 
 mod analyticdirect;
+mod direct;
 mod flat;
 mod raytracer;
 mod scratcher;
 
 pub use analyticdirect::*;
+pub use direct::*;
 pub use flat::*;
 pub use raytracer::*;
 pub use scratcher::*;
@@ -32,6 +34,7 @@ pub enum IntegratorStrategy {
     Raytracer,
     Flat,
     AnalyticDirect,
+    Direct,
 }
 
 impl IntegratorStrategy {
@@ -53,17 +56,21 @@ impl IntegratorStrategy {
                 static ANALYTIC_DIRECT: AnalyticDirect = AnalyticDirect::new();
                 &ANALYTIC_DIRECT
             }
+            Self::Direct => {
+                static DIRECT: Direct = Direct::new();
+                &DIRECT
+            }
         }
     }
 }
 
 impl From<loader::sdtf::SdtfIntegratorStrategy> for IntegratorStrategy {
     fn from(value: loader::sdtf::SdtfIntegratorStrategy) -> Self {
+        use loader::sdtf::SdtfIntegratorStrategy;
         match value {
-            loader::sdtf::SdtfIntegratorStrategy::Raytracer => IntegratorStrategy::Raytracer,
-            loader::sdtf::SdtfIntegratorStrategy::AnalyticDirect => {
-                IntegratorStrategy::AnalyticDirect
-            }
+            SdtfIntegratorStrategy::Raytracer => IntegratorStrategy::Raytracer,
+            SdtfIntegratorStrategy::AnalyticDirect => IntegratorStrategy::AnalyticDirect,
+            SdtfIntegratorStrategy::Direct => IntegratorStrategy::Direct,
         }
     }
 }

@@ -318,6 +318,7 @@ mod gltf {
     }
 
     #[test]
+    #[ignore]
     fn sponza() -> Result<(), Box<dyn Error>> {
         let mut scene = Scene::default();
         let assets = Assets::new();

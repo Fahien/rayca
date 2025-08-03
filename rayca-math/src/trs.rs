@@ -117,6 +117,10 @@ impl Trs {
         self.scale = scale;
     }
 
+    pub fn get_position(&self) -> Point3 {
+        Point3::from(self.get_translation())
+    }
+
     /// Returns the translation after rotation, meaning the actual translation
     pub fn get_translation(&self) -> Vec3 {
         self.rotation * self.translation

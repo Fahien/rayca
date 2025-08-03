@@ -213,6 +213,14 @@ impl QuadLight {
         self.ab.cross(&self.ac).get_normalized()
     }
 
+    pub fn get_area(&self) -> f32 {
+        let ab_len = self.ab.len();
+        let ac_len = self.ac.len();
+        let cos_theta = self.ab.dot(self.ac) / (ab_len * ac_len);
+        let sin_theta = 1.0 - cos_theta;
+        sin_theta * ab_len * ac_len
+    }
+
     pub fn get_a(&self, trs: &Trs, edge_index: u32) -> Point3 {
         let a: Point3 = trs.get_translation().into();
         match edge_index {

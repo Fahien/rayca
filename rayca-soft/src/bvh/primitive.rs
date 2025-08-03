@@ -126,9 +126,19 @@ impl BvhPrimitive {
         geometry_color * material_color
     }
 
+    pub fn get_diffuse(&self, scene: &SceneDrawInfo, uv: Vec2) -> Color {
+        let model = scene.get_model(self.node.model);
+        self.get_material(scene).get_diffuse(model, uv)
+    }
+
     pub fn get_specular(&self, scene: &SceneDrawInfo) -> Color {
         let model = scene.get_model(self.node.model);
         self.get_material(scene).get_specular(model)
+    }
+
+    pub fn get_shininess(&self, scene: &SceneDrawInfo) -> f32 {
+        let model = scene.get_model(self.node.model);
+        self.get_material(scene).get_shininess(model)
     }
 
     pub fn get_uv(&self, hit: &Hit) -> Vec2 {

@@ -1,0 +1,110 @@
+// Copyright © 2022-2025
+// Author: Antonio Caggiano <info@antoniocaggiano.eu>
+// SPDX-License-Identifier: MIT
+
+use crate::*;
+
+#[derive(Default)]
+pub struct Direct {}
+
+impl Direct {
+    pub const fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Integrator for Direct {
+    fn trace(
+        &self,
+        config: &Config,
+        scene: &SceneDrawInfo,
+        ray: Ray,
+        tlas: &Tlas,
+        depth: u32,
+    ) -> Option<Color> {
+        if depth >= config.max_depth {
+            return None;
+        }
+
+        let hit = tlas.intersects(scene, &ray)?;
+
+        let primitive = tlas.get_primitive(&hit);
+        let n = primitive.get_normal(scene, &hit);
+
+        let reflection_dir = ray.dir.reflect(&n).get_normalized();
+
+        // This is the color of the primitive with no light
+        let ambient_and_emissive = primitive.get_color(scene, &hit);
+
+        if primitive.is_emissive(scene) {
+            return Some(ambient_and_emissive);
+        }
+
+        let mut light_contribution = Color::black();
+
+        let uv = primitive.get_uv(&hit);
+        let diffuse = primitive.get_diffuse(scene, uv);
+        let specular = primitive.get_specular(scene);
+        let shininess = primitive.get_shininess(scene);
+
+        let strate_count = config.get_strate_count();
+
+        // Expecting only area lights here
+        for light_draw_info in scene.light_draw_infos.iter().copied() {
+            let light = scene.get_light(light_draw_info);
+            let light_node = scene.get_node(light_draw_info);
+            if let Light::Quad(quad_light) = light {
+                let mut ld = Color::black();
+
+                let quad_a = light_node.trs.get_position();
+
+                let step1 = quad_light.ab / strate_count as f32;
+                let step2 = quad_light.ac / strate_count as f32;
+
+                for i in 0..config.light_samples {
+                    let u1 = fastrand::f32() / strate_count as f32;
+                    let u2 = fastrand::f32() / strate_count as f32;
+
+                    // Random point on the parallelogram
+                    let mut x1 = quad_a + (u1 * quad_light.ab) + (u2 * quad_light.ac);
+
+                    if config.light_stratify {
+                        let i1 = (i % strate_count) as f32;
+                        let i2 = (i / strate_count) as f32;
+
+                        let offset1 = step1 * i1;
+                        let offset2 = step2 * i2;
+
+                        x1 += offset1 + offset2;
+                    }
+
+                    // Random sample incident direction
+                    let x1_to_hit_point = x1 - hit.point;
+                    let omega_i = x1_to_hit_point.get_normalized();
+
+                    // BRDF
+                    let kd = diffuse;
+                    let lambertian = kd / std::f32::consts::PI;
+                    let ks = specular;
+                    let s = shininess;
+                    let r = &reflection_dir;
+                    let brdf = lambertian
+                        + (ks * (s + 2.0) * r.dot(omega_i).powf(s)) / (2.0 * std::f32::consts::PI);
+
+                    let r_squared = x1_to_hit_point.len().powf(2.0);
+                    let d_omega_i = quad_light.get_normal().dot(omega_i) / r_squared;
+
+                    ld += brdf * n.dot(omega_i) * d_omega_i;
+                }
+
+                // Constant radiance?
+                let li = quad_light.intensity * quad_light.color;
+                let area = quad_light.get_area();
+                ld = (li * area * ld) / (config.light_samples as f32);
+                light_contribution += ld;
+            }
+        }
+
+        Some(light_contribution)
+    }
+}

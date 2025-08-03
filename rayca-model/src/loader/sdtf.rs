@@ -20,6 +20,9 @@ pub enum SdtfIntegratorStrategy {
 
     /// Analytic solution of direct lighting for simple scenes
     AnalyticDirect,
+
+    /// Direct lighting using Monte Carlo integration
+    Direct,
 }
 
 impl FromStr for SdtfIntegratorStrategy {
@@ -29,6 +32,7 @@ impl FromStr for SdtfIntegratorStrategy {
         match s {
             "raytracer" => Ok(Self::Raytracer),
             "analyticdirect" => Ok(Self::AnalyticDirect),
+            "direct" => Ok(Self::Direct),
             _ => Err(format!("Failed to find an integrator for `{}`", s)),
         }
     }
@@ -39,6 +43,8 @@ pub struct SdtfConfig {
     pub width: u32,
     pub height: u32,
     pub max_depth: i32,
+    pub light_samples: u32,
+    pub light_stratify: bool,
     pub integrator: SdtfIntegratorStrategy,
 }
 
@@ -48,6 +54,8 @@ impl Default for SdtfConfig {
             width: 0,
             height: 0,
             max_depth: 5,
+            light_samples: 1,
+            light_stratify: false,
             integrator: SdtfIntegratorStrategy::Raytracer,
         }
     }
@@ -605,6 +613,25 @@ impl SdtfBuilder {
 
         Ok(())
     }
+    fn parse_light_samples<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.config.light_samples = words
+            .next()
+            .expect("Failed to read light samples")
+            .parse()?;
+        Ok(())
+    }
+
+    fn parse_light_stratify<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        let word = words.next().expect("Failed to read light_stratify");
+        self.config.light_stratify = word == "on";
+        Ok(())
+    }
 
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
@@ -649,6 +676,8 @@ impl SdtfBuilder {
             Some("maxdepth") => self.parse_maxdepth(words)?,
             Some("integrator") => self.parse_integrator(words)?,
             Some("quadLight") => self.parse_quadlight(words, model)?,
+            Some("lightsamples") => self.parse_light_samples(words)?,
+            Some("lightstratify") => self.parse_light_stratify(words)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 

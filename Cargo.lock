@@ -1810,6 +1810,7 @@ dependencies = [
  "base64 0.13.1",
  "bon",
  "console_error_panic_hook",
+ "fastrand",
  "gltf",
  "instant",
  "jpeg-decoder",

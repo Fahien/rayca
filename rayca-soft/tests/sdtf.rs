@@ -14,8 +14,7 @@ fn run_test(in_path: &str, out_path: &str, mut config: Config) {
 
     let mut image = Image::new(sdtf_config.width, sdtf_config.height, ColorType::RGBA8);
     image.fill(RGBA8::BLACK);
-    config.max_depth = sdtf_config.max_depth as u32;
-    config.integrator = sdtf_config.integrator.into();
+    config.apply(sdtf_config);
     let mut renderer = SoftRenderer::new_with_config(config);
     renderer.draw(&scene, &mut image);
 
@@ -110,6 +109,42 @@ fn analytic() {
     run_test(
         "sdtf/2/analytic.sdtf",
         "sdtf/2/analytic.png",
+        Config::builder().bvh(false).build(),
+    );
+}
+
+#[test]
+fn direct3x3() {
+    run_test(
+        "sdtf/2/direct3x3.sdtf",
+        "sdtf/2/direct3x3.png",
+        Config::builder().bvh(false).build(),
+    );
+}
+
+#[test]
+fn direct9() {
+    run_test(
+        "sdtf/2/direct9.sdtf",
+        "sdtf/2/direct9.png",
+        Config::builder().bvh(false).build(),
+    );
+}
+
+#[test]
+fn sphere() {
+    run_test(
+        "sdtf/2/sphere.sdtf",
+        "sdtf/2/sphere.png",
+        Config::builder().bvh(false).build(),
+    );
+}
+
+#[test]
+fn cornell() {
+    run_test(
+        "sdtf/2/cornell.sdtf",
+        "sdtf/2/cornell.png",
         Config::builder().bvh(false).build(),
     );
 }

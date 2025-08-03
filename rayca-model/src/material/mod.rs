@@ -111,4 +111,11 @@ impl Material {
             Material::Pbr(_) => todo!(),
         }
     }
+
+    pub fn get_shininess(&self, model: &Model) -> f32 {
+        match &self {
+            Material::Phong(_) => self.get_phong_material(model).unwrap().shininess,
+            Material::Pbr(_) => todo!(),
+        }
+    }
 }
