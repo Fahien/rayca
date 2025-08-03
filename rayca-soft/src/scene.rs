@@ -77,20 +77,12 @@ impl SoftRenderer {
     }
 }
 
-fn draw_pixel(
-    config: &Config,
-    scene: &SceneDrawInfo,
-    ray: Ray,
-    tlas: &Tlas,
-    pixel: &mut RGBA8,
-) -> usize {
-    let triangle_count = 0;
+fn draw_pixel(config: &Config, scene: &SceneDrawInfo, ray: Ray, tlas: &Tlas) -> Color {
     let integrator = config.integrator.get_integrator();
-    if let Some(pixel_color) = integrator.trace(config, scene, ray, tlas, 0) {
-        // No over operation here as transparency should be handled by the lighting model
-        *pixel = pixel_color.into();
-    }
-    triangle_count
+    // No over operation here as transparency should be handled by the lighting model
+    integrator
+        .trace(config, scene, ray, tlas, 0)
+        .unwrap_or(Color::BLACK)
 }
 
 impl Draw for SoftRenderer {
@@ -122,12 +114,14 @@ impl Draw for SoftRenderer {
         let aspectratio = width / height;
         let angle = camera.get_angle();
 
-        let row_iter = image.pixels_mut().into_par_iter();
+        let row_iter = image.pixels_mut::<RGBA8>().into_par_iter();
 
         row_iter.enumerate().for_each(|(y, row)| {
             let pixel_iter = row.into_par_iter();
 
             pixel_iter.enumerate().for_each(|(x, pixel)| {
+                let mut color = Color::BLACK;
+
                 // Generate primary ray
                 let xx = (2.0 * ((x as f32 + 0.5) * inv_width) - 1.0) * angle * aspectratio;
                 let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
@@ -136,7 +130,9 @@ impl Draw for SoftRenderer {
                 let origin = Point3::new(0.0, 0.0, 0.0);
                 let ray = &camera_trs.trs * Ray::new(origin, dir);
 
-                draw_pixel(&self.config, &scene_draw_info, ray, &bvh, pixel);
+                color += draw_pixel(&self.config, &scene_draw_info, ray, &bvh);
+
+                *pixel = color.into();
             });
         });
 
