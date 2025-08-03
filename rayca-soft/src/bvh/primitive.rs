@@ -30,7 +30,7 @@ impl BvhGeometry {
     pub fn get_normal(&self, hit: &Hit) -> Vec3 {
         match self {
             BvhGeometry::Triangle(triangle) => triangle.interpolate_normals(&hit.uv),
-            BvhGeometry::Sphere(sphere) => sphere.get_normal(&hit.point),
+            BvhGeometry::Sphere(sphere) => sphere.get_model_normal(&hit.point),
         }
     }
 
@@ -126,9 +126,11 @@ impl BvhPrimitive {
         geometry_color * material_color
     }
 
-    pub fn get_diffuse(&self, scene: &SceneDrawInfo, uv: Vec2) -> Color {
+    pub fn get_diffuse(&self, scene: &SceneDrawInfo, hit: &Hit, uv: Vec2) -> Color {
         let model = scene.get_model(self.node.model);
-        self.get_material(scene).get_diffuse(model, uv)
+        let geometry_color = self.geometry.get_color(hit);
+        let material_color = self.get_material(scene).get_diffuse(model, uv);
+        geometry_color * material_color
     }
 
     pub fn get_specular(&self, scene: &SceneDrawInfo) -> Color {
@@ -160,7 +162,7 @@ impl BvhPrimitive {
                 let trs = scene_draw_info.get_world_trs(self.node);
                 let inverse = trs.get_inversed();
                 let hit_point = &inverse * hit.point;
-                let normal = sphere.get_normal(&hit_point);
+                let normal = sphere.get_model_normal(&hit_point);
                 let normal_matrix = Mat3::from(&inverse).get_transpose();
                 (&normal_matrix * normal).get_normalized()
             }

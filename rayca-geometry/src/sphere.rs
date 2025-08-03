@@ -92,7 +92,7 @@ impl Sphere {
     }
 
     /// - `point`: should be in model space
-    pub fn get_normal(&self, point: &Point3) -> Vec3 {
+    pub fn get_model_normal(&self, point: &Point3) -> Vec3 {
         (point - self.center).get_normalized()
     }
 
@@ -216,7 +216,7 @@ mod tests {
     fn get_normal() {
         let sphere = Sphere::new(Point3::new(0.0, 0.0, 0.0), 1.0);
         let point = Point3::new(0.0, 1.0, 0.0);
-        let normal = sphere.get_normal(&point);
+        let normal = sphere.get_model_normal(&point);
         assert!((normal - Vec3::new(0.0, 1.0, 0.0)).norm() < 1e-6);
     }
 

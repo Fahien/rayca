@@ -148,3 +148,13 @@ fn cornell() {
         Config::builder().bvh(false).build(),
     );
 }
+
+#[test]
+#[ignore]
+fn dragon() {
+    run_test(
+        "sdtf/2/dragon.sdtf",
+        "sdtf/2/dragon.png",
+        Config::builder().bvh(false).build(),
+    );
+}

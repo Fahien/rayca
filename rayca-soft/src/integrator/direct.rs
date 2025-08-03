@@ -8,6 +8,8 @@ use crate::*;
 pub struct Direct {}
 
 impl Direct {
+    const RAY_BIAS: f32 = 1e-4;
+
     pub const fn new() -> Self {
         Self {}
     }
@@ -43,7 +45,7 @@ impl Integrator for Direct {
         let mut light_contribution = Color::black();
 
         let uv = primitive.get_uv(&hit);
-        let diffuse = primitive.get_diffuse(scene, uv);
+        let diffuse = primitive.get_diffuse(scene, &hit, uv);
         let specular = primitive.get_specular(scene);
         let shininess = primitive.get_shininess(scene);
 
@@ -81,6 +83,17 @@ impl Integrator for Direct {
                     // Random sample incident direction
                     let x1_to_hit_point = x1 - hit.point;
                     let omega_i = x1_to_hit_point.get_normalized();
+
+                    // Move ray origin slightly along the surface normal to avoid self intersections
+                    let shadow_ray_origin = hit.point + n * Self::RAY_BIAS;
+                    // Let us see if we actually see the light
+                    let shadow_ray = Ray::new(shadow_ray_origin, omega_i);
+                    if let Some(shadow_hit) = tlas.intersects(scene, &shadow_ray) {
+                        let primitive = tlas.get_primitive(&shadow_hit);
+                        if !primitive.is_emissive(scene) {
+                            continue;
+                        }
+                    }
 
                     // BRDF
                     let kd = diffuse;
