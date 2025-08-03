@@ -84,7 +84,7 @@ mod test {
         let rot = Quat::new(-0.383, 0.0, 0.0, 0.924);
         ray.rotate(rot);
         println!("{:?}", ray.dir);
-        assert!(ray.dir.close(&Vec3::new(0.0, -0.707, -0.707)));
+        assert!(ray.dir.close(Vec3::new(0.0, -0.707, -0.707)));
     }
 
     #[test]
@@ -93,7 +93,7 @@ mod test {
         let scale = Vec3::new(2.0, 2.0, 2.0); // uniform scaling to avoid floating-point artifacts
         let orig_dir = ray.dir;
         ray.scale(&scale);
-        assert!(ray.dir.close(&(orig_dir * scale)));
+        assert!(ray.dir.close(orig_dir * scale));
         let expected_rdir = ray.dir.get_reciprocal();
         let eps = 1e-5;
         let dx = (ray.rdir.get_x() - expected_rdir.get_x()).abs();

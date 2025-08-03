@@ -227,7 +227,7 @@ impl SdtfBuilder {
 
             let ab = b.pos - a.pos;
             let ac = c.pos - a.pos;
-            let n = ab.cross(&ac).get_normalized();
+            let n = ab.cross(ac).get_normalized();
 
             a.ext.normal = n;
             b.ext.normal = n;

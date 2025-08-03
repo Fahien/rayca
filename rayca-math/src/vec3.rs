@@ -105,7 +105,7 @@ impl Vec3 {
         self
     }
 
-    pub fn close(&self, b: &Vec3) -> bool {
+    pub fn close(&self, b: Vec3) -> bool {
         let diff = (self - b).abs();
         diff < Vec3::splat(EPS)
     }
@@ -127,7 +127,7 @@ impl Vec3 {
     }
 
     /// [SIMD cross-product](https://geometrian.com/programming/tutorials/cross-product/index.php) method 5
-    pub fn cross(&self, rhs: &Self) -> Self {
+    pub fn cross(&self, rhs: Self) -> Self {
         let tmp0 = simd_swizzle!(self.simd, [1, 2, 0, 3]);
         let tmp1 = simd_swizzle!(rhs.simd, [2, 0, 1, 3]);
         let tmp2 = tmp0 * rhs.simd;
@@ -151,7 +151,7 @@ impl Vec3 {
         let s = rotation.get_w();
 
         // Do the math
-        *self = 2.0 * u.dot(&v) * u + (s * s - u.dot(&u)) * v + 2.0 * s * u.cross(&v);
+        *self = 2.0 * u.dot(&v) * u + (s * s - u.dot(&u)) * v + 2.0 * s * u.cross(v);
     }
 
     pub fn get_rotated(&self, rotation: Quat) -> Self {
@@ -516,7 +516,7 @@ mod test {
         fn normalize() {
             let mut v = Vec3::new(2.0, 0.0, 0.0);
             v.normalize();
-            assert!(v.close(&Vec3::new(1.0, 0.0, 0.0)));
+            assert!(v.close(Vec3::new(1.0, 0.0, 0.0)));
         }
 
         #[test]
@@ -524,28 +524,28 @@ mod test {
             let mut v = Vec3::new(1.0, 0.0, 0.0);
             let y180 = Quat::new(0.0, 1.0, 0.0, 0.0);
             v.rotate(y180);
-            assert!(v.close(&Vec3::new(-1.0, 0.0, 0.0)));
+            assert!(v.close(Vec3::new(-1.0, 0.0, 0.0)));
 
             let mut v = Vec3::new(1.0, 0.0, 0.0);
             let y90 = Quat::new(0.0, 0.707, 0.0, 0.707);
             v.rotate(y90);
-            assert!(v.close(&Vec3::new(0.0, 0.0, -1.0)));
+            assert!(v.close(Vec3::new(0.0, 0.0, -1.0)));
 
             let mut v = Vec3::new(1.0, 0.0, 0.0);
             let z180 = Quat::new(0.0, 0.0, 1.0, 0.0);
             v.rotate(z180);
-            assert!(v.close(&Vec3::new(-1.0, 0.0, 0.0)));
+            assert!(v.close(Vec3::new(-1.0, 0.0, 0.0)));
 
             let mut v = Vec3::new(1.0, 0.0, 0.0);
             let z90 = Quat::new(0.0, 0.0, 0.707, 0.707);
             v.rotate(z90);
-            assert!(v.close(&Vec3::new(0.0, 1.0, 0.0)));
+            assert!(v.close(Vec3::new(0.0, 1.0, 0.0)));
 
             let mut v = Vec3::new(0.0, 0.0, 1.0);
             // x: -45 degrees
             let rot = Quat::new(-0.383, 0.0, 0.0, 0.924);
             v.rotate(rot);
-            assert!(v.close(&Vec3::new(0.0, 0.707, 0.707)));
+            assert!(v.close(Vec3::new(0.0, 0.707, 0.707)));
         }
 
         #[test]
@@ -581,7 +581,7 @@ mod test {
             let v = Vec3::new(1.0, -1.0, 0.0);
             let n = Vec3::new(0.0, 1.0, 0.0);
             let r = v.reflect(&n);
-            assert!(r.close(&Vec3::new(1.0, 1.0, 0.0)));
+            assert!(r.close(Vec3::new(1.0, 1.0, 0.0)));
         }
 
         #[test]
@@ -589,8 +589,8 @@ mod test {
             let a = Vec3::new(1.0, 0.0, 0.0);
             let b = Vec3::new(0.0, 1.0, 0.0);
             assert_eq!(a.dot(&b), 0.0);
-            let c = a.cross(&b);
-            assert!(c.close(&Vec3::new(0.0, 0.0, 1.0)));
+            let c = a.cross(b);
+            assert!(c.close(Vec3::new(0.0, 0.0, 1.0)));
         }
 
         #[test]

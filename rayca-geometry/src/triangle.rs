@@ -89,7 +89,7 @@ impl Triangle {
         let v0v1 = v1 - v0;
         let v0v2 = v2 - v0;
         // No need to normalize
-        let n = v0v1.cross(&v0v2);
+        let n = v0v1.cross(v0v2);
 
         // Back-face test
         if ray.dir.dot(n) > 0.0 {
@@ -126,7 +126,7 @@ impl Triangle {
         let edge0 = v1 - v0;
         let vp0 = Vec3::from(p - v0);
         // Vector perpendicular to triangle's plane
-        let c = edge0.cross(&vp0);
+        let c = edge0.cross(vp0);
         if n.dot(c) < 0.0 {
             return None; // P is on the right side
         }
@@ -134,7 +134,7 @@ impl Triangle {
         // Edge 1
         let edge1 = v2 - v1;
         let vp1 = Vec3::from(p - v1);
-        let c = edge1.cross(&vp1);
+        let c = edge1.cross(vp1);
         let u = n.dot(c);
         if u < 0.0 {
             return None; // P is on the right side
@@ -143,7 +143,7 @@ impl Triangle {
         // Edge 2
         let edge2 = v0 - v2;
         let vp2 = Vec3::from(p - v2);
-        let c = edge2.cross(&vp2);
+        let c = edge2.cross(vp2);
         let v = n.dot(c);
         if v < 0.0 {
             return None; // P is on the right side;

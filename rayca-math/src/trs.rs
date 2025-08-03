@@ -34,8 +34,8 @@ impl TrsBuilder {
     pub fn look_at(mut self, target: Vec3, eye: Vec3, up: Vec3) -> Self {
         // Z axis points towards the eye!
         let z_axis = (eye - target).get_normalized();
-        let x_axis = up.cross(&z_axis).get_normalized();
-        let y_axis = z_axis.cross(&x_axis);
+        let x_axis = up.cross(z_axis).get_normalized();
+        let y_axis = z_axis.cross(x_axis);
 
         self.translation = Vec3::new(x_axis.dot(&-eye), y_axis.dot(&-eye), z_axis.dot(&-eye));
 
@@ -513,7 +513,7 @@ mod test {
         let v = Vec3::new(4.0, 5.0, 6.0);
         let transformed = &trs * v;
         let restored = &inv * transformed;
-        assert!(restored.close(&v));
+        assert!(restored.close(v));
     }
 
     #[test]
@@ -523,7 +523,7 @@ mod test {
         let v = Vec3::new(8.0, 9.0, 12.0);
         let transformed = &trs * v;
         let restored = &inv * transformed;
-        assert!(restored.close(&v));
+        assert!(restored.close(v));
     }
 
     #[test]
@@ -534,7 +534,7 @@ mod test {
         let v = Vec3::new(1.0, 0.0, 0.0);
         let transformed = &trs * v;
         let restored = &inv * transformed;
-        assert!(restored.close(&v));
+        assert!(restored.close(v));
     }
 
     #[test]
@@ -548,6 +548,6 @@ mod test {
         let v = Vec3::new(1.0, 1.0, 1.0);
         let transformed = &trs * v;
         let restored = &inv * transformed;
-        assert!(restored.close(&v));
+        assert!(restored.close(v));
     }
 }

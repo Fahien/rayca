@@ -71,7 +71,7 @@ impl Point3 {
         let s = rotation.get_w();
 
         // Do the math
-        let rotated = 2.0 * u.dot(v) * u + (s * s - u.dot(u)) * v + 2.0 * s * u.cross(&v);
+        let rotated = 2.0 * u.dot(v) * u + (s * s - u.dot(u)) * v + 2.0 * s * u.cross(v);
         *self = rotated.into();
     }
 

@@ -116,7 +116,7 @@ impl Quat {
     }
 
     pub fn angle_between(a: Vec3, b: Vec3) -> Self {
-        let c = a.cross(&b);
+        let c = a.cross(b);
         let w = (a.norm() * b.norm()).sqrt() + a.dot(&b);
         // TODO: return an identity quat for parallel vectors,
         // or return a 180 degree rotation for opposite vectors

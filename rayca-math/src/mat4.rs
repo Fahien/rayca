@@ -81,8 +81,8 @@ impl Mat4 {
     pub fn look_at(target: Vec3, eye: Vec3, up: Vec3) -> Self {
         // Z axis points towards the eye!
         let z_axis = (eye - target).get_normalized();
-        let x_axis = up.cross(&z_axis).get_normalized();
-        let y_axis = z_axis.cross(&x_axis);
+        let x_axis = up.cross(z_axis).get_normalized();
+        let y_axis = z_axis.cross(x_axis);
 
         let values = [
             x_axis.simd + f32x4::from_array([0.0, 0.0, 0.0, x_axis.dot(&-eye)]),

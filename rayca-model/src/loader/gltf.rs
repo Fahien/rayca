@@ -227,7 +227,7 @@ impl UriBuffers {
             vertex.ext.tangent = Vec3::new(tangent[0], tangent[1], tangent[2]);
 
             // Compute bitangent as for glTF 2.0 spec
-            vertex.ext.bitangent = vertex.ext.normal.cross(&vertex.ext.tangent) * tangent[3];
+            vertex.ext.bitangent = vertex.ext.normal.cross(vertex.ext.tangent) * tangent[3];
         });
     }
 

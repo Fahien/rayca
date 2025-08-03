@@ -210,7 +210,7 @@ impl QuadLight {
 
     /// Returns the normal of the quad light in model space.
     pub fn get_normal(&self) -> Vec3 {
-        self.ab.cross(&self.ac).get_normalized()
+        self.ab.cross(self.ac).get_normalized()
     }
 
     pub fn get_area(&self) -> f32 {
@@ -256,7 +256,7 @@ impl QuadLight {
     pub fn gamma(&self, trs: &Trs, edge_index: u32, frag_pos: Point3) -> Vec3 {
         let ra = self.get_a(trs, edge_index) - frag_pos;
         let rb = self.get_b(trs, edge_index) - frag_pos;
-        ra.cross(&rb).get_normalized()
+        ra.cross(rb).get_normalized()
     }
 
     /// Returns the intensity of quad light reaching that point, at a certain angle.
