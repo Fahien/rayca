@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
 
 use serde::Deserialize;
 
@@ -163,6 +163,17 @@ impl Color {
 
     pub fn is_transparent(&self) -> bool {
         self.a < 1.0 - f32::EPSILON
+    }
+
+    pub fn close(&self, other: Self) -> bool {
+        let diff_r = (self.r - other.r).abs();
+        let diff_g = (self.g - other.g).abs();
+        let diff_b = (self.b - other.b).abs();
+        let diff_a = (self.a - other.a).abs();
+        diff_r < f32::EPSILON
+            && diff_g < f32::EPSILON
+            && diff_b < f32::EPSILON
+            && diff_a < f32::EPSILON
     }
 }
 
@@ -405,5 +416,13 @@ impl<'de> Deserialize<'de> for Color {
         place.b = arr[2];
         place.a = arr[3];
         Ok(())
+    }
+}
+
+impl DivAssign<f32> for Color {
+    fn div_assign(&mut self, rhs: f32) {
+        self.r /= rhs;
+        self.g /= rhs;
+        self.b /= rhs;
     }
 }

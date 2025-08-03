@@ -12,7 +12,7 @@ pub struct PhongMaterial {
     pub shader: u32,
 
     /// The ambient color, representing constant background light reflected by the material.
-    #[builder(default = Color::WHITE)]
+    #[builder(default = Color::BLACK)]
     pub ambient: Color,
 
     /// The emission color, representing light emitted by the material.
@@ -41,7 +41,7 @@ impl Default for PhongMaterial {
 impl PhongMaterial {
     pub const WHITE: PhongMaterial = PhongMaterial {
         shader: 0,
-        ambient: Color::new(0.2, 0.2, 0.2, 1.0),
+        ambient: Color::BLACK,
         emission: Color::BLACK,
         diffuse: Color::BLACK,
         specular: Color::BLACK,
@@ -49,7 +49,7 @@ impl PhongMaterial {
     };
 
     pub fn is_emissive(&self) -> bool {
-        self.emission != Color::BLACK
+        !self.emission.close(Color::BLACK)
     }
 
     pub fn get_color(&self) -> Color {

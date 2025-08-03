@@ -5,12 +5,14 @@
 mod analyticdirect;
 mod direct;
 mod flat;
+mod pathtracer;
 mod raytracer;
 mod scratcher;
 
 pub use analyticdirect::*;
 pub use direct::*;
 pub use flat::*;
+pub use pathtracer::*;
 pub use raytracer::*;
 pub use scratcher::*;
 
@@ -35,6 +37,7 @@ pub enum IntegratorStrategy {
     Flat,
     AnalyticDirect,
     Direct,
+    Pathtracer,
 }
 
 impl IntegratorStrategy {
@@ -60,6 +63,10 @@ impl IntegratorStrategy {
                 static DIRECT: Direct = Direct::new();
                 &DIRECT
             }
+            Self::Pathtracer => {
+                static PATHTRACER: Pathtracer = Pathtracer::new();
+                &PATHTRACER
+            }
         }
     }
 }
@@ -71,6 +78,7 @@ impl From<loader::sdtf::SdtfIntegratorStrategy> for IntegratorStrategy {
             SdtfIntegratorStrategy::Raytracer => IntegratorStrategy::Raytracer,
             SdtfIntegratorStrategy::AnalyticDirect => IntegratorStrategy::AnalyticDirect,
             SdtfIntegratorStrategy::Direct => IntegratorStrategy::Direct,
+            SdtfIntegratorStrategy::Pathtracer => IntegratorStrategy::Pathtracer,
         }
     }
 }

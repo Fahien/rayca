@@ -35,7 +35,7 @@ impl Integrator for Scratcher {
         let albedo_color = primitive.get_color(scene, &hit);
 
         // Ambient?
-        let mut pixel_color = Color::black() + albedo_color / 8.0;
+        let mut pixel_color = Color::BLACK;
         const RAY_BIAS: f32 = 1e-3;
 
         if albedo_color.is_transparent() {
@@ -79,7 +79,7 @@ impl Integrator for Scratcher {
                         let shadow_primitive =
                             &shadow_blas.model.primitives[shadow_hit.primitive as usize];
                         let shadow_color = shadow_primitive.get_color(scene, &shadow_hit);
-                        shadow_color.a < 1.0
+                        shadow_color.is_transparent()
                     }
                 }
             };

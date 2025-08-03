@@ -122,16 +122,28 @@ impl Draw for SoftRenderer {
             pixel_iter.enumerate().for_each(|(x, pixel)| {
                 let mut color = Color::BLACK;
 
-                // Generate primary ray
-                let xx = (2.0 * ((x as f32 + 0.5) * inv_width) - 1.0) * angle * aspectratio;
-                let yy = (1.0 - 2.0 * ((y as f32 + 0.5) * inv_height)) * angle;
-                let mut dir = Vec3::new(xx, yy, -1.0);
-                dir.normalize();
-                let origin = Point3::new(0.0, 0.0, 0.0);
-                let ray = &camera_trs.trs * Ray::new(origin, dir);
+                let strate_count = (self.config.samples_per_pixel as f32).sqrt();
+                let offset = 0.5 / strate_count;
+                let step = 1.0 / strate_count;
 
-                color += draw_pixel(&self.config, &scene_draw_info, ray, &bvh);
+                for i in 0..self.config.samples_per_pixel {
+                    let ix = (i % strate_count as u32) as f32;
+                    let iy = (i / strate_count as u32) as f32;
 
+                    // Generate primary ray
+                    let xx = (2.0 * ((x as f32 + ix * step + offset) * inv_width) - 1.0)
+                        * angle
+                        * aspectratio;
+                    let yy = (1.0 - 2.0 * ((y as f32 + iy * step + offset) * inv_height)) * angle;
+                    let mut dir = Vec3::new(xx, yy, -1.0);
+                    dir.normalize();
+                    let origin = Point3::new(0.0, 0.0, 0.0);
+                    let ray = &camera_trs.trs * Ray::new(origin, dir);
+
+                    color += draw_pixel(&self.config, &scene_draw_info, ray, &bvh);
+                }
+
+                color /= self.config.samples_per_pixel as f32;
                 *pixel = color.into();
             });
         });

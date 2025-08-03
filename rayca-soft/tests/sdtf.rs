@@ -155,6 +155,15 @@ fn dragon() {
     run_test(
         "sdtf/2/dragon.sdtf",
         "sdtf/2/dragon.png",
+        Config::builder().bvh(true).build(),
+    );
+}
+
+#[test]
+fn cornell2() {
+    run_test(
+        "sdtf/3/cornellSimple.sdtf",
+        "sdtf/3/cornellSimple.png",
         Config::builder().bvh(false).build(),
     );
 }

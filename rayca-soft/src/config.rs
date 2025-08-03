@@ -20,6 +20,10 @@ pub struct Config {
     #[builder(default = false)]
     pub light_stratify: bool,
 
+    /// Number of samples to collect for each pixel.
+    #[builder(default = 1)]
+    pub samples_per_pixel: u32,
+
     #[builder(default = IntegratorStrategy::Scratcher)]
     pub integrator: IntegratorStrategy,
 
@@ -39,6 +43,7 @@ impl Config {
         self.max_depth = sdtf_config.max_depth as u32;
         self.light_samples = sdtf_config.light_samples;
         self.light_stratify = sdtf_config.light_stratify;
+        self.samples_per_pixel = sdtf_config.samples_per_pixel;
         self.integrator = sdtf_config.integrator.into();
     }
 

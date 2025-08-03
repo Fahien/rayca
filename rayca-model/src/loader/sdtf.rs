@@ -23,6 +23,9 @@ pub enum SdtfIntegratorStrategy {
 
     /// Direct lighting using Monte Carlo integration
     Direct,
+
+    /// Monte Carlo direct/indirect lighting
+    Pathtracer,
 }
 
 impl FromStr for SdtfIntegratorStrategy {
@@ -33,6 +36,7 @@ impl FromStr for SdtfIntegratorStrategy {
             "raytracer" => Ok(Self::Raytracer),
             "analyticdirect" => Ok(Self::AnalyticDirect),
             "direct" => Ok(Self::Direct),
+            "pathtracer" => Ok(Self::Pathtracer),
             _ => Err(format!("Failed to find an integrator for `{}`", s)),
         }
     }
@@ -45,6 +49,7 @@ pub struct SdtfConfig {
     pub max_depth: i32,
     pub light_samples: u32,
     pub light_stratify: bool,
+    pub samples_per_pixel: u32,
     pub integrator: SdtfIntegratorStrategy,
 }
 
@@ -56,6 +61,7 @@ impl Default for SdtfConfig {
             max_depth: 5,
             light_samples: 1,
             light_stratify: false,
+            samples_per_pixel: 1,
             integrator: SdtfIntegratorStrategy::Raytracer,
         }
     }
@@ -633,6 +639,14 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_spp<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.config.samples_per_pixel = words.next().expect("Failed to read spp").parse()?;
+        Ok(())
+    }
+
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
         if line.starts_with('#') {
@@ -678,6 +692,7 @@ impl SdtfBuilder {
             Some("quadLight") => self.parse_quadlight(words, model)?,
             Some("lightsamples") => self.parse_light_samples(words)?,
             Some("lightstratify") => self.parse_light_stratify(words)?,
+            Some("spp") => self.parse_spp(words)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 
