@@ -100,13 +100,7 @@ impl Pathtracer {
                     }
                 }
 
-                // BRDF
-                let kd = material.diffuse;
-                let lambertian = kd * std::f32::consts::FRAC_1_PI;
-                let ks = material.specular;
-                let s = material.shininess;
-                let brdf = lambertian
-                    + (ks * (s + 2.0) * r.dot(omega_i).powf(s)) * std::f32::consts::FRAC_1_PI / 2.0;
+                let brdf = lambertian::get_brdf(material, r, omega_i);
 
                 let r_squared = x_to_x1.norm();
                 let d_omega_i = quad_light.get_normal().dot(omega_i) / r_squared;
@@ -140,13 +134,7 @@ impl Pathtracer {
 
         for _ in 0..config.light_samples {
             let omega_i = Self::get_random_dir(n);
-
-            let kd = material.diffuse;
-            let ks = material.specular;
-            let s = material.shininess;
-            let lambertian = kd * std::f32::consts::FRAC_1_PI;
-            let brdf = lambertian
-                + ((ks * (s + 2.0) * r.dot(omega_i).powf(s)) * std::f32::consts::FRAC_1_PI) / 2.0;
+            let brdf = lambertian::get_brdf(material, r, omega_i);
 
             let cosin_law = omega_i.dot(n);
 

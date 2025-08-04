@@ -33,7 +33,8 @@ impl Integrator for Direct {
         let primitive = tlas.get_primitive(&hit);
         let n = primitive.get_normal(scene, &hit);
 
-        let reflection_dir = ray.dir.reflect(&n).get_normalized();
+        // Reflect the ray direction around the normal
+        let r = ray.dir.reflect(&n).get_normalized();
 
         // This is the color of the primitive with no light
         let ambient_and_emissive = primitive.get_color(scene, &hit);
@@ -44,10 +45,7 @@ impl Integrator for Direct {
 
         let mut light_contribution = Color::black();
 
-        let uv = primitive.get_uv(&hit);
-        let diffuse = primitive.get_diffuse(scene, &hit, uv);
-        let specular = primitive.get_specular(scene);
-        let shininess = primitive.get_shininess(scene);
+        let material = primitive.get_phong_material(scene);
 
         let strate_count = config.get_strate_count();
 
@@ -81,15 +79,7 @@ impl Integrator for Direct {
                         }
                     }
 
-                    // BRDF
-                    let kd = diffuse;
-                    let lambertian = kd * std::f32::consts::FRAC_1_PI;
-                    let ks = specular;
-                    let s = shininess;
-                    let r = &reflection_dir;
-                    let brdf = lambertian
-                        + (ks * (s + 2.0) * r.dot(omega_i).powf(s)) * std::f32::consts::FRAC_1_PI
-                            / 2.0;
+                    let brdf = lambertian::get_brdf(material, r, omega_i);
 
                     let r_squared = x1_to_hit_point.len().powf(2.0);
                     let d_omega_i = quad_light.get_normal().dot(omega_i) / r_squared;

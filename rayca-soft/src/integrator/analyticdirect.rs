@@ -36,9 +36,6 @@ impl Integrator for AnalyticDirect {
         }
 
         let n = primitive.get_normal(scene, &hit);
-        let model = scene.get_model(primitive.node.model);
-        let uv = primitive.get_uv(&hit);
-
         let mut light_contribution = Color::black();
 
         for light_draw_info in scene.light_draw_infos.iter().copied() {
@@ -47,7 +44,8 @@ impl Integrator for AnalyticDirect {
             light_contribution += light.get_intensity(&light_node.trs, hit.point, n);
         }
 
-        let f = primitive.get_material(scene).get_diffuse(model, uv) * std::f32::consts::FRAC_1_PI;
+        let uv = primitive.get_uv(&hit);
+        let f = primitive.get_diffuse(scene, &hit, uv) * std::f32::consts::FRAC_1_PI;
         Some(f * light_contribution)
     }
 }
