@@ -51,6 +51,7 @@ pub struct SdtfConfig {
     pub light_stratify: bool,
     pub samples_per_pixel: u32,
     pub next_event_estimation: bool,
+    pub russian_roulette: bool,
     pub integrator: SdtfIntegratorStrategy,
 }
 
@@ -64,6 +65,7 @@ impl Default for SdtfConfig {
             light_stratify: false,
             samples_per_pixel: 1,
             next_event_estimation: false,
+            russian_roulette: false,
             integrator: SdtfIntegratorStrategy::Raytracer,
         }
     }
@@ -659,6 +661,15 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_roussian_roulette<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        let word = words.next().expect("Failed to read russianroulette");
+        self.config.russian_roulette = word == "on";
+        Ok(())
+    }
+
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
         if line.starts_with('#') {
@@ -706,6 +717,7 @@ impl SdtfBuilder {
             Some("lightstratify") => self.parse_light_stratify(words)?,
             Some("spp") => self.parse_spp(words)?,
             Some("nexteventestimation") => self.parse_next_event_estimation(words)?,
+            Some("russianroulette") => self.parse_roussian_roulette(words)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 

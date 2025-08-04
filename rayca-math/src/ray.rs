@@ -4,20 +4,69 @@
 
 use crate::*;
 
+#[derive(Default, Debug, Clone)]
+pub struct RayBuilder {
+    origin: Point3,
+    dir: Vec3,
+    throughput: Color,
+}
+
+impl RayBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn origin(mut self, origin: Point3) -> Self {
+        self.origin = origin;
+        self
+    }
+
+    pub fn dir(mut self, dir: Vec3) -> Self {
+        self.dir = dir;
+        self
+    }
+
+    pub fn throughput(mut self, throughput: Color) -> Self {
+        self.throughput = throughput;
+        self
+    }
+
+    pub fn build(self) -> Ray {
+        let mut ray = Ray::new(self.origin, self.dir);
+        ray.throughput = self.throughput;
+        ray
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Ray {
+    /// Origin of the ray in world space.
     pub origin: Point3,
+
+    /// Direction of the ray in world space.
     pub dir: Vec3,
 
-    // Reciprocal of direction
+    /// Reciprocal of direction.
     pub rdir: Vec3,
+
+    /// Used with the russian roulette.
+    pub throughput: Color,
 }
 
 impl Ray {
+    pub fn builder() -> RayBuilder {
+        RayBuilder::new()
+    }
+
     pub fn new(mut origin: Point3, dir: Vec3) -> Self {
         let rdir = dir.get_reciprocal();
         origin.simd[3] = 1.0;
-        Self { origin, dir, rdir }
+        Self {
+            origin,
+            dir,
+            rdir,
+            throughput: Color::WHITE,
+        }
     }
 
     pub fn scale(&mut self, scale: &Vec3) {
@@ -37,6 +86,20 @@ impl Ray {
         self.rdir = self.dir.get_reciprocal();
         self.origin.rotate(rotation);
         self.origin.simd[3] = 1.0;
+    }
+
+    /// This function applies the russian roulette method.
+    /// If the ray is not to be terminated, it returns the boost factor.
+    pub fn next_russian_roulette(&self, next_throughput: Color) -> Option<f32> {
+        // Fragments with high information have a higher change to generate a new ray.
+        let q = 1.0 - next_throughput.get_rgb().reduce_max().min(1.0);
+        if q < fastrand::f32() {
+            let weight = 1.0 / (1.0 - q);
+            Some(weight)
+        } else {
+            // Path has not survived the russian roulette
+            None
+        }
     }
 }
 

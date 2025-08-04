@@ -120,6 +120,7 @@ impl Pathtracer {
         config: &Config,
         scene: &SceneDrawInfo,
         tlas: &Tlas,
+        ray: &Ray,
         hit: &Hit,
         n: Vec3,
         r: Vec3,
@@ -136,13 +137,26 @@ impl Pathtracer {
             let omega_i = Self::get_random_dir(n);
             let brdf = lambertian::get_brdf(material, r, omega_i);
 
-            let cosin_law = omega_i.dot(n);
+            let mut next_ray = Ray::new(next_origin, omega_i);
+            let mut weight = 1.0;
 
-            let next_ray = Ray::new(next_origin, omega_i);
+            if config.russian_roulette {
+                use std::f32::consts::PI;
+                let next_throughput = 2.0 * PI * ray.throughput * brdf * n.dot(omega_i);
+                if let Some(boost_factor) = ray.next_russian_roulette(next_throughput) {
+                    weight = boost_factor;
+                    next_ray.throughput = next_throughput * boost_factor;
+                } else {
+                    continue; // Russian roulette terminated the ray
+                }
+            }
+
             if let Some(indirect_sample) =
                 Self::trace_impl(config, scene, next_ray, tlas, depth + 1, collect_emissive)
             {
-                indirect_lighting += brdf * cosin_law * indirect_sample;
+                let cosin_law = omega_i.dot(n);
+                // Boost factor applies to the returned radiance as well
+                indirect_lighting += brdf * cosin_law * indirect_sample * weight;
             }
         }
 
@@ -157,7 +171,7 @@ impl Pathtracer {
         depth: u32,
         collect_emissive: bool,
     ) -> Option<Color> {
-        if depth >= config.max_depth {
+        if !config.russian_roulette && depth >= config.max_depth {
             return None;
         }
 
@@ -193,9 +207,9 @@ impl Pathtracer {
             config.max_depth
         };
 
-        if depth < indirect_depth_limit {
+        if config.russian_roulette || depth < indirect_depth_limit {
             indirect_lighting +=
-                Self::get_indirect_lighting(config, scene, tlas, &hit, n, r, material, depth);
+                Self::get_indirect_lighting(config, scene, tlas, &ray, &hit, n, r, material, depth);
         }
 
         Some(direct_lighting + indirect_lighting)

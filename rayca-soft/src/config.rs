@@ -28,6 +28,10 @@ pub struct Config {
     #[builder(default = false)]
     pub next_event_estimation: bool,
 
+    /// Whether to use Russian roulette for path termination.
+    #[builder(default = false)]
+    pub russian_roulette: bool,
+
     #[builder(default = IntegratorStrategy::Scratcher)]
     pub integrator: IntegratorStrategy,
 

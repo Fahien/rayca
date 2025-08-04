@@ -176,3 +176,22 @@ fn cornell3() {
         Config::builder().bvh(false).build(),
     );
 }
+
+#[test]
+fn cornell4() {
+    run_test(
+        "sdtf/3/cornellRR.sdtf",
+        "sdtf/3/cornellRR.png",
+        Config::builder().bvh(false).build(),
+    );
+}
+
+#[test]
+#[ignore]
+fn dragon2() {
+    run_test(
+        "sdtf/3/dragon.sdtf",
+        "sdtf/3/dragon2.png",
+        Config::builder().bvh(true).build(),
+    );
+}

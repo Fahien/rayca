@@ -167,6 +167,10 @@ impl Color {
             && diff_b < f32::EPSILON
             && diff_a < f32::EPSILON
     }
+
+    pub fn get_rgb(&self) -> Vec3 {
+        Vec3::new(self.r, self.g, self.b)
+    }
 }
 
 impl From<u32> for Color {
