@@ -34,12 +34,12 @@ pub struct PhongMaterial {
 
 impl Default for PhongMaterial {
     fn default() -> Self {
-        Self::WHITE
+        Self::DEFAULT
     }
 }
 
 impl PhongMaterial {
-    pub const WHITE: PhongMaterial = PhongMaterial {
+    pub const DEFAULT: PhongMaterial = PhongMaterial {
         shader: 0,
         ambient: Color::BLACK,
         emission: Color::BLACK,

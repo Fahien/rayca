@@ -52,6 +52,74 @@ impl Pathtracer {
         s.get_x() * u + s.get_y() * v + s.get_z() * w
     }
 
+    fn get_direct_lighting(
+        config: &Config,
+        scene: &SceneDrawInfo,
+        tlas: &Tlas,
+        hit: &Hit,
+        n: Vec3,
+        r: Vec3,
+        material: &PhongMaterial,
+    ) -> Color {
+        let mut direct_lighting = Color::BLACK;
+        let strate_count = config.get_strate_count();
+        let next_origin = hit.point + n * Self::RAY_BIAS;
+
+        for light_draw_info in scene.light_draw_infos.iter().copied() {
+            let light_node = scene.get_node(light_draw_info);
+            let quad_light = scene.get_quad_light(light_draw_info);
+            let area = quad_light.get_area();
+
+            // Constant radiance?
+            let le = quad_light.intensity * quad_light.color;
+
+            let mut ld = Color::BLACK;
+
+            for i in 0..config.light_samples {
+                let x1 = quad_light.get_random_point(
+                    &light_node.trs,
+                    config.light_stratify,
+                    strate_count,
+                    i,
+                );
+
+                // X is the point on the surface
+                let x = hit.point;
+                // Random sample incident direction
+                let x_to_x1 = x1 - x;
+                let omega_i = x_to_x1.get_normalized();
+
+                // Let us see if we actually see the light
+                let shadow_ray = Ray::new(next_origin, omega_i);
+                if let Some(shadow_hit) = tlas.intersects(scene, &shadow_ray) {
+                    let shadow_primitive = tlas.get_primitive(&shadow_hit);
+                    if !shadow_primitive.is_emissive(scene) {
+                        continue;
+                    }
+                }
+
+                // BRDF
+                let kd = material.diffuse;
+                let lambertian = kd * std::f32::consts::FRAC_1_PI;
+                let ks = material.specular;
+                let s = material.shininess;
+                let brdf = lambertian
+                    + (ks * (s + 2.0) * r.dot(omega_i).powf(s)) * std::f32::consts::FRAC_1_PI / 2.0;
+
+                let r_squared = x_to_x1.norm();
+                let d_omega_i = quad_light.get_normal().dot(omega_i) / r_squared;
+
+                ld += brdf * n.dot(omega_i) * d_omega_i;
+            }
+
+            ld = (le * area * ld) / (config.light_samples as f32);
+
+            direct_lighting += ld;
+        } // End direct lighting
+
+        direct_lighting
+    }
+
     fn trace_impl(
         &self,
         config: &Config,
@@ -76,7 +144,6 @@ impl Pathtracer {
             return Some(ambient_and_emissive);
         }
 
-        let strate_count = config.get_strate_count();
         let n = primitive.get_normal(scene, &hit);
         let uv = primitive.get_uv(&hit);
         let diffuse = primitive.get_diffuse(scene, &hit, uv);
@@ -85,67 +152,21 @@ impl Pathtracer {
 
         let reflection_dir = ray.dir.reflect(&n).get_normalized();
 
-        let mut direct_lighting = Color::BLACK;
-
         // Move ray origin slightly along the surface normal to avoid self intersections
         let next_origin = hit.point + n * Self::RAY_BIAS;
 
-        // Expecting only area lights here
+        let mut direct_lighting = Color::BLACK;
         if config.next_event_estimation {
-            for light_draw_info in scene.light_draw_infos.iter().copied() {
-                let light_node = scene.get_node(light_draw_info);
-                let quad_light = scene.get_quad_light(light_draw_info);
-                let area = quad_light.get_area();
-
-                // Constant radiance?
-                let le = quad_light.intensity * quad_light.color;
-
-                let mut ld = Color::BLACK;
-
-                for i in 0..config.light_samples {
-                    let x1 = quad_light.get_random_point(
-                        &light_node.trs,
-                        config.light_stratify,
-                        strate_count,
-                        i,
-                    );
-
-                    // X is the point on the surface
-                    let x = hit.point;
-                    // Random sample incident direction
-                    let x_to_x1 = x1 - x;
-                    let omega_i = x_to_x1.get_normalized();
-
-                    // Let us see if we actually see the light
-                    let shadow_ray = Ray::new(next_origin, omega_i);
-                    if let Some(shadow_hit) = tlas.intersects(scene, &shadow_ray) {
-                        let shadow_primitive = tlas.get_primitive(&shadow_hit);
-                        if !shadow_primitive.is_emissive(scene) {
-                            continue;
-                        }
-                    }
-
-                    // BRDF
-                    let kd = diffuse;
-                    let lambertian = kd * std::f32::consts::FRAC_1_PI;
-                    let ks = specular;
-                    let s = shininess;
-                    let r = &reflection_dir;
-                    let brdf = lambertian
-                        + (ks * (s + 2.0) * r.dot(omega_i).powf(s)) * std::f32::consts::FRAC_1_PI
-                            / 2.0;
-
-                    let r_squared = x_to_x1.norm();
-                    let d_omega_i = quad_light.get_normal().dot(omega_i) / r_squared;
-
-                    ld += brdf * n.dot(omega_i) * d_omega_i;
-                }
-
-                ld = (le * area * ld) / (config.light_samples as f32);
-
-                direct_lighting += ld;
-            } // End direct lighting
-        } // end next event estimation
+            direct_lighting = Self::get_direct_lighting(
+                config,
+                scene,
+                tlas,
+                &hit,
+                n,
+                reflection_dir,
+                primitive.get_phong_material(scene),
+            );
+        }
 
         let mut indirect_lighting = Color::BLACK;
 

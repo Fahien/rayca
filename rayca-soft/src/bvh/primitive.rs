@@ -109,6 +109,11 @@ impl BvhPrimitive {
         material
     }
 
+    pub fn get_phong_material<'m>(&self, scene: &'m SceneDrawInfo) -> &'m PhongMaterial {
+        let model = scene.get_model(self.node.model);
+        self.get_material(scene).get_phong_material(model)
+    }
+
     pub fn is_emissive(&self, scene: &SceneDrawInfo) -> bool {
         let model = scene.get_model(self.node.model);
         let material = self.get_material(scene);
@@ -179,7 +184,7 @@ impl BvhPrimitive {
                 ggx::get_radiance(pbr_material, ir, model)
             }
             Material::Phong(_) => {
-                let phong_material = material.get_phong_material(model).unwrap();
+                let phong_material = material.get_phong_material(model);
                 lambertian::get_radiance(phong_material, ir)
             }
         }

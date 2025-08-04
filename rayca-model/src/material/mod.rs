@@ -58,10 +58,13 @@ impl Material {
         }
     }
 
-    pub fn get_phong_material<'m>(&self, model: &'m Model) -> Option<&'m PhongMaterial> {
+    pub fn get_phong_material<'m>(&self, model: &'m Model) -> &'m PhongMaterial {
         match self {
-            Material::Phong(handle) => model.phong_materials.get(*handle),
-            _ => None,
+            Material::Phong(handle) => model
+                .phong_materials
+                .get(*handle)
+                .unwrap_or(&PhongMaterial::DEFAULT),
+            _ => panic!("Expected PhongMaterial, found different material type"),
         }
     }
 
@@ -76,7 +79,7 @@ impl Material {
     pub fn get_color(&self, model: &Model, uv: Vec2) -> Color {
         match self {
             Material::Pbr(_) => self.get_pbr_material(model).get_color(model, uv),
-            Material::Phong(_) => self.get_phong_material(model).unwrap().get_color(),
+            Material::Phong(_) => self.get_phong_material(model).get_color(),
         }
     }
 
@@ -84,7 +87,7 @@ impl Material {
     pub fn get_diffuse(&self, model: &Model, uv: Vec2) -> Color {
         match self {
             Material::Pbr(_) => self.get_pbr_material(model).get_color(model, uv),
-            Material::Phong(_) => self.get_phong_material(model).unwrap().diffuse,
+            Material::Phong(_) => self.get_phong_material(model).diffuse,
         }
     }
 
@@ -107,14 +110,14 @@ impl Material {
 
     pub fn get_specular(&self, model: &Model) -> Color {
         match &self {
-            Material::Phong(_) => self.get_phong_material(model).unwrap().specular,
+            Material::Phong(_) => self.get_phong_material(model).specular,
             Material::Pbr(_) => todo!(),
         }
     }
 
     pub fn get_shininess(&self, model: &Model) -> f32 {
         match &self {
-            Material::Phong(_) => self.get_phong_material(model).unwrap().shininess,
+            Material::Phong(_) => self.get_phong_material(model).shininess,
             Material::Pbr(_) => todo!(),
         }
     }
