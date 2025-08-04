@@ -1792,6 +1792,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "bon",
+ "fastrand",
  "gltf",
  "image",
  "rayca-geometry",

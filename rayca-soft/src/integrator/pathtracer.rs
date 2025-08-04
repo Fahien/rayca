@@ -67,6 +67,7 @@ impl Pathtracer {
         // Expecting only area lights here
         if config.next_event_estimation {
             for light_draw_info in scene.light_draw_infos.iter().copied() {
+                let light_node = scene.get_node(light_draw_info);
                 let quad_light = scene.get_quad_light(light_draw_info);
                 let area = quad_light.get_area();
 
@@ -75,27 +76,13 @@ impl Pathtracer {
 
                 let mut ld = Color::BLACK;
 
-                let step1 = quad_light.ab / strate_count as f32;
-                let step2 = quad_light.ac / strate_count as f32;
-
                 for i in 0..config.light_samples {
-                    let u1 = fastrand::f32() / strate_count as f32;
-                    let u2 = fastrand::f32() / strate_count as f32;
-
-                    // Random point on the parallelogram
-                    let light_node = scene.get_node(light_draw_info);
-                    let quad_a = light_node.trs.get_position();
-                    let mut x1 = quad_a + (u1 * quad_light.ab) + (u2 * quad_light.ac);
-
-                    if config.light_stratify {
-                        let i1 = (i % strate_count) as f32;
-                        let i2 = (i / strate_count) as f32;
-
-                        let offset1 = step1 * i1 + step1 / 2.0;
-                        let offset2 = step2 * i2 + step2 / 2.0;
-
-                        x1 += offset1 + offset2;
-                    }
+                    let x1 = quad_light.get_random_point(
+                        &light_node.trs,
+                        config.light_stratify,
+                        strate_count,
+                        i,
+                    );
 
                     // X is the point on the surface
                     let x = hit.point;

@@ -58,27 +58,13 @@ impl Integrator for Direct {
             if let Light::Quad(quad_light) = light {
                 let mut ld = Color::black();
 
-                let quad_a = light_node.trs.get_position();
-
-                let step1 = quad_light.ab / strate_count as f32;
-                let step2 = quad_light.ac / strate_count as f32;
-
                 for i in 0..config.light_samples {
-                    let u1 = fastrand::f32() / strate_count as f32;
-                    let u2 = fastrand::f32() / strate_count as f32;
-
-                    // Random point on the parallelogram
-                    let mut x1 = quad_a + (u1 * quad_light.ab) + (u2 * quad_light.ac);
-
-                    if config.light_stratify {
-                        let i1 = (i % strate_count) as f32;
-                        let i2 = (i / strate_count) as f32;
-
-                        let offset1 = step1 * i1;
-                        let offset2 = step2 * i2;
-
-                        x1 += offset1 + offset2;
-                    }
+                    let x1 = quad_light.get_random_point(
+                        &light_node.trs,
+                        config.light_stratify,
+                        strate_count,
+                        i,
+                    );
 
                     // Random sample incident direction
                     let x1_to_hit_point = x1 - hit.point;

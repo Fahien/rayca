@@ -278,6 +278,35 @@ impl QuadLight {
     pub fn get_fallof(&self) -> f32 {
         1.0
     }
+
+    /// Returns a random point on the surface of the area light.
+    /// - `trs`: transformation of the light
+    /// - `stratify`: if true, the area will be stratified according to
+    ///   the `strate_count` and a point in the `i`th stratum will be returned.
+    /// - `strate_count`: number of strata to divide the area into
+    /// - `i`: index of the stratum to return
+    pub fn get_random_point(&self, trs: &Trs, stratify: bool, strate_count: u32, i: u32) -> Point3 {
+        let step1 = self.ab / strate_count as f32;
+        let step2 = self.ac / strate_count as f32;
+
+        let u1 = fastrand::f32() / strate_count as f32;
+        let u2 = fastrand::f32() / strate_count as f32;
+
+        let a = self.get_a(trs, 0);
+        let mut x1 = a + (u1 * self.ab) + (u2 * self.ac);
+
+        if stratify {
+            let i1 = (i % strate_count) as f32;
+            let i2 = (i / strate_count) as f32;
+
+            let offset1 = step1 * i1;
+            let offset2 = step2 * i2;
+
+            x1 += offset1 + offset2;
+        }
+
+        x1
+    }
 }
 
 impl Default for Light {
