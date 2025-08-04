@@ -26,6 +26,32 @@ impl Pathtracer {
 }
 
 impl Pathtracer {
+    /// Returns a random direction in the hemisphere centered around the normal `n`.
+    fn get_random_dir(n: Vec3) -> Vec3 {
+        let e1 = fastrand::f32();
+        let e2 = fastrand::f32();
+
+        let theta = e1.acos();
+        let omega = 2.0 * std::f32::consts::PI * e2;
+
+        let s = Vec3::new(
+            omega.cos() * theta.sin(),
+            omega.sin() * theta.sin(),
+            theta.cos(),
+        );
+        // We need to rotate s so that the emisphere is centered around n
+        let w = n;
+        let a = if w.close(Vec3::Y_AXIS) {
+            Vec3::X_AXIS
+        } else {
+            Vec3::Y_AXIS
+        };
+        let u = a.cross(w).get_normalized();
+        let v = w.cross(u).get_normalized();
+
+        s.get_x() * u + s.get_y() * v + s.get_z() * w
+    }
+
     fn trace_impl(
         &self,
         config: &Config,
@@ -132,29 +158,7 @@ impl Pathtracer {
 
         if depth < indirect_depth_limit {
             for _ in 0..config.light_samples {
-                // Ray generation for hemisphere sampling
-                let e1 = fastrand::f32();
-                let e2 = fastrand::f32();
-
-                let theta = e1.acos();
-                let omega = 2.0 * std::f32::consts::PI * e2;
-
-                let s = Vec3::new(
-                    omega.cos() * theta.sin(),
-                    omega.sin() * theta.sin(),
-                    theta.cos(),
-                );
-                // We need to rotate s so that the emisphere is centered around n
-                let w = n;
-                let a = if w.close(Vec3::Y_AXIS) {
-                    Vec3::X_AXIS
-                } else {
-                    Vec3::Y_AXIS
-                };
-                let u = a.cross(w).get_normalized();
-                let v = w.cross(u).get_normalized();
-
-                let omega_i = s.get_x() * u + s.get_y() * v + s.get_z() * w;
+                let omega_i = Self::get_random_dir(n);
 
                 let kd = diffuse;
                 let ks = specular;
