@@ -36,7 +36,7 @@ impl Integrator for AnalyticDirect {
         }
 
         let n = primitive.get_normal(scene, &hit);
-        let mut light_contribution = Color::black();
+        let mut light_contribution = Color::BLACK;
 
         for light_draw_info in scene.light_draw_infos.iter().copied() {
             let light_node = scene.get_node(light_draw_info);

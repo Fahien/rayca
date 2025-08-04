@@ -146,14 +146,6 @@ impl Color {
         Color::new(fastrand::f32(), fastrand::f32(), fastrand::f32(), 1.0)
     }
 
-    pub fn black() -> Self {
-        Self::new(0.0, 0.0, 0.0, 1.0)
-    }
-
-    pub fn white() -> Self {
-        Self::new(1.0, 1.0, 1.0, 1.0)
-    }
-
     pub fn over(&mut self, top: Color) {
         self.r = top.r * top.a + self.r * (1.0 - top.a);
         self.g = top.g * top.a + self.g * (1.0 - top.a);

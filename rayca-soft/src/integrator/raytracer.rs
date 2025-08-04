@@ -39,7 +39,7 @@ impl Integrator for Raytracer {
 
         let ambient_emissive = albedo_color;
 
-        let mut light_contribution = Color::black();
+        let mut light_contribution = Color::BLACK;
 
         // Lights iteration
         for light_draw_info in scene.light_draw_infos.iter().copied() {

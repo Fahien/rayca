@@ -43,7 +43,7 @@ impl Integrator for Direct {
             return Some(ambient_and_emissive);
         }
 
-        let mut light_contribution = Color::black();
+        let mut light_contribution = Color::BLACK;
 
         let material = primitive.get_phong_material(scene);
 
@@ -54,7 +54,7 @@ impl Integrator for Direct {
             let light = scene.get_light(light_draw_info);
             let light_node = scene.get_node(light_draw_info);
             if let Light::Quad(quad_light) = light {
-                let mut ld = Color::black();
+                let mut ld = Color::BLACK;
 
                 for i in 0..config.light_samples {
                     let x1 = quad_light.get_random_point(

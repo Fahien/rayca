@@ -15,7 +15,7 @@ impl BvhGeometry {
     pub fn get_color(&self, hit: &Hit) -> Color {
         match self {
             BvhGeometry::Triangle(triangle) => triangle.interpolate_colors(&hit.uv),
-            BvhGeometry::Sphere(_) => Color::white(),
+            BvhGeometry::Sphere(_) => Color::WHITE,
         }
     }
 

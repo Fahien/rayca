@@ -37,7 +37,7 @@ mod test {
     fn sampler() {
         let sampler = Sampler::default();
         let mut image = Image::new(1, 1, ColorType::RGBA8);
-        let color = Color::white();
+        let color = Color::WHITE;
         image.clear::<RGBA8>(color.into());
 
         let uv = Vec2::default();

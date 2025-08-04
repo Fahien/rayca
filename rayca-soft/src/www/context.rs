@@ -138,7 +138,7 @@ impl Context {
         let canvas = get_canvas(offscreen_canvas)?;
 
         let mut image = Image::new(width, height, ColorType::RGBA8);
-        image.clear(RGBA8::black());
+        image.clear(RGBA8::BLACK);
 
         let renderer = SoftRenderer::default();
 
