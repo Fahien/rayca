@@ -62,7 +62,9 @@ impl Pathtracer {
         material: &PhongMaterial,
     ) -> Color {
         let mut direct_lighting = Color::BLACK;
+
         let strate_count = config.get_strate_count();
+        // Move ray origin slightly along the surface normal to avoid self intersections
         let next_origin = hit.point + n * Self::RAY_BIAS;
 
         for light_draw_info in scene.light_draw_infos.iter().copied() {
@@ -120,8 +122,46 @@ impl Pathtracer {
         direct_lighting
     }
 
+    fn get_indirect_lighting(
+        config: &Config,
+        scene: &SceneDrawInfo,
+        tlas: &Tlas,
+        hit: &Hit,
+        n: Vec3,
+        r: Vec3,
+        material: &PhongMaterial,
+        depth: u32,
+    ) -> Color {
+        let mut indirect_lighting = Color::BLACK;
+
+        let collect_emissive = !config.next_event_estimation;
+        // Move ray origin slightly along the surface normal to avoid self intersections
+        let next_origin = hit.point + n * Self::RAY_BIAS;
+
+        for _ in 0..config.light_samples {
+            let omega_i = Self::get_random_dir(n);
+
+            let kd = material.diffuse;
+            let ks = material.specular;
+            let s = material.shininess;
+            let lambertian = kd * std::f32::consts::FRAC_1_PI;
+            let brdf = lambertian
+                + ((ks * (s + 2.0) * r.dot(omega_i).powf(s)) * std::f32::consts::FRAC_1_PI) / 2.0;
+
+            let cosin_law = omega_i.dot(n);
+
+            let next_ray = Ray::new(next_origin, omega_i);
+            if let Some(indirect_sample) =
+                Self::trace_impl(config, scene, next_ray, tlas, depth + 1, collect_emissive)
+            {
+                indirect_lighting += brdf * cosin_law * indirect_sample;
+            }
+        }
+
+        (2.0 * std::f32::consts::PI * indirect_lighting) / (config.light_samples as f32)
+    }
+
     fn trace_impl(
-        &self,
         config: &Config,
         scene: &SceneDrawInfo,
         ray: Ray,
@@ -144,33 +184,21 @@ impl Pathtracer {
             return Some(ambient_and_emissive);
         }
 
+        // Normal at the hit point
         let n = primitive.get_normal(scene, &hit);
-        let uv = primitive.get_uv(&hit);
-        let diffuse = primitive.get_diffuse(scene, &hit, uv);
-        let specular = primitive.get_specular(scene);
-        let shininess = primitive.get_shininess(scene);
 
-        let reflection_dir = ray.dir.reflect(&n).get_normalized();
+        // Reflection direction
+        let r = ray.dir.reflect(&n).get_normalized();
 
-        // Move ray origin slightly along the surface normal to avoid self intersections
-        let next_origin = hit.point + n * Self::RAY_BIAS;
+        let material = primitive.get_phong_material(scene);
 
         let mut direct_lighting = Color::BLACK;
         if config.next_event_estimation {
-            direct_lighting = Self::get_direct_lighting(
-                config,
-                scene,
-                tlas,
-                &hit,
-                n,
-                reflection_dir,
-                primitive.get_phong_material(scene),
-            );
+            direct_lighting = Self::get_direct_lighting(config, scene, tlas, &hit, n, r, material);
         }
 
         let mut indirect_lighting = Color::BLACK;
 
-        let collect_emissive = !config.next_event_estimation;
         let indirect_depth_limit = if config.next_event_estimation {
             config.max_depth - 1
         } else {
@@ -178,31 +206,9 @@ impl Pathtracer {
         };
 
         if depth < indirect_depth_limit {
-            for _ in 0..config.light_samples {
-                let omega_i = Self::get_random_dir(n);
-
-                let kd = diffuse;
-                let ks = specular;
-                let s = shininess;
-                let r = reflection_dir;
-                let lambertian = kd * std::f32::consts::FRAC_1_PI;
-                let brdf = lambertian
-                    + ((ks * (s + 2.0) * r.dot(omega_i).powf(s)) * std::f32::consts::FRAC_1_PI)
-                        / 2.0;
-
-                let cosin_law = omega_i.dot(n);
-
-                let next_ray = Ray::new(next_origin, omega_i);
-                if let Some(indirect_sample) =
-                    self.trace_impl(config, scene, next_ray, tlas, depth + 1, collect_emissive)
-                {
-                    indirect_lighting += brdf * cosin_law * indirect_sample;
-                }
-            }
+            indirect_lighting +=
+                Self::get_indirect_lighting(config, scene, tlas, &hit, n, r, material, depth);
         }
-
-        indirect_lighting =
-            (2.0 * std::f32::consts::PI * indirect_lighting) / (config.light_samples as f32);
 
         Some(direct_lighting + indirect_lighting)
     }
@@ -217,6 +223,6 @@ impl Integrator for Pathtracer {
         tlas: &Tlas,
         depth: u32,
     ) -> Option<Color> {
-        self.trace_impl(config, scene, ray, tlas, depth, true)
+        Self::trace_impl(config, scene, ray, tlas, depth, true)
     }
 }
