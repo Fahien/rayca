@@ -24,6 +24,10 @@ pub struct Config {
     #[builder(default = 1)]
     pub samples_per_pixel: u32,
 
+    /// Whether to use next event estimation.
+    #[builder(default = false)]
+    pub next_event_estimation: bool,
+
     #[builder(default = IntegratorStrategy::Scratcher)]
     pub integrator: IntegratorStrategy,
 
@@ -44,6 +48,7 @@ impl Config {
         self.light_samples = sdtf_config.light_samples;
         self.light_stratify = sdtf_config.light_stratify;
         self.samples_per_pixel = sdtf_config.samples_per_pixel;
+        self.next_event_estimation = sdtf_config.next_event_estimation;
         self.integrator = sdtf_config.integrator.into();
     }
 

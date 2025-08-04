@@ -167,3 +167,12 @@ fn cornell2() {
         Config::builder().bvh(false).build(),
     );
 }
+
+#[test]
+fn cornell3() {
+    run_test(
+        "sdtf/3/cornellNEE.sdtf",
+        "sdtf/3/cornellNEE.png",
+        Config::builder().bvh(false).build(),
+    );
+}

@@ -50,6 +50,7 @@ pub struct SdtfConfig {
     pub light_samples: u32,
     pub light_stratify: bool,
     pub samples_per_pixel: u32,
+    pub next_event_estimation: bool,
     pub integrator: SdtfIntegratorStrategy,
 }
 
@@ -62,6 +63,7 @@ impl Default for SdtfConfig {
             light_samples: 1,
             light_stratify: false,
             samples_per_pixel: 1,
+            next_event_estimation: false,
             integrator: SdtfIntegratorStrategy::Raytracer,
         }
     }
@@ -608,7 +610,8 @@ impl SdtfBuilder {
             .push(PhongMaterial::builder().emission(color).build());
         let material_handle = model.materials.push(Material::Phong(material_handle));
 
-        let light = Light::Quad(QuadLight::new(ab, ac, color, material_handle));
+        let quad_light = QuadLight::new(ab, ac, color, material_handle);
+        let light = Light::Quad(quad_light);
         let light_handle = model.lights.push(light);
         let point_node = Node::builder()
             .trs(Trs::builder().translation(a).build())
@@ -644,6 +647,15 @@ impl SdtfBuilder {
         mut words: impl Iterator<Item = &'w str>,
     ) -> Result<(), Box<dyn Error>> {
         self.config.samples_per_pixel = words.next().expect("Failed to read spp").parse()?;
+        Ok(())
+    }
+
+    fn parse_next_event_estimation<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        let word = words.next().expect("Failed to read nexteventestimation");
+        self.config.next_event_estimation = word == "on";
         Ok(())
     }
 
@@ -693,6 +705,7 @@ impl SdtfBuilder {
             Some("lightsamples") => self.parse_light_samples(words)?,
             Some("lightstratify") => self.parse_light_stratify(words)?,
             Some("spp") => self.parse_spp(words)?,
+            Some("nexteventestimation") => self.parse_next_event_estimation(words)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 

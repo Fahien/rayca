@@ -97,12 +97,13 @@ impl Integrator for Direct {
 
                     // BRDF
                     let kd = diffuse;
-                    let lambertian = kd / std::f32::consts::PI;
+                    let lambertian = kd * std::f32::consts::FRAC_1_PI;
                     let ks = specular;
                     let s = shininess;
                     let r = &reflection_dir;
                     let brdf = lambertian
-                        + (ks * (s + 2.0) * r.dot(omega_i).powf(s)) / (2.0 * std::f32::consts::PI);
+                        + (ks * (s + 2.0) * r.dot(omega_i).powf(s)) * std::f32::consts::FRAC_1_PI
+                            / 2.0;
 
                     let r_squared = x1_to_hit_point.len().powf(2.0);
                     let d_omega_i = quad_light.get_normal().dot(omega_i) / r_squared;

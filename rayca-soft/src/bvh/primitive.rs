@@ -306,23 +306,16 @@ impl BvhPrimitive {
         let quad_a: Point3 = Point3::default();
         let normal = quad_light.get_normal();
 
-        let a = Vertex::builder()
-            .color(quad_light.color)
-            .position(quad_a)
-            .normal(normal)
-            .build();
+        let a = Vertex::builder().position(quad_a).normal(normal).build();
         let b = Vertex::builder()
-            .color(quad_light.color)
             .position(quad_a + quad_light.ab)
             .normal(normal)
             .build();
         let d = Vertex::builder()
-            .color(quad_light.color)
             .position(quad_a + quad_light.ab + quad_light.ac)
             .normal(normal)
             .build();
         let c = Vertex::builder()
-            .color(quad_light.color)
             .position(quad_a + quad_light.ac)
             .normal(normal)
             .build();
