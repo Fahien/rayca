@@ -126,6 +126,10 @@ impl Vec3 {
         self.simd.reduce_max()
     }
 
+    pub fn reduce_avg(&self) -> f32 {
+        self.simd.reduce_sum() / 3.0
+    }
+
     /// [SIMD cross-product](https://geometrian.com/programming/tutorials/cross-product/index.php) method 5
     pub fn cross(&self, rhs: Self) -> Self {
         let tmp0 = simd_swizzle!(self.simd, [1, 2, 0, 3]);

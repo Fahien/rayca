@@ -46,6 +46,7 @@ impl FromStr for SdtfIntegratorStrategy {
 pub enum SdtfSamplerStrategy {
     Hemisphere,
     Cosine,
+    Brdf,
 }
 
 impl FromStr for SdtfSamplerStrategy {
@@ -55,6 +56,7 @@ impl FromStr for SdtfSamplerStrategy {
         match s {
             "hemisphere" => Ok(Self::Hemisphere),
             "cosine" => Ok(Self::Cosine),
+            "brdf" => Ok(Self::Brdf),
             _ => Err(format!("Failed to find a sampler for `{}`", s)),
         }
     }

@@ -16,7 +16,7 @@ impl CosineSampler {
 impl SoftSampler for CosineSampler {
     /// Returns a random direction in the cosine-weighted hemisphere
     /// centered around the normal `n`.
-    fn get_random_dir(&self, n: Vec3) -> Vec3 {
+    fn get_random_dir(&self, _material: &PhongMaterial, n: Vec3, _r: Vec3) -> Vec3 {
         let e1 = fastrand::f32();
         let e2 = fastrand::f32();
 
@@ -43,12 +43,14 @@ impl SoftSampler for CosineSampler {
 
     fn get_radiance(
         &self,
-        brdf: Color,
+        material: &PhongMaterial,
         _n: Vec3,
-        _omega_i: Vec3,
+        r: Vec3,
+        omega_i: Vec3,
         indirect_sample: Color,
         weight: f32,
     ) -> Color {
+        let brdf = lambertian::get_brdf(material, r, omega_i);
         std::f32::consts::PI * brdf * indirect_sample * weight
     }
 }

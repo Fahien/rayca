@@ -2,28 +2,32 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+pub mod brdf;
 pub mod cosine;
 pub mod hemisphere;
 
 use crate::*;
 
+use brdf::*;
 use cosine::*;
 use hemisphere::*;
 
 pub trait SoftSampler: Sync {
     /// Returns a random direction in the hemisphere
-    fn get_random_dir(&self, n: Vec3) -> Vec3;
+    fn get_random_dir(&self, material: &PhongMaterial, n: Vec3, r: Vec3) -> Vec3;
 
     /// Returns the radiance for the given parameters.
-    /// - `brdf`: The BRDF color.
+    /// - `material`: The material properties.
     /// - `n`: The normal vector at the point of intersection.
+    /// - `r`: The reflection vector.
     /// - `omega_i`: The incoming direction.
     /// - `indirect_sample`: The indirect sample color.
     /// - `weight`: The weight for the sample.
     fn get_radiance(
         &self,
-        brdf: Color,
+        material: &PhongMaterial,
         n: Vec3,
+        r: Vec3,
         omega_i: Vec3,
         indirect_sample: Color,
         weight: f32,
@@ -35,6 +39,7 @@ pub trait SoftSampler: Sync {
 pub enum SamplerStrategy {
     Hemisphere,
     Cosine,
+    Brdf,
 }
 
 impl SamplerStrategy {
@@ -48,6 +53,10 @@ impl SamplerStrategy {
                 static COSINE: CosineSampler = CosineSampler::new();
                 &COSINE
             }
+            Self::Brdf => {
+                static BRDF: BrdfSampler = BrdfSampler::new();
+                &BRDF
+            }
         }
     }
 }
@@ -58,6 +67,7 @@ impl From<loader::sdtf::SdtfSamplerStrategy> for SamplerStrategy {
         match value {
             SdtfSamplerStrategy::Hemisphere => Self::Hemisphere,
             SdtfSamplerStrategy::Cosine => Self::Cosine,
+            SdtfSamplerStrategy::Brdf => Self::Brdf,
         }
     }
 }

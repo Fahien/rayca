@@ -105,7 +105,7 @@ impl Pathtracer {
         let sampler = config.sampler.get_sampler();
 
         for _ in 0..config.light_samples {
-            let omega_i = sampler.get_random_dir(n);
+            let omega_i = sampler.get_random_dir(material, n, r);
             let brdf = lambertian::get_brdf(material, r, omega_i);
 
             let mut next_ray = Ray::new(next_origin, omega_i);
@@ -126,7 +126,7 @@ impl Pathtracer {
                 Pathtracer::trace_impl(config, scene, next_ray, tlas, depth + 1, collect_emissive)
             {
                 // Boost factor applies to the returned radiance as well
-                li += sampler.get_radiance(brdf, n, omega_i, indirect_sample, weight);
+                li += sampler.get_radiance(material, n, r, omega_i, indirect_sample, weight);
             }
         }
 

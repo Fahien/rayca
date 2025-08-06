@@ -14,7 +14,7 @@ impl HemisphereSampler {
 
 impl SoftSampler for HemisphereSampler {
     /// Returns a random direction in the hemisphere centered around the normal `n`.
-    fn get_random_dir(&self, n: Vec3) -> Vec3 {
+    fn get_random_dir(&self, _material: &PhongMaterial, n: Vec3, _r: Vec3) -> Vec3 {
         let e1 = fastrand::f32();
         let e2 = fastrand::f32();
 
@@ -41,12 +41,14 @@ impl SoftSampler for HemisphereSampler {
 
     fn get_radiance(
         &self,
-        brdf: Color,
+        material: &PhongMaterial,
         n: Vec3,
+        r: Vec3,
         omega_i: Vec3,
         indirect_sample: Color,
         weight: f32,
     ) -> Color {
+        let brdf = lambertian::get_brdf(material, r, omega_i);
         let cosine_law = n.dot(omega_i).clamp(0.0, 1.0);
         2.0 * std::f32::consts::PI * brdf * cosine_law * indirect_sample * weight
     }

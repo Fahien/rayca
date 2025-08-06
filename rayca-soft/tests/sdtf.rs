@@ -204,3 +204,11 @@ fn cornell5() {
         Config::builder().bvh(false).build(),
     );
 }
+#[test]
+fn cornell6() {
+    run_test(
+        "sdtf/4/cornellBRDF.sdtf",
+        "sdtf/4/cornellBRDF.png",
+        Config::builder().bvh(false).build(),
+    );
+}
