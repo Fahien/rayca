@@ -32,6 +32,10 @@ pub struct Config {
     #[builder(default = false)]
     pub russian_roulette: bool,
 
+    /// Sampler strategy to use.
+    #[builder(default = SamplerStrategy::Hemisphere)]
+    pub sampler: SamplerStrategy,
+
     #[builder(default = IntegratorStrategy::Scratcher)]
     pub integrator: IntegratorStrategy,
 

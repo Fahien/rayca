@@ -42,6 +42,22 @@ impl FromStr for SdtfIntegratorStrategy {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SdtfSamplerStrategy {
+    Hemisphere,
+}
+
+impl FromStr for SdtfSamplerStrategy {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "hemisphere" => Ok(Self::Hemisphere),
+            _ => Err(format!("Failed to find a sampler for `{}`", s)),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct SdtfConfig {
     pub width: u32,
@@ -52,6 +68,7 @@ pub struct SdtfConfig {
     pub samples_per_pixel: u32,
     pub next_event_estimation: bool,
     pub russian_roulette: bool,
+    pub sampler: SdtfSamplerStrategy,
     pub integrator: SdtfIntegratorStrategy,
 }
 
@@ -66,6 +83,7 @@ impl Default for SdtfConfig {
             samples_per_pixel: 1,
             next_event_estimation: false,
             russian_roulette: false,
+            sampler: SdtfSamplerStrategy::Hemisphere,
             integrator: SdtfIntegratorStrategy::Raytracer,
         }
     }

@@ -26,7 +26,7 @@ impl Integrator for AnalyticDirect {
             return None;
         }
 
-        let hit = tlas.intersects(scene, &ray)?;
+        let hit = tlas.intersects(scene, ray)?;
         let primitive = tlas.get_primitive(&hit);
 
         // This is the color of the primitive with no light

@@ -4,15 +4,11 @@
 
 use crate::*;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum NextEventEstimationStrategy {
     None,
     Direct,
     AnalyticDirect,
-}
-
-pub enum SamplerStrategy {
-    Hemisphere,
-    Uniform,
 }
 
 pub struct Pathtracer {}
@@ -26,32 +22,6 @@ impl Pathtracer {
 }
 
 impl Pathtracer {
-    /// Returns a random direction in the hemisphere centered around the normal `n`.
-    fn get_random_dir(n: Vec3) -> Vec3 {
-        let e1 = fastrand::f32();
-        let e2 = fastrand::f32();
-
-        let theta = e1.acos();
-        let omega = 2.0 * std::f32::consts::PI * e2;
-
-        let s = Vec3::new(
-            omega.cos() * theta.sin(),
-            omega.sin() * theta.sin(),
-            theta.cos(),
-        );
-        // We need to rotate s so that the emisphere is centered around n
-        let w = n;
-        let a = if w.close(Vec3::Y_AXIS) {
-            Vec3::X_AXIS
-        } else {
-            Vec3::Y_AXIS
-        };
-        let u = a.cross(w).get_normalized();
-        let v = w.cross(u).get_normalized();
-
-        s.get_x() * u + s.get_y() * v + s.get_z() * w
-    }
-
     fn get_direct_lighting(
         config: &Config,
         scene: &SceneDrawInfo,
@@ -93,7 +63,7 @@ impl Pathtracer {
 
                 // Let us see if we actually see the light
                 let shadow_ray = Ray::new(next_origin, omega_i);
-                if let Some(shadow_hit) = tlas.intersects(scene, &shadow_ray) {
+                if let Some(shadow_hit) = tlas.intersects(scene, shadow_ray) {
                     let shadow_primitive = tlas.get_primitive(&shadow_hit);
                     if !shadow_primitive.is_emissive(scene) {
                         continue;
@@ -116,54 +86,7 @@ impl Pathtracer {
         direct_lighting
     }
 
-    fn get_indirect_lighting(
-        config: &Config,
-        scene: &SceneDrawInfo,
-        tlas: &Tlas,
-        ray: &Ray,
-        hit: &Hit,
-        n: Vec3,
-        r: Vec3,
-        material: &PhongMaterial,
-        depth: u32,
-    ) -> Color {
-        let mut indirect_lighting = Color::BLACK;
-
-        let collect_emissive = !config.next_event_estimation;
-        // Move ray origin slightly along the surface normal to avoid self intersections
-        let next_origin = hit.point + n * Self::RAY_BIAS;
-
-        for _ in 0..config.light_samples {
-            let omega_i = Self::get_random_dir(n);
-            let brdf = lambertian::get_brdf(material, r, omega_i);
-
-            let mut next_ray = Ray::new(next_origin, omega_i);
-            let mut weight = 1.0;
-
-            if config.russian_roulette {
-                use std::f32::consts::PI;
-                let next_throughput = 2.0 * PI * ray.throughput * brdf * n.dot(omega_i);
-                if let Some(boost_factor) = ray.next_russian_roulette(next_throughput) {
-                    weight = boost_factor;
-                    next_ray.throughput = next_throughput * boost_factor;
-                } else {
-                    continue; // Russian roulette terminated the ray
-                }
-            }
-
-            if let Some(indirect_sample) =
-                Self::trace_impl(config, scene, next_ray, tlas, depth + 1, collect_emissive)
-            {
-                let cosin_law = omega_i.dot(n);
-                // Boost factor applies to the returned radiance as well
-                indirect_lighting += brdf * cosin_law * indirect_sample * weight;
-            }
-        }
-
-        (2.0 * std::f32::consts::PI * indirect_lighting) / (config.light_samples as f32)
-    }
-
-    fn trace_impl(
+    pub fn trace_impl(
         config: &Config,
         scene: &SceneDrawInfo,
         ray: Ray,
@@ -175,7 +98,7 @@ impl Pathtracer {
             return None;
         }
 
-        let hit = tlas.intersects(scene, &ray)?;
+        let hit = tlas.intersects(scene, ray)?;
 
         let primitive = tlas.get_primitive(&hit);
 
@@ -190,7 +113,7 @@ impl Pathtracer {
         let n = primitive.get_normal(scene, &hit);
 
         // Reflection direction
-        let r = ray.dir.reflect(&n).get_normalized();
+        let r = hit.ray.dir.reflect(&n).get_normalized();
 
         let material = primitive.get_phong_material(scene);
 
@@ -208,8 +131,10 @@ impl Pathtracer {
         };
 
         if config.russian_roulette || depth < indirect_depth_limit {
-            indirect_lighting +=
-                Self::get_indirect_lighting(config, scene, tlas, &ray, &hit, n, r, material, depth);
+            indirect_lighting += config
+                .sampler
+                .get_sampler()
+                .get_indirect_lighting(config, scene, tlas, &hit, n, r, material, depth);
         }
 
         Some(direct_lighting + indirect_lighting)

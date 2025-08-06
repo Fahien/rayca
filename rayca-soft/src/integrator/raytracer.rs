@@ -26,7 +26,7 @@ impl Integrator for Raytracer {
             return None;
         }
 
-        let hit = tlas.intersects(scene, &ray)?;
+        let hit = tlas.intersects(scene, ray)?;
         let blas = tlas.get_blas(hit.blas);
         let primitive = blas.model.get_primitive(hit.primitive);
 
@@ -48,7 +48,7 @@ impl Integrator for Raytracer {
             let light_dir = light.get_direction(&light_node.trs, &hit.point);
 
             let shadow_ray = Ray::new(next_origin, light_dir);
-            let shadow_result = tlas.intersects(scene, &shadow_ray);
+            let shadow_result = tlas.intersects(scene, shadow_ray);
 
             // Whether this object is light (verb) by a light (noun)
             let is_light = match shadow_result {
@@ -67,12 +67,20 @@ impl Integrator for Raytracer {
 
             if is_light {
                 let intensity = light.get_intensity(&light_node.trs, hit.point, n);
-                let ir = Irradiance::new(intensity, &hit, light_dir, n, -ray.dir, albedo_color, uv);
+                let ir = Irradiance::new(
+                    intensity,
+                    &hit,
+                    light_dir,
+                    n,
+                    -hit.ray.dir,
+                    albedo_color,
+                    uv,
+                );
                 light_contribution += primitive.get_radiance(scene, &ir);
             }
         } // end iterate light
 
-        let reflection_dir = ray.dir.reflect(&n).get_normalized();
+        let reflection_dir = hit.ray.dir.reflect(&n).get_normalized();
         let reflection_ray = Ray::new(next_origin, reflection_dir);
         if let Some(reflection_color) = self.trace(config, scene, reflection_ray, tlas, depth + 1) {
             // Cosine-law should apply here as well

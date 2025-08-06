@@ -54,6 +54,8 @@ pub struct Ray {
 }
 
 impl Ray {
+    pub const BIAS: f32 = 1e-4;
+
     pub fn builder() -> RayBuilder {
         RayBuilder::new()
     }
@@ -110,6 +112,12 @@ impl Default for Ray {
 }
 
 pub struct Hit {
+    /// Ray that hit the primitive.
+    pub ray: Ray,
+
+    /// Point of intersection in world space.
+    pub point: Point3,
+
     /// BLAS index hit in this intersection
     pub blas: u32,
 
@@ -118,7 +126,6 @@ pub struct Hit {
     pub primitive: u32,
 
     pub depth: f32,
-    pub point: Point3,
 
     /// Barycentric coordinates expressing the hit point in terms of the primitive.
     /// Useful to interpolate vertex data of such a primitive
@@ -126,11 +133,12 @@ pub struct Hit {
 }
 
 impl Hit {
-    pub fn new(blas: u32, primitive: u32, depth: f32, point: Point3, uv: Vec2) -> Self {
+    pub fn new(ray: Ray, blas: u32, primitive: u32, depth: f32, point: Point3, uv: Vec2) -> Self {
         Self {
+            ray,
+            depth,
             blas,
             primitive,
-            depth,
             point,
             uv,
         }

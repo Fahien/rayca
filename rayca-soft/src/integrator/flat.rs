@@ -22,7 +22,7 @@ impl Integrator for Flat {
         tlas: &Tlas,
         _depth: u32,
     ) -> Option<Color> {
-        let hit = tlas.intersects(scene, &ray)?;
+        let hit = tlas.intersects(scene, ray)?;
         let blas = tlas.get_blas(hit.blas);
         let primitive = blas.model.get_primitive(hit.primitive);
         Some(primitive.get_color(scene, &hit))

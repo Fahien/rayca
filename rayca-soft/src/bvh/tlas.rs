@@ -268,9 +268,9 @@ impl Tlas {
         ret
     }
 
-    pub fn intersects(&self, scene: &SceneDrawInfo, ray: &Ray) -> Option<Hit> {
+    pub fn intersects(&self, scene: &SceneDrawInfo, ray: Ray) -> Option<Hit> {
         assert!(self.root.blas.count > 0 || self.root.left.is_some() || self.root.right.is_some());
-        self.root.intersects(scene, ray, self)
+        self.root.intersects(scene, &ray, self)
     }
 
     pub fn get_blas(&self, blas: u32) -> &Blas {

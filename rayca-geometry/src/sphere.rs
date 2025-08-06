@@ -135,7 +135,7 @@ impl Sphere {
         };
 
         let point = ray.origin + ray.dir * t;
-        let hit = Hit::new(u32::MAX, u32::MAX, t, point, Vec2::default());
+        let hit = Hit::new(ray.clone(), u32::MAX, u32::MAX, t, point, Vec2::default());
         Some(hit)
     }
 }

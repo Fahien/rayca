@@ -153,7 +153,7 @@ impl Triangle {
 
         // A triangle does not know its primitive index
         // Setting the primitive index is responsiblity of the caller
-        let hit = Hit::new(u32::MAX, u32::MAX, t, p, uv);
+        let hit = Hit::new(ray.clone(), u32::MAX, u32::MAX, t, p, uv);
         Some(hit) // This ray hits the triangle
     }
 

@@ -28,13 +28,13 @@ impl Integrator for Direct {
             return None;
         }
 
-        let hit = tlas.intersects(scene, &ray)?;
+        let hit = tlas.intersects(scene, ray)?;
 
         let primitive = tlas.get_primitive(&hit);
         let n = primitive.get_normal(scene, &hit);
 
         // Reflect the ray direction around the normal
-        let r = ray.dir.reflect(&n).get_normalized();
+        let r = hit.ray.dir.reflect(&n).get_normalized();
 
         // This is the color of the primitive with no light
         let ambient_and_emissive = primitive.get_color(scene, &hit);
@@ -72,7 +72,7 @@ impl Integrator for Direct {
                     let shadow_ray_origin = hit.point + n * Self::RAY_BIAS;
                     // Let us see if we actually see the light
                     let shadow_ray = Ray::new(shadow_ray_origin, omega_i);
-                    if let Some(shadow_hit) = tlas.intersects(scene, &shadow_ray) {
+                    if let Some(shadow_hit) = tlas.intersects(scene, shadow_ray) {
                         let primitive = tlas.get_primitive(&shadow_hit);
                         if !primitive.is_emissive(scene) {
                             continue;

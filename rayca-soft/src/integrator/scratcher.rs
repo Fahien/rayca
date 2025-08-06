@@ -26,7 +26,7 @@ impl Integrator for Scratcher {
             return None;
         }
 
-        let hit = tlas.intersects(scene, &ray)?;
+        let hit = tlas.intersects(scene, ray)?;
         let blas = &tlas.get_blas(hit.blas);
         let primitive = &blas.model.primitives[hit.primitive as usize];
 
@@ -40,7 +40,7 @@ impl Integrator for Scratcher {
 
         if albedo_color.is_transparent() {
             let transmit_origin = hit.point + -n * RAY_BIAS;
-            let transmit_ray = Ray::new(transmit_origin, ray.dir);
+            let transmit_ray = Ray::new(transmit_origin, hit.ray.dir);
             let transmit_result = self.trace(config, scene, transmit_ray, tlas, depth + 1);
 
             if let Some(mut transmit_color) = transmit_result {
@@ -62,7 +62,7 @@ impl Integrator for Scratcher {
             let light_dir = light.get_direction(&light_node.trs, &hit.point);
 
             let shadow_ray = Ray::new(next_origin, light_dir);
-            let shadow_result = tlas.intersects(scene, &shadow_ray);
+            let shadow_result = tlas.intersects(scene, shadow_ray);
 
             // Whether this object is light (verb) by a light (noun)
             let is_light = match shadow_result {
@@ -86,13 +86,21 @@ impl Integrator for Scratcher {
 
             if is_light {
                 let intensity = light.get_intensity(&light_node.trs, hit.point, n);
-                let ir = Irradiance::new(intensity, &hit, light_dir, n, -ray.dir, albedo_color, uv);
+                let ir = Irradiance::new(
+                    intensity,
+                    &hit,
+                    light_dir,
+                    n,
+                    -hit.ray.dir,
+                    albedo_color,
+                    uv,
+                );
                 pixel_color += primitive.get_radiance(scene, &ir);
             }
         } // end iterate light
 
         // Reflection component
-        let reflection_dir = ray.dir.reflect(&n).get_normalized();
+        let reflection_dir = hit.ray.dir.reflect(&n).get_normalized();
         let reflection_ray = Ray::new(next_origin, reflection_dir);
         if let Some(reflection_intensity) =
             self.trace(config, scene, reflection_ray, tlas, depth + 1)
@@ -102,7 +110,7 @@ impl Integrator for Scratcher {
                 &hit,
                 reflection_dir,
                 n,
-                -ray.dir,
+                -hit.ray.dir,
                 albedo_color,
                 uv,
             );

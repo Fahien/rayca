@@ -9,6 +9,7 @@ pub mod bvh;
 pub mod config;
 pub mod draw;
 pub mod integrator;
+pub mod sampler;
 pub mod scene;
 #[cfg(target_arch = "wasm32")]
 pub mod www;
@@ -18,6 +19,7 @@ pub use bvh::*;
 pub use config::*;
 pub use draw::*;
 pub use integrator::*;
+pub use sampler::*;
 pub use scene::*;
 #[cfg(target_arch = "wasm32")]
 pub use www::*;
