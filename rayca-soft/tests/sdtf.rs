@@ -195,3 +195,12 @@ fn dragon2() {
         Config::builder().bvh(true).build(),
     );
 }
+
+#[test]
+fn cornell5() {
+    run_test(
+        "sdtf/4/cornellCosine.sdtf",
+        "sdtf/4/cornellCosine.png",
+        Config::builder().bvh(false).build(),
+    );
+}

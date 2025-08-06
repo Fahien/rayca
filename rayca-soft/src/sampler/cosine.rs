@@ -4,21 +4,23 @@
 
 use crate::*;
 
-pub struct HemisphereSampler {}
+#[derive(Default)]
+pub struct CosineSampler {}
 
-impl HemisphereSampler {
+impl CosineSampler {
     pub const fn new() -> Self {
         Self {}
     }
 }
 
-impl SoftSampler for HemisphereSampler {
-    /// Returns a random direction in the hemisphere centered around the normal `n`.
+impl SoftSampler for CosineSampler {
+    /// Returns a random direction in the cosine-weighted hemisphere
+    /// centered around the normal `n`.
     fn get_random_dir(&self, n: Vec3) -> Vec3 {
         let e1 = fastrand::f32();
         let e2 = fastrand::f32();
 
-        let theta = e1.acos();
+        let theta = e1.sqrt().acos();
         let omega = 2.0 * std::f32::consts::PI * e2;
 
         let s = Vec3::new(
@@ -34,7 +36,7 @@ impl SoftSampler for HemisphereSampler {
             Vec3::Y_AXIS
         };
         let u = a.cross(w).get_normalized();
-        let v = w.cross(u).get_normalized();
+        let v = w.cross(u);
 
         s.get_x() * u + s.get_y() * v + s.get_z() * w
     }
@@ -42,12 +44,11 @@ impl SoftSampler for HemisphereSampler {
     fn get_radiance(
         &self,
         brdf: Color,
-        n: Vec3,
-        omega_i: Vec3,
+        _n: Vec3,
+        _omega_i: Vec3,
         indirect_sample: Color,
         weight: f32,
     ) -> Color {
-        let cosine_law = n.dot(omega_i).clamp(0.0, 1.0);
-        2.0 * std::f32::consts::PI * brdf * cosine_law * indirect_sample * weight
+        std::f32::consts::PI * brdf * indirect_sample * weight
     }
 }

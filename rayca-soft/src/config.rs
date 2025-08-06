@@ -57,6 +57,7 @@ impl Config {
         self.light_stratify = sdtf_config.light_stratify;
         self.samples_per_pixel = sdtf_config.samples_per_pixel;
         self.next_event_estimation = sdtf_config.next_event_estimation;
+        self.sampler = sdtf_config.sampler.into();
         self.integrator = sdtf_config.integrator.into();
     }
 

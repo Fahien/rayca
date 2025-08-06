@@ -86,6 +86,53 @@ impl Pathtracer {
         direct_lighting
     }
 
+    fn get_indirect_lighting(
+        config: &Config,
+        scene: &SceneDrawInfo,
+        tlas: &Tlas,
+        hit: &Hit,
+        n: Vec3,
+        r: Vec3,
+        material: &PhongMaterial,
+        depth: u32,
+    ) -> Color {
+        let mut li = Color::BLACK;
+
+        let collect_emissive = !config.next_event_estimation;
+        // Move ray origin slightly along the surface normal to avoid self intersections
+        let next_origin = hit.point + n * Ray::BIAS;
+
+        let sampler = config.sampler.get_sampler();
+
+        for _ in 0..config.light_samples {
+            let omega_i = sampler.get_random_dir(n);
+            let brdf = lambertian::get_brdf(material, r, omega_i);
+
+            let mut next_ray = Ray::new(next_origin, omega_i);
+            let mut weight = 1.0;
+
+            if config.russian_roulette {
+                use std::f32::consts::PI;
+                let next_throughput = 2.0 * PI * hit.ray.throughput * brdf * n.dot(omega_i);
+                if let Some(boost_factor) = hit.ray.next_russian_roulette(next_throughput) {
+                    weight = boost_factor;
+                    next_ray.throughput = next_throughput * boost_factor;
+                } else {
+                    continue; // Russian roulette terminated the ray
+                }
+            }
+
+            if let Some(indirect_sample) =
+                Pathtracer::trace_impl(config, scene, next_ray, tlas, depth + 1, collect_emissive)
+            {
+                // Boost factor applies to the returned radiance as well
+                li += sampler.get_radiance(brdf, n, omega_i, indirect_sample, weight);
+            }
+        }
+
+        li / (config.light_samples as f32)
+    }
+
     pub fn trace_impl(
         config: &Config,
         scene: &SceneDrawInfo,
@@ -131,10 +178,8 @@ impl Pathtracer {
         };
 
         if config.russian_roulette || depth < indirect_depth_limit {
-            indirect_lighting += config
-                .sampler
-                .get_sampler()
-                .get_indirect_lighting(config, scene, tlas, &hit, n, r, material, depth);
+            indirect_lighting +=
+                Self::get_indirect_lighting(config, scene, tlas, &hit, n, r, material, depth);
         }
 
         Some(direct_lighting + indirect_lighting)

@@ -45,6 +45,7 @@ impl FromStr for SdtfIntegratorStrategy {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SdtfSamplerStrategy {
     Hemisphere,
+    Cosine,
 }
 
 impl FromStr for SdtfSamplerStrategy {
@@ -53,6 +54,7 @@ impl FromStr for SdtfSamplerStrategy {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "hemisphere" => Ok(Self::Hemisphere),
+            "cosine" => Ok(Self::Cosine),
             _ => Err(format!("Failed to find a sampler for `{}`", s)),
         }
     }
@@ -688,6 +690,17 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_importance_sampling<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.config.sampler = words
+            .next()
+            .expect("Failed to read importancesampling")
+            .parse()?;
+        Ok(())
+    }
+
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
         if line.starts_with('#') {
@@ -736,6 +749,7 @@ impl SdtfBuilder {
             Some("spp") => self.parse_spp(words)?,
             Some("nexteventestimation") => self.parse_next_event_estimation(words)?,
             Some("russianroulette") => self.parse_roussian_roulette(words)?,
+            Some("importancesampling") => self.parse_importance_sampling(words)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 
