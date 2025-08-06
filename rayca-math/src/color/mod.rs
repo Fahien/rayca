@@ -259,11 +259,17 @@ impl Add<&Color> for Color {
     }
 }
 
-impl AddAssign for Color {
-    fn add_assign(&mut self, rhs: Color) {
+impl AddAssign<&Color> for Color {
+    fn add_assign(&mut self, rhs: &Color) {
         self.r += rhs.r * rhs.a;
         self.g += rhs.g * rhs.a;
         self.b += rhs.b * rhs.a;
+    }
+}
+
+impl AddAssign for Color {
+    fn add_assign(&mut self, rhs: Color) {
+        *self += &rhs;
     }
 }
 

@@ -44,6 +44,8 @@ impl FromStr for SdtfIntegratorStrategy {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SdtfSamplerStrategy {
+    None,
+    Nee,
     Hemisphere,
     Cosine,
     Brdf,
@@ -54,6 +56,7 @@ impl FromStr for SdtfSamplerStrategy {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "on" => Ok(Self::Nee),
             "hemisphere" => Ok(Self::Hemisphere),
             "cosine" => Ok(Self::Cosine),
             "brdf" => Ok(Self::Brdf),
@@ -70,9 +73,9 @@ pub struct SdtfConfig {
     pub light_samples: u32,
     pub light_stratify: bool,
     pub samples_per_pixel: u32,
-    pub next_event_estimation: bool,
+    pub direct_sampler: SdtfSamplerStrategy,
     pub russian_roulette: bool,
-    pub sampler: SdtfSamplerStrategy,
+    pub indirect_sampler: SdtfSamplerStrategy,
     pub integrator: SdtfIntegratorStrategy,
 }
 
@@ -85,9 +88,9 @@ impl Default for SdtfConfig {
             light_samples: 1,
             light_stratify: false,
             samples_per_pixel: 1,
-            next_event_estimation: false,
+            direct_sampler: SdtfSamplerStrategy::None,
             russian_roulette: false,
-            sampler: SdtfSamplerStrategy::Hemisphere,
+            indirect_sampler: SdtfSamplerStrategy::Hemisphere,
             integrator: SdtfIntegratorStrategy::Raytracer,
         }
     }
@@ -679,7 +682,7 @@ impl SdtfBuilder {
         mut words: impl Iterator<Item = &'w str>,
     ) -> Result<(), Box<dyn Error>> {
         let word = words.next().expect("Failed to read nexteventestimation");
-        self.config.next_event_estimation = word == "on";
+        self.config.direct_sampler = word.parse()?;
         Ok(())
     }
 
@@ -696,7 +699,7 @@ impl SdtfBuilder {
         &mut self,
         mut words: impl Iterator<Item = &'w str>,
     ) -> Result<(), Box<dyn Error>> {
-        self.config.sampler = words
+        self.config.indirect_sampler = words
             .next()
             .expect("Failed to read importancesampling")
             .parse()?;

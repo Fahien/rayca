@@ -22,70 +22,6 @@ impl Pathtracer {
 }
 
 impl Pathtracer {
-    fn get_direct_lighting(
-        config: &Config,
-        scene: &SceneDrawInfo,
-        tlas: &Tlas,
-        hit: &Hit,
-        n: Vec3,
-        r: Vec3,
-        material: &PhongMaterial,
-    ) -> Color {
-        let mut direct_lighting = Color::BLACK;
-
-        let strate_count = config.get_strate_count();
-        // Move ray origin slightly along the surface normal to avoid self intersections
-        let next_origin = hit.point + n * Self::RAY_BIAS;
-
-        for light_draw_info in scene.light_draw_infos.iter().copied() {
-            let light_node = scene.get_node(light_draw_info);
-            let quad_light = scene.get_quad_light(light_draw_info);
-            let area = quad_light.get_area();
-
-            // Constant radiance?
-            let le = quad_light.intensity * quad_light.color;
-
-            let mut ld = Color::BLACK;
-
-            for i in 0..config.light_samples {
-                let x1 = quad_light.get_random_point(
-                    &light_node.trs,
-                    config.light_stratify,
-                    strate_count,
-                    i,
-                );
-
-                // X is the point on the surface
-                let x = hit.point;
-                // Random sample incident direction
-                let x_to_x1 = x1 - x;
-                let omega_i = x_to_x1.get_normalized();
-
-                // Let us see if we actually see the light
-                let shadow_ray = Ray::new(next_origin, omega_i);
-                if let Some(shadow_hit) = tlas.intersects(scene, shadow_ray) {
-                    let shadow_primitive = tlas.get_primitive(&shadow_hit);
-                    if !shadow_primitive.is_emissive(scene) {
-                        continue;
-                    }
-                }
-
-                let brdf = lambertian::get_brdf(material, r, omega_i);
-
-                let r_squared = x_to_x1.norm();
-                let d_omega_i = quad_light.get_normal().dot(omega_i) / r_squared;
-
-                ld += brdf * n.dot(omega_i) * d_omega_i;
-            }
-
-            ld = (le * area * ld) / (config.light_samples as f32);
-
-            direct_lighting += ld;
-        } // End direct lighting
-
-        direct_lighting
-    }
-
     fn get_indirect_lighting(
         config: &Config,
         scene: &SceneDrawInfo,
@@ -98,11 +34,11 @@ impl Pathtracer {
     ) -> Color {
         let mut li = Color::BLACK;
 
-        let collect_emissive = !config.next_event_estimation;
+        let collect_emissive = config.direct_sampler.is_none();
         // Move ray origin slightly along the surface normal to avoid self intersections
         let next_origin = hit.point + n * Ray::BIAS;
 
-        let sampler = config.sampler.get_sampler();
+        let sampler = config.indirect_sampler.get_indirect_sampler();
 
         for _ in 0..config.light_samples {
             let omega_i = sampler.get_random_dir(material, n, r);
@@ -164,14 +100,14 @@ impl Pathtracer {
 
         let material = primitive.get_phong_material(scene);
 
-        let mut direct_lighting = Color::BLACK;
-        if config.next_event_estimation {
-            direct_lighting = Self::get_direct_lighting(config, scene, tlas, &hit, n, r, material);
-        }
+        let direct_lighting = config
+            .direct_sampler
+            .get_direct_sampler()
+            .get_direct_lighting(config, scene, tlas, &hit, material, n, r);
 
         let mut indirect_lighting = Color::BLACK;
 
-        let indirect_depth_limit = if config.next_event_estimation {
+        let indirect_depth_limit = if !config.direct_sampler.is_none() {
             config.max_depth - 1
         } else {
             config.max_depth

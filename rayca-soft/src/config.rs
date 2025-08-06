@@ -24,17 +24,17 @@ pub struct Config {
     #[builder(default = 1)]
     pub samples_per_pixel: u32,
 
-    /// Whether to use next event estimation.
-    #[builder(default = false)]
-    pub next_event_estimation: bool,
-
     /// Whether to use Russian roulette for path termination.
     #[builder(default = false)]
     pub russian_roulette: bool,
 
-    /// Sampler strategy to use.
+    /// Direct sampler strategy to use.
+    #[builder(default = SamplerStrategy::None)]
+    pub direct_sampler: SamplerStrategy,
+
+    /// Indirect sampler strategy to use.
     #[builder(default = SamplerStrategy::Hemisphere)]
-    pub sampler: SamplerStrategy,
+    pub indirect_sampler: SamplerStrategy,
 
     #[builder(default = IntegratorStrategy::Scratcher)]
     pub integrator: IntegratorStrategy,
@@ -52,12 +52,16 @@ impl Default for Config {
 
 impl Config {
     pub fn apply(&mut self, sdtf_config: SdtfConfig) {
-        self.max_depth = sdtf_config.max_depth as u32;
+        self.max_depth = if sdtf_config.max_depth == -1 {
+            16
+        } else {
+            sdtf_config.max_depth as u32
+        };
         self.light_samples = sdtf_config.light_samples;
         self.light_stratify = sdtf_config.light_stratify;
         self.samples_per_pixel = sdtf_config.samples_per_pixel;
-        self.next_event_estimation = sdtf_config.next_event_estimation;
-        self.sampler = sdtf_config.sampler.into();
+        self.direct_sampler = sdtf_config.direct_sampler.into();
+        self.indirect_sampler = sdtf_config.indirect_sampler.into();
         self.integrator = sdtf_config.integrator.into();
     }
 
