@@ -29,12 +29,13 @@ fn geometry_smith_ggx(n_dot_v: f32, n_dot_l: f32, roughness: f32) -> f32 {
     0.5 / (ggxv + ggxl)
 }
 
-pub fn get_radiance(material: &PbrMaterial, ir: &Irradiance, model: &Model) -> Color {
-    let (metallic, roughness) = material.get_metallic_roughness(model, ir.uv);
+pub fn get_radiance(hit: &mut HitInfo, ir: Irradiance) -> Color {
+    let (metallic, roughness) = hit.get_metallic_roughness();
 
     let d = distribution_ggx(ir.n_dot_h, roughness);
 
-    let f0 = Vec3::splat(0.04) * (1.0 - metallic) + Vec3::from(&ir.albedo) * metallic;
+    let albedo = hit.get_color();
+    let f0 = Vec3::splat(0.04) * (1.0 - metallic) + Vec3::from(&albedo) * metallic;
     let f = fresnel_schlick(ir.l_dot_h, f0);
 
     let ks = f;
@@ -45,7 +46,7 @@ pub fn get_radiance(material: &PbrMaterial, ir: &Irradiance, model: &Model) -> C
     let fr = (d * g) * Color::from(f);
 
     // Lambertian diffuse (1/PI)
-    let fd = Color::from(kd) * ir.albedo * std::f32::consts::FRAC_1_PI;
+    let fd = Color::from(kd) * albedo * std::f32::consts::FRAC_1_PI;
 
     (fd + fr) * ir.intensity * ir.n_dot_l
 }

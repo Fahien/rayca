@@ -16,20 +16,16 @@ use nee::*;
 
 pub trait SoftSampler: Sync {
     /// Returns a random direction in the hemisphere
-    fn get_random_dir(&self, material: &PhongMaterial, n: Vec3, r: Vec3) -> Vec3;
+    fn get_random_dir(&self, hit: &mut HitInfo) -> Vec3;
 
     /// Returns the radiance for the given parameters.
-    /// - `material`: The material properties.
-    /// - `n`: The normal vector at the point of intersection.
-    /// - `r`: The reflection vector.
+    /// - `hit`: The hit information.
     /// - `omega_i`: The incoming direction.
     /// - `indirect_sample`: The indirect sample color.
     /// - `weight`: The weight for the sample.
     fn get_radiance(
         &self,
-        material: &PhongMaterial,
-        n: Vec3,
-        r: Vec3,
+        hit: &mut HitInfo,
         omega_i: Vec3,
         indirect_sample: Color,
         weight: f32,
@@ -37,16 +33,7 @@ pub trait SoftSampler: Sync {
 }
 
 pub trait DirectSampler: Sync {
-    fn get_direct_lighting(
-        &self,
-        config: &Config,
-        scene: &SceneDrawInfo,
-        tlas: &Tlas,
-        hit: &Hit,
-        material: &PhongMaterial,
-        n: Vec3,
-        r: Vec3,
-    ) -> Color;
+    fn get_direct_lighting(&self, config: &Config, hit: &mut HitInfo) -> Color;
 }
 
 #[repr(u32)]
@@ -113,16 +100,7 @@ impl From<loader::sdtf::SdtfSamplerStrategy> for SamplerStrategy {
 pub struct NoSampler;
 
 impl DirectSampler for NoSampler {
-    fn get_direct_lighting(
-        &self,
-        _config: &Config,
-        _scene: &SceneDrawInfo,
-        _tlas: &Tlas,
-        _hit: &Hit,
-        _material: &PhongMaterial,
-        _n: Vec3,
-        _r: Vec3,
-    ) -> Color {
+    fn get_direct_lighting(&self, _config: &Config, _hit: &mut HitInfo) -> Color {
         // No direct lighting calculation, return black
         Color::BLACK
     }

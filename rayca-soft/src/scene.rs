@@ -81,7 +81,7 @@ fn draw_pixel(config: &Config, scene: &SceneDrawInfo, ray: Ray, tlas: &Tlas) -> 
     let integrator = config.integrator.get_integrator();
     // No over operation here as transparency should be handled by the lighting model
     integrator
-        .trace(config, scene, ray, tlas, 0)
+        .trace(config, scene, tlas, ray, 0)
         .unwrap_or(Color::BLACK)
 }
 

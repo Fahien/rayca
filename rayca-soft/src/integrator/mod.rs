@@ -23,8 +23,8 @@ pub trait Integrator: Sync {
         &self,
         config: &Config,
         scene: &SceneDrawInfo,
-        ray: Ray,
         tlas: &Tlas,
+        ray: Ray,
         depth: u32,
     ) -> Option<Color>;
 }

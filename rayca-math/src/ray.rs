@@ -111,6 +111,7 @@ impl Default for Ray {
     }
 }
 
+#[derive(Default)]
 pub struct Hit {
     /// Ray that hit the primitive.
     pub ray: Ray,

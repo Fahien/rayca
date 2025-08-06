@@ -12,9 +12,9 @@ impl BrdfSampler {
         Self {}
     }
 
-    fn get_t(&self, material: &PhongMaterial) -> f32 {
-        let kd_avg = material.diffuse.get_rgb().reduce_avg();
-        let ks_avg = material.specular.get_rgb().reduce_avg();
+    fn get_t(&self, hit: &mut HitInfo) -> f32 {
+        let kd_avg = hit.get_diffuse().get_rgb().reduce_avg();
+        let ks_avg = hit.get_specular().get_rgb().reduce_avg();
         ks_avg / (ks_avg + kd_avg)
     }
 }
@@ -23,13 +23,13 @@ impl SoftSampler for BrdfSampler {
     /// - `material`: The material properties.
     /// - `n`: Surface normal
     /// - `r`: Reflection vector
-    fn get_random_dir(&self, material: &PhongMaterial, n: Vec3, r: Vec3) -> Vec3 {
+    fn get_random_dir(&self, hit: &mut HitInfo) -> Vec3 {
         let e0 = fastrand::f32();
         let e1 = fastrand::f32();
         let e2 = fastrand::f32();
 
-        let t = self.get_t(material);
-        let s = material.shininess;
+        let t = self.get_t(hit);
+        let s = hit.get_shininess();
 
         let theta = if e0 <= t {
             e1.powf(1.0 / (s + 1.0)).clamp(-1.0, 1.0).acos()
@@ -45,7 +45,11 @@ impl SoftSampler for BrdfSampler {
         );
 
         // We need to rotate s so that it is centered around n (or r)
-        let w = if e0 <= t { r } else { n };
+        let w = if e0 <= t {
+            hit.get_reflection()
+        } else {
+            hit.get_normal()
+        };
         let a = if w.close(Vec3::Y_AXIS) {
             Vec3::X_AXIS
         } else {
@@ -58,24 +62,15 @@ impl SoftSampler for BrdfSampler {
     }
 
     /// Returns the radiance for the given parameters.
-    /// - `brdf`: The BRDF color.
-    /// - `n`: The normal vector at the point of intersection.
+    /// - `hit`: The hit information.
     /// - `omega_i`: The incoming direction.
     /// - `li`: The indirect light color.
     /// - `weight`: The weight for the sample.
-    fn get_radiance(
-        &self,
-        material: &PhongMaterial,
-        n: Vec3,
-        _r: Vec3,
-        omega_i: Vec3,
-        li: Color,
-        weight: f32,
-    ) -> Color {
-        let cosine_law = n.dot(omega_i).clamp(0.0, 1.0);
-        let cd = material.diffuse;
-        let cs = material.specular
-            * (cosine_law * (material.shininess + 2.0) / (material.shininess + 1.0)).min(1.0);
+    fn get_radiance(&self, hit: &mut HitInfo, omega_i: Vec3, li: Color, weight: f32) -> Color {
+        let cosine_law = hit.get_normal().dot(omega_i).clamp(0.0, 1.0);
+        let cd = hit.get_diffuse();
+        let cs = hit.get_specular()
+            * (cosine_law * (hit.get_shininess() + 2.0) / (hit.get_shininess() + 1.0)).min(1.0);
         // Boost factor applies to the returned radiance as well
         li * (cd + cs) * weight
     }

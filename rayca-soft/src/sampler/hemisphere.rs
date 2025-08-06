@@ -14,7 +14,7 @@ impl HemisphereSampler {
 
 impl SoftSampler for HemisphereSampler {
     /// Returns a random direction in the hemisphere centered around the normal `n`.
-    fn get_random_dir(&self, _material: &PhongMaterial, n: Vec3, _r: Vec3) -> Vec3 {
+    fn get_random_dir(&self, hit: &mut HitInfo) -> Vec3 {
         let e1 = fastrand::f32();
         let e2 = fastrand::f32();
 
@@ -27,7 +27,7 @@ impl SoftSampler for HemisphereSampler {
             theta.cos(),
         );
         // We need to rotate s so that the emisphere is centered around n
-        let w = n;
+        let w = hit.get_normal();
         let a = if w.close(Vec3::Y_AXIS) {
             Vec3::X_AXIS
         } else {
@@ -41,15 +41,13 @@ impl SoftSampler for HemisphereSampler {
 
     fn get_radiance(
         &self,
-        material: &PhongMaterial,
-        n: Vec3,
-        r: Vec3,
+        hit: &mut HitInfo,
         omega_i: Vec3,
         indirect_sample: Color,
         weight: f32,
     ) -> Color {
-        let brdf = lambertian::get_brdf(material, r, omega_i);
-        let cosine_law = n.dot(omega_i).clamp(0.0, 1.0);
+        let brdf = lambertian::get_brdf(hit, omega_i);
+        let cosine_law = hit.get_normal().dot(omega_i).clamp(0.0, 1.0);
         2.0 * std::f32::consts::PI * brdf * cosine_law * indirect_sample * weight
     }
 }

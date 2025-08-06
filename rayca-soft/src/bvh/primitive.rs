@@ -109,6 +109,11 @@ impl BvhPrimitive {
         material
     }
 
+    pub fn get_pbr_material<'m>(&self, scene: &'m SceneDrawInfo) -> &'m PbrMaterial {
+        let model = scene.get_model(self.node.model);
+        self.get_material(scene).get_pbr_material(model)
+    }
+
     pub fn get_phong_material<'m>(&self, scene: &'m SceneDrawInfo) -> &'m PhongMaterial {
         let model = scene.get_model(self.node.model);
         self.get_material(scene).get_phong_material(model)
@@ -175,18 +180,11 @@ impl BvhPrimitive {
     }
 
     /// Calculates the light coming out towards the viewer at a certain intersection
-    pub fn get_radiance(&self, scene: &SceneDrawInfo, ir: &Irradiance) -> Color {
-        let model = scene.get_model(self.node.model);
-        let material = self.get_material(scene);
+    pub fn get_radiance(&self, hit: &mut HitInfo, ir: Irradiance) -> Color {
+        let material = hit.get_material();
         match material {
-            Material::Pbr(_) => {
-                let pbr_material = material.get_pbr_material(model);
-                ggx::get_radiance(pbr_material, ir, model)
-            }
-            Material::Phong(_) => {
-                let phong_material = material.get_phong_material(model);
-                lambertian::get_radiance(phong_material, ir)
-            }
+            Material::Pbr(_) => ggx::get_radiance(hit, ir),
+            Material::Phong(_) => lambertian::get_radiance(hit, ir),
         }
     }
 

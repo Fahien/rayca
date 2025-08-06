@@ -18,13 +18,12 @@ impl Integrator for Flat {
         &self,
         _config: &Config,
         scene: &SceneDrawInfo,
-        ray: Ray,
         tlas: &Tlas,
+        ray: Ray,
         _depth: u32,
     ) -> Option<Color> {
-        let hit = tlas.intersects(scene, ray)?;
-        let blas = tlas.get_blas(hit.blas);
-        let primitive = blas.model.get_primitive(hit.primitive);
-        Some(primitive.get_color(scene, &hit))
+        let mut hit = tlas.intersects(scene, ray)?;
+        let color = hit.get_color();
+        Some(color)
     }
 }
