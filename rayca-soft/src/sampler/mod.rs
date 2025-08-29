@@ -5,6 +5,7 @@
 pub mod brdf;
 pub mod cosine;
 pub mod hemisphere;
+pub mod mis;
 pub mod nee;
 pub mod sample;
 

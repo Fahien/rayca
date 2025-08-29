@@ -137,7 +137,7 @@ impl NextEventEstimationSampler {
         samples
     }
 
-    fn get_samples(config: &Config, hit: &mut HitInfo) -> Vec<Box<dyn Sample>> {
+    pub fn get_samples(&self, config: &Config, hit: &mut HitInfo) -> Vec<Box<dyn Sample>> {
         let mut samples = vec![];
         for light_index in 0..hit.scene.light_draw_infos.len() {
             let light_sample = Self::get_light_samples(config, hit, light_index);
@@ -149,7 +149,7 @@ impl NextEventEstimationSampler {
 
 impl DirectSampler for NextEventEstimationSampler {
     fn get_direct_lighting(&self, config: &Config, hit: &mut HitInfo) -> Color {
-        let samples = Self::get_samples(config, hit);
+        let samples = self.get_samples(config, hit);
         let mut ret = Color::BLACK;
         for sample in samples {
             ret += sample.get_x();
