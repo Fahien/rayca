@@ -15,6 +15,13 @@ pub struct MultipleImportanceSampling {
 }
 
 impl MultipleImportanceSampling {
+    pub const fn new() -> Self {
+        Self {
+            nee: NextEventEstimationSampler {},
+            brdf: BrdfSampler {},
+        }
+    }
+
     fn get_pdf_nee(
         &self,
         hit: &mut HitInfo,

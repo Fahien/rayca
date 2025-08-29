@@ -49,6 +49,7 @@ pub enum SdtfSamplerStrategy {
     Hemisphere,
     Cosine,
     Brdf,
+    Mis,
 }
 
 impl FromStr for SdtfSamplerStrategy {
@@ -57,6 +58,7 @@ impl FromStr for SdtfSamplerStrategy {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "on" => Ok(Self::Nee),
+            "mis" => Ok(Self::Mis),
             "hemisphere" => Ok(Self::Hemisphere),
             "cosine" => Ok(Self::Cosine),
             "brdf" => Ok(Self::Brdf),

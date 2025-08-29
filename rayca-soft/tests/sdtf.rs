@@ -212,3 +212,30 @@ fn cornell6() {
         Config::builder().bvh(false).build(),
     );
 }
+
+#[test]
+fn mis() {
+    run_test(
+        "sdtf/4/mis.sdtf",
+        "sdtf/4/mis.png",
+        Config::builder().build(),
+    );
+}
+
+#[test]
+fn cornell7() {
+    run_test(
+        "sdtf/4/cornellMIS.sdtf",
+        "sdtf/4/cornellMIS.png",
+        Config::builder().build(),
+    );
+}
+
+#[test]
+fn ggx() {
+    run_test(
+        "sdtf/4/ggx.sdtf",
+        "sdtf/4/ggx.png",
+        Config::builder().build(),
+    );
+}

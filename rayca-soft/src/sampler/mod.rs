@@ -9,7 +9,7 @@ pub mod mis;
 pub mod nee;
 pub mod sample;
 
-use crate::*;
+use crate::{mis::MultipleImportanceSampling, *};
 
 use brdf::*;
 use cosine::*;
@@ -46,6 +46,7 @@ pub enum SamplerStrategy {
     Hemisphere,
     Cosine,
     Brdf,
+    Mis,
 }
 
 impl SamplerStrategy {
@@ -62,6 +63,10 @@ impl SamplerStrategy {
             Self::Nee => {
                 static NEE: NextEventEstimationSampler = NextEventEstimationSampler {};
                 &NEE
+            }
+            Self::Mis => {
+                static MIS: MultipleImportanceSampling = MultipleImportanceSampling::new();
+                &MIS
             }
             _ => panic!("Unsupported direct sampler strategy: {:?}", self),
         }
@@ -95,6 +100,7 @@ impl From<loader::sdtf::SdtfSamplerStrategy> for SamplerStrategy {
             SdtfSamplerStrategy::Hemisphere => Self::Hemisphere,
             SdtfSamplerStrategy::Cosine => Self::Cosine,
             SdtfSamplerStrategy::Brdf => Self::Brdf,
+            SdtfSamplerStrategy::Mis => Self::Mis,
         }
     }
 }
