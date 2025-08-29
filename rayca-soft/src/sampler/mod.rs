@@ -6,6 +6,7 @@ pub mod brdf;
 pub mod cosine;
 pub mod hemisphere;
 pub mod nee;
+pub mod sample;
 
 use crate::*;
 

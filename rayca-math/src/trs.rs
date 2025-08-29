@@ -117,7 +117,8 @@ impl Trs {
         self.scale = scale;
     }
 
-    pub fn get_position(&self) -> Point3 {
+    /// Returns the position on model space
+    pub fn get_model_position(&self) -> Point3 {
         Point3::from(self.get_translation())
     }
 

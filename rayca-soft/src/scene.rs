@@ -339,3 +339,11 @@ impl NodeDrawInfo {
 pub type MeshDrawInfo = NodeDrawInfo;
 pub type CameraDrawInfo = NodeDrawInfo;
 pub type LightDrawInfo = NodeDrawInfo;
+
+impl LightDrawInfo {
+    pub fn intersects(&self, scene: &SceneDrawInfo, ray: Ray) -> Option<Hit> {
+        let light = scene.get_light(*self);
+        let node = scene.get_node(*self);
+        light.intersects(&node.trs, ray)
+    }
+}

@@ -83,6 +83,30 @@ impl Light {
             Light::Quad(_) => todo!(),
         }
     }
+
+    pub fn get_area(&self) -> f32 {
+        match self {
+            Light::Directional(_) => 0.0,
+            Light::Point(_) => 0.0,
+            Light::Quad(light) => light.get_area(),
+        }
+    }
+
+    pub fn get_normal(&self, light_trs: &Trs) -> Vec3 {
+        match self {
+            Light::Directional(d) => d.get_direction(light_trs),
+            Light::Point(_) => Vec3::default(), // all directions
+            Light::Quad(q) => q.get_normal(),
+        }
+    }
+
+    pub fn intersects(&self, light_trs: &Trs, ray: Ray) -> Option<Hit> {
+        match self {
+            Light::Directional(_) => None,
+            Light::Point(_) => None,
+            Light::Quad(light) => light.intersects(light_trs, ray),
+        }
+    }
 }
 
 impl Default for Light {

@@ -131,4 +131,29 @@ impl QuadLight {
 
         x1
     }
+
+    /// Checks if the given ray intersects with the quad light.
+    pub fn intersects(&self, trs: &Trs, ray: Ray) -> Option<Hit> {
+        for triangle in self.get_wide_triangles() {
+            if let Some(hit) = triangle.intersects(trs, &ray) {
+                return Some(Hit::new(ray, 0, 0, hit.depth, hit.point, hit.uv));
+            }
+        }
+
+        None
+    }
+
+    /// Returns a triangle representation of this quad light in model space
+    fn get_wide_triangles(&self) -> Vec<Triangle> {
+        const SMALL_BIAS: f32 = 1e-2;
+        let a = Point3::from(-(self.ab + self.ac).get_normalized() * SMALL_BIAS);
+        let b = Point3::from(self.ab + (self.ab - self.ac).get_normalized() * SMALL_BIAS);
+        let c = Point3::from(self.ab + self.ac + (self.ab + self.ab).get_normalized() * SMALL_BIAS);
+        let d = Point3::from(self.ac + (self.ac - self.ab).get_normalized() * SMALL_BIAS);
+
+        let t1 = Triangle::new([a, c, b]);
+        let t2 = Triangle::new([a, d, c]);
+
+        vec![t1, t2]
+    }
 }
