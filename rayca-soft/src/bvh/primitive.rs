@@ -128,6 +128,15 @@ impl BvhPrimitive {
         }
     }
 
+    pub fn get_emission(&self, scene: &SceneDrawInfo) -> Color {
+        let model = scene.get_model(self.node.model);
+        let material = self.get_material(scene);
+        match material {
+            Material::Pbr(handle) => model.pbr_materials.get(*handle).unwrap().get_emission(),
+            Material::Phong(handle) => model.phong_materials.get(*handle).unwrap().get_emission(),
+        }
+    }
+
     pub fn get_color(&self, scene: &SceneDrawInfo, hit: &Hit) -> Color {
         let geometry_color = self.geometry.get_color(hit);
         let uv = self.geometry.get_uv(hit);

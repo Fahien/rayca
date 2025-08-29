@@ -52,6 +52,10 @@ impl PhongMaterial {
         !self.emission.close(Color::BLACK)
     }
 
+    pub fn get_emission(&self) -> Color {
+        self.emission
+    }
+
     pub fn get_color(&self) -> Color {
         self.ambient + self.emission
     }

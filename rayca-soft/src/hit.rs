@@ -118,6 +118,11 @@ impl<'a> HitInfo<'a> {
         primitive.is_emissive(self.scene)
     }
 
+    pub fn get_emission(&mut self) -> Color {
+        let primitive = self.get_primitive();
+        primitive.get_emission(self.scene)
+    }
+
     pub fn get_diffuse(&mut self) -> Color {
         if self.diffuse.is_none() {
             let primitive = self.get_primitive();

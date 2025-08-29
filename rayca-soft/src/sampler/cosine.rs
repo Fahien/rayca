@@ -2,7 +2,36 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::*;
+use crate::{sample::Sample, *};
+
+pub struct CosineSample {
+    omega: Vec3,
+    x: Color,
+}
+
+impl CosineSample {
+    fn new(omega: Vec3, x: Color) -> Self {
+        Self { omega, x }
+    }
+}
+
+impl Sample for CosineSample {
+    fn get_omega(&self) -> Vec3 {
+        self.omega
+    }
+
+    fn get_x(&self) -> Color {
+        self.x
+    }
+
+    fn get_pdf(&self) -> f32 {
+        std::f32::consts::FRAC_1_PI / 2.0
+    }
+
+    fn get_pdf_for(&self, _hit: &mut HitInfo<'_>, _sample: &dyn Sample) -> f32 {
+        self.get_pdf()
+    }
+}
 
 #[derive(Default)]
 pub struct CosineSampler {}
@@ -10,6 +39,23 @@ pub struct CosineSampler {}
 impl CosineSampler {
     pub const fn new() -> Self {
         Self {}
+    }
+
+    pub fn sample_direct(&self, hit: &mut HitInfo) -> CosineSample {
+        let n = hit.get_normal();
+        let omega_i = self.get_random_dir(hit);
+        let shadow_ray = hit.get_next_ray(omega_i);
+        let mut x = Color::BLACK;
+        if let Some(mut shadow_hit) = hit.tlas.intersects(hit.scene, shadow_ray) {
+            if shadow_hit.is_emissive() {
+                let li = shadow_hit.get_emission();
+                let brdf = lambertian::get_brdf(hit, omega_i);
+                let n_dot_omega_i = n.dot(omega_i).clamp(0.0, 1.0);
+                let frac_1_pdf = 2.0 * std::f32::consts::PI;
+                x = li * brdf * n_dot_omega_i * frac_1_pdf;
+            }
+        };
+        CosineSample::new(omega_i, x)
     }
 }
 

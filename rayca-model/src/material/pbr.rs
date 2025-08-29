@@ -94,6 +94,10 @@ impl PbrMaterial {
         false
     }
 
+    pub fn get_emission(&self) -> Color {
+        Color::BLACK
+    }
+
     pub fn get_color(&self, model: &Model, uv: Vec2) -> Color {
         if let Some(albedo_texture) = model.textures.get(self.albedo) {
             let sampler = Sampler::default();
