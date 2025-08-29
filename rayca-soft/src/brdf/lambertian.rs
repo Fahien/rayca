@@ -19,3 +19,14 @@ pub fn get_brdf(hit: &mut HitInfo, omega_i: Vec3) -> Color {
             / 2.0;
     lambertian + specular
 }
+
+pub fn get_pdf(hit: &mut HitInfo, omega: Vec3) -> f32 {
+    // specular pdf
+    let r_dot_omega = hit.get_reflection().dot(omega).clamp(0.0, 1.0);
+    let s = hit.get_shininess();
+    let spec = (s + 1.0) * std::f32::consts::FRAC_2_PI * r_dot_omega.powf(s);
+    // diffuse pdf
+    let diff = hit.get_normal().dot(omega).clamp(0.0, 1.0) * std::f32::consts::FRAC_1_PI;
+    let t = hit.get_t();
+    (1.0 - t) * diff + t * spec
+}

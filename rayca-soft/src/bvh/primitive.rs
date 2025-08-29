@@ -162,6 +162,12 @@ impl BvhPrimitive {
         self.get_material(scene).get_shininess(model)
     }
 
+    /// Returns the specular weight
+    pub fn get_t(&self, scene: &SceneDrawInfo) -> f32 {
+        let model = scene.get_model(self.node.model);
+        self.get_material(scene).get_t(model)
+    }
+
     pub fn get_uv(&self, hit: &Hit) -> Vec2 {
         self.geometry.get_uv(hit)
     }

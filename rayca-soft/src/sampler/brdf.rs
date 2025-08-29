@@ -2,7 +2,39 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use crate::*;
+use crate::{sample::Sample, *};
+
+pub struct BrdfSample {
+    omega: Vec3,
+
+    /// Color towards outgoing direction
+    x: Color,
+    pdf: f32,
+}
+
+impl BrdfSample {
+    fn new(omega: Vec3, x: Color, pdf: f32) -> Self {
+        Self { omega, x, pdf }
+    }
+}
+
+impl Sample for BrdfSample {
+    fn get_omega(&self) -> Vec3 {
+        self.omega
+    }
+
+    fn get_x(&self) -> Color {
+        self.x
+    }
+
+    fn get_pdf(&self) -> f32 {
+        self.pdf
+    }
+
+    fn get_pdf_for(&self, hit: &mut HitInfo, sample: &dyn Sample) -> f32 {
+        lambertian::get_pdf(hit, sample.get_omega())
+    }
+}
 
 #[derive(Default)]
 pub struct BrdfSampler {}
@@ -12,10 +44,24 @@ impl BrdfSampler {
         Self {}
     }
 
-    fn get_t(&self, hit: &mut HitInfo) -> f32 {
-        let kd_avg = hit.get_diffuse().get_rgb().reduce_avg();
-        let ks_avg = hit.get_specular().get_rgb().reduce_avg();
-        ks_avg / (ks_avg + kd_avg)
+    pub fn sample_direct(&self, hit: &mut HitInfo) -> BrdfSample {
+        // The direct lighting algorithm is not recursive
+        let omega = self.get_random_dir(hit);
+        let pdf = lambertian::get_pdf(hit, omega);
+        let mut x = Color::BLACK;
+
+        let shadow_ray = hit.get_next_ray(omega);
+        if let Some(mut shadow_hit) = hit.tlas.intersects(hit.scene, shadow_ray) {
+            if shadow_hit.is_emissive() {
+                // This calculation already includes division by pdf
+                let li = shadow_hit.get_emission();
+                let cd = hit.get_diffuse();
+                let cs = hit.get_specular();
+                x = li * (cd + cs);
+            }
+        }
+
+        BrdfSample::new(omega, x, pdf)
     }
 }
 
@@ -28,7 +74,7 @@ impl SoftSampler for BrdfSampler {
         let e1 = fastrand::f32();
         let e2 = fastrand::f32();
 
-        let t = self.get_t(hit);
+        let t = hit.get_t();
         let s = hit.get_shininess();
 
         let theta = if e0 <= t {

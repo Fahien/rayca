@@ -137,6 +137,11 @@ impl<'a> HitInfo<'a> {
         primitive.get_specular(self.scene)
     }
 
+    pub fn get_t(&mut self) -> f32 {
+        let primitive = self.get_primitive();
+        primitive.get_t(self.scene)
+    }
+
     pub fn get_shininess(&mut self) -> f32 {
         let primitive = self.get_primitive();
         primitive.get_shininess(self.scene)

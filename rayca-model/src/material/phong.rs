@@ -59,4 +59,14 @@ impl PhongMaterial {
     pub fn get_color(&self) -> Color {
         self.ambient + self.emission
     }
+
+    /// Returns the specular weight
+    pub fn get_t(&self) -> f32 {
+        let kd_avg = self.diffuse.get_rgb().reduce_avg();
+        let ks_avg = self.specular.get_rgb().reduce_avg();
+        if ks_avg == 0.0 && kd_avg == 0.0 {
+            return 1.0;
+        }
+        ks_avg / (ks_avg + kd_avg)
+    }
 }

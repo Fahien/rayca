@@ -121,4 +121,15 @@ impl Material {
             Material::Pbr(_) => todo!(),
         }
     }
+
+    /// Returns the specular weight
+    pub fn get_t(&self, model: &Model) -> f32 {
+        match &self {
+            Material::Phong(_) => {
+                let phong = self.get_phong_material(model);
+                phong.get_t()
+            }
+            Material::Pbr(_) => todo!(),
+        }
+    }
 }
