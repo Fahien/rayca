@@ -144,6 +144,7 @@ impl Draw for SoftRenderer {
                 }
 
                 color /= self.config.samples_per_pixel as f32;
+                color.correct_gamma(self.config.gamma);
                 *pixel = color.into();
             });
         });

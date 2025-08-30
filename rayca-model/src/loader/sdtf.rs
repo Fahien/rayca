@@ -98,6 +98,8 @@ pub struct SdtfConfig {
     pub indirect_sampler: SdtfSamplerStrategy,
     pub integrator: SdtfIntegratorStrategy,
     pub brdf: SdtfBrdfStrategy,
+    /// Gamma correction
+    pub gamma: f32,
 }
 
 impl Default for SdtfConfig {
@@ -114,6 +116,7 @@ impl Default for SdtfConfig {
             indirect_sampler: SdtfSamplerStrategy::Hemisphere,
             integrator: SdtfIntegratorStrategy::Raytracer,
             brdf: SdtfBrdfStrategy::Phong,
+            gamma: 1.0,
         }
     }
 }
@@ -760,6 +763,14 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    fn parse_gamma<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.config.gamma = words.next().expect("Failed to read gamma").parse()?;
+        Ok(())
+    }
+
     fn parse_line(&mut self, line: String, model: &mut Model) -> Result<(), Box<dyn Error>> {
         // Skip comments
         if line.starts_with('#') {
@@ -811,6 +822,7 @@ impl SdtfBuilder {
             Some("nexteventestimation") => self.parse_next_event_estimation(words)?,
             Some("russianroulette") => self.parse_roussian_roulette(words)?,
             Some("importancesampling") => self.parse_importance_sampling(words)?,
+            Some("gamma") => self.parse_gamma(words)?,
             _ => log::warn!("Skipping command: {}", line),
         }
 

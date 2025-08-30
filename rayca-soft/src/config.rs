@@ -42,6 +42,10 @@ pub struct Config {
     /// Maximum recursion depth for ray tracing.
     #[builder(default = 5)]
     pub max_depth: u32,
+
+    /// Gamma correction
+    #[builder(default = 1.0)]
+    pub gamma: f32,
 }
 
 impl Default for Config {
@@ -63,6 +67,7 @@ impl Config {
         self.direct_sampler = sdtf_config.direct_sampler.into();
         self.indirect_sampler = sdtf_config.indirect_sampler.into();
         self.integrator = sdtf_config.integrator.into();
+        self.gamma = sdtf_config.gamma;
     }
 
     pub fn get_strate_count(&self) -> u32 {

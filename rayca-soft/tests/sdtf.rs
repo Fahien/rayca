@@ -239,3 +239,13 @@ fn ggx() {
         Config::builder().build(),
     );
 }
+
+#[test]
+#[ignore]
+fn dragon3() {
+    run_test(
+        "sdtf/4/dragon.sdtf",
+        "sdtf/4/dragon.png",
+        Config::builder().build(),
+    );
+}

@@ -171,6 +171,13 @@ impl Color {
     pub fn get_rgb(&self) -> Vec3 {
         Vec3::new(self.r, self.g, self.b)
     }
+
+    pub fn correct_gamma(&mut self, gamma: f32) {
+        let frac_1_gamma = 1.0 / gamma;
+        self.r = self.r.powf(frac_1_gamma);
+        self.g = self.g.powf(frac_1_gamma);
+        self.b = self.b.powf(frac_1_gamma);
+    }
 }
 
 impl From<u32> for Color {
