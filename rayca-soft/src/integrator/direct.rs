@@ -66,7 +66,7 @@ impl Integrator for Direct {
                         }
                     }
 
-                    let brdf = lambertian::get_brdf(&mut hit, omega_i);
+                    let brdf = hit.get_brdf(omega_i);
 
                     let r_squared = x1_to_hit_point.len().powf(2.0);
                     let d_omega_i = quad_light.get_normal().dot(omega_i) / r_squared;

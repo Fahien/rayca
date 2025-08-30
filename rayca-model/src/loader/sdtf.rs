@@ -67,6 +67,24 @@ impl FromStr for SdtfSamplerStrategy {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SdtfBrdfStrategy {
+    Phong,
+    Ggx,
+}
+
+impl FromStr for SdtfBrdfStrategy {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "phong" => Ok(Self::Phong),
+            "ggx" => Ok(Self::Ggx),
+            _ => Err(format!("Failed to find a BRDF for `{}`", s)),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct SdtfConfig {
     pub width: u32,
@@ -79,6 +97,7 @@ pub struct SdtfConfig {
     pub russian_roulette: bool,
     pub indirect_sampler: SdtfSamplerStrategy,
     pub integrator: SdtfIntegratorStrategy,
+    pub brdf: SdtfBrdfStrategy,
 }
 
 impl Default for SdtfConfig {
@@ -94,6 +113,7 @@ impl Default for SdtfConfig {
             russian_roulette: false,
             indirect_sampler: SdtfSamplerStrategy::Hemisphere,
             integrator: SdtfIntegratorStrategy::Raytracer,
+            brdf: SdtfBrdfStrategy::Phong,
         }
     }
 }
@@ -103,7 +123,8 @@ struct SdtfBuilder {
     string: Option<String>,
     vertices: Pack<Vertex>,
     transform: Vec<Trs>,
-    temp_material: PhongMaterial,
+    temp_phong_material: PhongMaterial,
+    temp_ggx_material: GgxMaterial,
     attenuation: Vec3,
     temp_model: Model,
     config: SdtfConfig,
@@ -116,7 +137,8 @@ impl SdtfBuilder {
             string: None,
             vertices: Pack::new(),
             transform: Vec::new(),
-            temp_material: PhongMaterial::default(),
+            temp_phong_material: PhongMaterial::DEFAULT,
+            temp_ggx_material: GgxMaterial::DEFAULT,
             attenuation: Vec3::new(1.0, 0.0, 0.0),
             temp_model: Model::default(),
             config: SdtfConfig::default(),
@@ -290,7 +312,7 @@ impl SdtfBuilder {
         let g = words.next().expect("Failed to read ambient g").parse()?;
         let b = words.next().expect("Failed to read ambient b").parse()?;
 
-        self.temp_material.ambient = Color::new(r, g, b, 1.0);
+        self.temp_phong_material.ambient = Color::new(r, g, b, 1.0);
 
         Ok(())
     }
@@ -394,7 +416,7 @@ impl SdtfBuilder {
         let g = words.next().expect("Failed to read emission g").parse()?;
         let b = words.next().expect("Failed to read emission b").parse()?;
 
-        self.temp_material.emission = Color::new(r, g, b, 1.0);
+        self.temp_phong_material.emission = Color::new(r, g, b, 1.0);
 
         Ok(())
     }
@@ -411,7 +433,9 @@ impl SdtfBuilder {
         let g = words.next().expect("Failed to read diffuse g").parse()?;
         let b = words.next().expect("Failed to read diffuse b").parse()?;
 
-        self.temp_material.diffuse = Color::new(r, g, b, 1.0);
+        let diffuse = Color::new(r, g, b, 1.0);
+        self.temp_phong_material.diffuse = diffuse;
+        self.temp_ggx_material.diffuse = diffuse;
 
         Ok(())
     }
@@ -428,7 +452,9 @@ impl SdtfBuilder {
         let g = words.next().expect("Failed to read specular g").parse()?;
         let b = words.next().expect("Failed to read specular b").parse()?;
 
-        self.temp_material.specular = Color::new(r, g, b, 1.0);
+        let specular = Color::new(r, g, b, 1.0);
+        self.temp_phong_material.specular = specular;
+        self.temp_ggx_material.specular = specular;
 
         Ok(())
     }
@@ -441,8 +467,34 @@ impl SdtfBuilder {
         // Process any pending primitive before editing current material
         self.process_primitive(model);
 
-        self.temp_material.shininess = words.next().expect("Failed to read shininess").parse()?;
+        self.temp_phong_material.shininess =
+            words.next().expect("Failed to read shininess").parse()?;
 
+        Ok(())
+    }
+
+    fn parse_roughness<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        // Process any pending primitive before editing current material
+        self.process_primitive(model);
+
+        let roughness = words.next().expect("Failed to read roughness").parse()?;
+        self.temp_ggx_material.roughness = roughness;
+
+        Ok(())
+    }
+
+    fn parse_brdf<'w>(
+        &mut self,
+        mut words: impl Iterator<Item = &'w str>,
+        model: &mut Model,
+    ) -> Result<(), Box<dyn Error>> {
+        // Process any pending primitive before editing current material
+        self.process_primitive(model);
+        self.config.brdf = words.next().expect("Failed to read brdf").parse()?;
         Ok(())
     }
 
@@ -745,6 +797,8 @@ impl SdtfBuilder {
             Some("diffuse") => self.parse_diffuse(words, model)?,
             Some("specular") => self.parse_specular(words, model)?,
             Some("shininess") => self.parse_shininess(words, model)?,
+            Some("roughness") => self.parse_roughness(words, model)?,
+            Some("brdf") => self.parse_brdf(words, model)?,
             Some("point") => self.parse_point(words, model)?,
             Some("directional") => self.parse_directional(words, model)?,
             Some("attenuation") => self.parse_attenuation(words)?,
@@ -763,6 +817,22 @@ impl SdtfBuilder {
         Ok(())
     }
 
+    /// Processes latest material from the temporary model to the output model
+    fn process_material(&self, model: &mut Model) -> Handle<Material> {
+        let material = match self.config.brdf {
+            SdtfBrdfStrategy::Phong => {
+                let phong_material_handle =
+                    model.phong_materials.push(self.temp_phong_material.clone());
+                Material::Phong(phong_material_handle)
+            }
+            SdtfBrdfStrategy::Ggx => {
+                let ggx_material_handle = model.ggx_materials.push(self.temp_ggx_material.clone());
+                Material::Ggx(ggx_material_handle)
+            }
+        };
+        model.materials.push(material)
+    }
+
     /// Processes latest pending primitive from the temporary model to the output model
     fn process_primitive(&mut self, model: &mut Model) {
         if let Some(mut primitive) = self.temp_model.primitives.pop() {
@@ -770,9 +840,7 @@ impl SdtfBuilder {
                 primitive.geometry = model.geometries.push(geometry.clone());
             }
 
-            let phong_material_handle = model.phong_materials.push(self.temp_material.clone());
-            let material = Material::Phong(phong_material_handle);
-            primitive.material = model.materials.push(material);
+            primitive.material = self.process_material(model);
 
             let primitive_handle = model.primitives.push(primitive);
             let mesh = Mesh::builder().primitive(primitive_handle).build();

@@ -29,7 +29,7 @@ impl Pathtracer {
 
         for _ in 0..config.light_samples {
             let omega_i = sampler.get_random_dir(hit);
-            let brdf = lambertian::get_brdf(hit, omega_i);
+            let brdf = hit.get_brdf(omega_i);
 
             let mut next_ray = hit.get_next_ray(omega_i);
             let mut weight = 1.0;

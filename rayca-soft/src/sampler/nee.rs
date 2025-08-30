@@ -106,7 +106,7 @@ impl NextEventEstimationSampler {
                 // Constant radiance from all point of the light surface
                 let le = quad_light.intensity * quad_light.color;
 
-                let brdf = lambertian::get_brdf(hit, omega);
+                let brdf = hit.get_brdf(omega);
 
                 let r_squared = x_to_x1.norm();
                 let d_omega = quad_light.get_normal().dot(omega) / r_squared;

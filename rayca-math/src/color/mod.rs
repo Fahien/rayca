@@ -2,7 +2,7 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub};
 
 use serde::Deserialize;
 
@@ -270,6 +270,18 @@ impl AddAssign<&Color> for Color {
 impl AddAssign for Color {
     fn add_assign(&mut self, rhs: Color) {
         *self += &rhs;
+    }
+}
+
+impl Sub for Color {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.r - rhs.r * rhs.a,
+            self.g - rhs.g * rhs.a,
+            self.b - rhs.b * rhs.a,
+            self.a,
+        )
     }
 }
 

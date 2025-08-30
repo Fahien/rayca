@@ -46,7 +46,7 @@ impl SoftSampler for HemisphereSampler {
         indirect_sample: Color,
         weight: f32,
     ) -> Color {
-        let brdf = lambertian::get_brdf(hit, omega_i);
+        let brdf = hit.get_brdf(omega_i);
         let cosine_law = hit.get_normal().dot(omega_i).clamp(0.0, 1.0);
         2.0 * std::f32::consts::PI * brdf * cosine_law * indirect_sample * weight
     }

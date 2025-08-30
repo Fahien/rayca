@@ -125,6 +125,7 @@ impl BvhPrimitive {
         match material {
             Material::Pbr(handle) => model.pbr_materials.get(*handle).unwrap().is_emissive(),
             Material::Phong(handle) => model.phong_materials.get(*handle).unwrap().is_emissive(),
+            Material::Ggx(handle) => model.ggx_materials.get(*handle).unwrap().is_emissive(),
         }
     }
 
@@ -134,6 +135,7 @@ impl BvhPrimitive {
         match material {
             Material::Pbr(handle) => model.pbr_materials.get(*handle).unwrap().get_emission(),
             Material::Phong(handle) => model.phong_materials.get(*handle).unwrap().get_emission(),
+            Material::Ggx(handle) => model.ggx_materials.get(*handle).unwrap().get_emission(),
         }
     }
 
@@ -150,11 +152,6 @@ impl BvhPrimitive {
         let geometry_color = self.geometry.get_color(hit);
         let material_color = self.get_material(scene).get_diffuse(model, uv);
         geometry_color * material_color
-    }
-
-    pub fn get_specular(&self, scene: &SceneDrawInfo) -> Color {
-        let model = scene.get_model(self.node.model);
-        self.get_material(scene).get_specular(model)
     }
 
     pub fn get_shininess(&self, scene: &SceneDrawInfo) -> f32 {
@@ -191,15 +188,6 @@ impl BvhPrimitive {
                 let normal_matrix = Mat3::from(&inverse).get_transpose();
                 (&normal_matrix * normal).get_normalized()
             }
-        }
-    }
-
-    /// Calculates the light coming out towards the viewer at a certain intersection
-    pub fn get_radiance(&self, hit: &mut HitInfo, ir: Irradiance) -> Color {
-        let material = hit.get_material();
-        match material {
-            Material::Pbr(_) => ggx::get_radiance(hit, ir),
-            Material::Phong(_) => lambertian::get_radiance(hit, ir),
         }
     }
 

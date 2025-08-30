@@ -38,6 +38,10 @@ impl<'a> HitInfo<'a> {
         &self.hit.ray
     }
 
+    pub fn get_view(&self) -> Vec3 {
+        self.hit.get_view()
+    }
+
     pub fn get_depth(&self) -> f32 {
         self.hit.depth
     }
@@ -133,8 +137,8 @@ impl<'a> HitInfo<'a> {
     }
 
     pub fn get_specular(&mut self) -> Color {
-        let primitive = self.get_primitive();
-        primitive.get_specular(self.scene)
+        let model = self.get_model();
+        self.get_material().get_specular(model)
     }
 
     pub fn get_t(&mut self) -> f32 {
@@ -145,6 +149,11 @@ impl<'a> HitInfo<'a> {
     pub fn get_shininess(&mut self) -> f32 {
         let primitive = self.get_primitive();
         primitive.get_shininess(self.scene)
+    }
+
+    pub fn get_roughness(&mut self) -> f32 {
+        let material = self.get_material();
+        material.get_roughness(self.get_model(), self.get_uv())
     }
 
     pub fn get_phong_material(&mut self) -> &'a PhongMaterial {
@@ -188,9 +197,51 @@ impl<'a> HitInfo<'a> {
         Ray::new(next_origin, light_dir)
     }
 
+    /// Calculates the light coming out towards the viewer at a certain intersection
+    /// This is used by the raytracer and scratcher integrators
     pub fn get_radiance(&mut self, ir: Irradiance) -> Color {
-        let primitive = self.get_primitive();
-        primitive.get_radiance(self, ir)
+        let material = self.get_material();
+        match material {
+            Material::Pbr(_) => ggx::get_radiance(self, ir),
+            Material::Phong(_) => lambertian::get_radiance(self, ir),
+            Material::Ggx(_) => ggx::get_radiance(self, ir),
+        }
+    }
+
+    pub fn get_random_dir(&mut self) -> Vec3 {
+        let material = self.get_material();
+        match material {
+            Material::Phong(_) => lambertian::get_random_dir(self),
+            Material::Pbr(_) => ggx::get_random_dir(self),
+            Material::Ggx(_) => ggx::get_random_dir(self),
+        }
+    }
+
+    pub fn get_brdf(&mut self, omega_i: Vec3) -> Color {
+        let material = self.get_material();
+        match material {
+            Material::Phong(_) => lambertian::get_brdf(self, omega_i),
+            Material::Pbr(_) => ggx::get_brdf(self, omega_i),
+            Material::Ggx(_) => ggx::get_brdf(self, omega_i),
+        }
+    }
+
+    pub fn get_pdf(&mut self, omega: Vec3) -> f32 {
+        let material = self.get_material();
+        match material {
+            Material::Phong(_) => lambertian::get_pdf(self, omega),
+            Material::Pbr(_) => ggx::get_pdf(self, omega),
+            Material::Ggx(_) => ggx::get_pdf(self, omega),
+        }
+    }
+
+    pub fn get_specular_component(&mut self, omega: Vec3) -> Color {
+        let material = self.get_material();
+        match material {
+            Material::Phong(_) => lambertian::get_specular_component(self, omega),
+            Material::Pbr(_) => ggx::get_specular_component(self, omega),
+            Material::Ggx(_) => ggx::get_specular_component(self, omega),
+        }
     }
 }
 

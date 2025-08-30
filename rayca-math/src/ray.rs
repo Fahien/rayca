@@ -144,6 +144,11 @@ impl Hit {
             uv,
         }
     }
+
+    /// Returns the view vector, aka the direction opposite to the ray generating this hit.
+    pub fn get_view(&self) -> Vec3 {
+        -self.ray.dir
+    }
 }
 
 #[cfg(test)]

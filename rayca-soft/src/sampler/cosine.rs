@@ -49,7 +49,7 @@ impl CosineSampler {
         if let Some(mut shadow_hit) = hit.tlas.intersects(hit.scene, shadow_ray) {
             if shadow_hit.is_emissive() {
                 let li = shadow_hit.get_emission();
-                let brdf = lambertian::get_brdf(hit, omega_i);
+                let brdf = hit.get_brdf(omega_i);
                 let n_dot_omega_i = n.dot(omega_i).clamp(0.0, 1.0);
                 let frac_1_pdf = 2.0 * std::f32::consts::PI;
                 x = li * brdf * n_dot_omega_i * frac_1_pdf;
@@ -94,7 +94,7 @@ impl SoftSampler for CosineSampler {
         indirect_sample: Color,
         weight: f32,
     ) -> Color {
-        let brdf = lambertian::get_brdf(hit, omega_i);
+        let brdf = hit.get_brdf(omega_i);
         std::f32::consts::PI * brdf * indirect_sample * weight
     }
 }
