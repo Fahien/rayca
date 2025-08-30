@@ -54,7 +54,7 @@ impl Light {
     pub fn get_intensity(&self, light_trs: &Trs, frag_pos: Point3, frag_n: Vec3) -> Color {
         match self {
             Light::Directional(light) => light.get_intensity(),
-            Light::Point(light) => light.get_intensity(light_trs, frag_pos, frag_n),
+            Light::Point(light) => light.get_intensity(light_trs, frag_pos),
             Light::Quad(light) => light.get_intensity(light_trs, frag_pos, frag_n),
         }
     }

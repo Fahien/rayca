@@ -34,7 +34,7 @@ impl PointLight {
         Vec3::from(dist).len()
     }
 
-    pub fn get_intensity(&self, light_trs: &Trs, frag_pos: Point3, _frag_n: Vec3) -> Color {
+    pub fn get_intensity(&self, light_trs: &Trs, frag_pos: Point3) -> Color {
         (self.intensity * self.color) / self.get_fallof(light_trs, frag_pos)
     }
 

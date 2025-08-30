@@ -110,8 +110,10 @@ impl Model {
         self.materials.get(handle)
     }
 
-    pub fn get_pbr_material(&self, handle: Handle<PbrMaterial>) -> Option<&PbrMaterial> {
-        self.pbr_materials.get(handle)
+    pub fn get_pbr_material(&self, handle: Handle<PbrMaterial>) -> &PbrMaterial {
+        self.pbr_materials
+            .get(handle)
+            .unwrap_or(&PbrMaterial::WHITE)
     }
 
     pub fn get_pbr_material_mut(
@@ -121,8 +123,10 @@ impl Model {
         self.pbr_materials.get_mut(handle)
     }
 
-    pub fn get_phong_material(&self, handle: Handle<PhongMaterial>) -> Option<&PhongMaterial> {
-        self.phong_materials.get(handle)
+    pub fn get_phong_material(&self, handle: Handle<PhongMaterial>) -> &PhongMaterial {
+        self.phong_materials
+            .get(handle)
+            .unwrap_or(&PhongMaterial::DEFAULT)
     }
 
     pub fn get_phong_material_mut(
@@ -130,6 +134,12 @@ impl Model {
         handle: Handle<PhongMaterial>,
     ) -> Option<&mut PhongMaterial> {
         self.phong_materials.get_mut(handle)
+    }
+
+    pub fn get_ggx_material(&self, handle: Handle<GgxMaterial>) -> &GgxMaterial {
+        self.ggx_materials
+            .get(handle)
+            .unwrap_or(&GgxMaterial::DEFAULT)
     }
 
     pub fn get_mesh(&self, handle: Handle<Mesh>) -> Option<&Mesh> {

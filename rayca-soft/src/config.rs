@@ -29,14 +29,14 @@ pub struct Config {
     pub russian_roulette: bool,
 
     /// Direct sampler strategy to use.
-    #[builder(default = SamplerStrategy::None)]
+    #[builder(default = SamplerStrategy::Nee)]
     pub direct_sampler: SamplerStrategy,
 
     /// Indirect sampler strategy to use.
-    #[builder(default = SamplerStrategy::Hemisphere)]
+    #[builder(default = SamplerStrategy::Cosine)]
     pub indirect_sampler: SamplerStrategy,
 
-    #[builder(default = IntegratorStrategy::Scratcher)]
+    #[builder(default = IntegratorStrategy::Pathtracer)]
     pub integrator: IntegratorStrategy,
 
     /// Maximum recursion depth for ray tracing.

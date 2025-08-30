@@ -94,8 +94,8 @@ impl Ray {
     /// If the ray is not to be terminated, it returns the boost factor.
     pub fn next_russian_roulette(&self, next_throughput: Color) -> Option<f32> {
         // Fragments with high information have a higher change to generate a new ray.
-        let q = 1.0 - next_throughput.get_rgb().reduce_max().min(1.0);
-        if q < fastrand::f32() {
+        let q = 1.0 - next_throughput.max_rgb().min(1.0);
+        if q < fastrand::f32().clamp(0.0, 1.0 - f32::EPSILON) {
             let weight = 1.0 / (1.0 - q);
             Some(weight)
         } else {

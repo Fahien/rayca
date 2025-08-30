@@ -69,21 +69,20 @@ impl NextEventEstimationSample {
 pub struct NextEventEstimationSampler {}
 
 impl NextEventEstimationSampler {
-    fn sample(
+    fn get_quad_light_sample(
         config: &Config,
         hit: &mut HitInfo,
-        light_index: usize,
         light_sample_index: u32,
+        light_draw_info: LightDrawInfo,
     ) -> Box<dyn Sample> {
-        let light_draw_info = hit.scene.light_draw_infos[light_index];
+        let mut ld = Color::BLACK;
 
-        let light_node = hit.scene.get_node(light_draw_info);
         let quad_light = hit.scene.get_quad_light(light_draw_info);
         let area = quad_light.get_area();
 
-        let mut ld = Color::BLACK;
-
         let strate_count = config.get_strate_count();
+
+        let light_node = hit.scene.get_node(light_draw_info);
         let x1 = quad_light.get_random_point(
             &light_node.trs,
             config.light_stratify,
@@ -103,6 +102,7 @@ impl NextEventEstimationSampler {
 
         if let Some(mut shadow_hit) = hit.tlas.intersects(hit.scene, shadow_ray) {
             if shadow_hit.is_emissive() {
+                // TODO: need to verify whether the shadow hit point is actually on the light surface
                 // Constant radiance from all point of the light surface
                 let le = quad_light.intensity * quad_light.color;
 
@@ -122,6 +122,64 @@ impl NextEventEstimationSampler {
             ld,
             pdf,
         ))
+    }
+
+    fn get_point_light_sample(
+        hit: &mut HitInfo,
+        light_draw_info: LightDrawInfo,
+    ) -> Box<dyn Sample> {
+        let point_light = hit.scene.get_point_light(light_draw_info);
+
+        let light_node = hit.scene.get_node(light_draw_info);
+        let x1 = Point3::from(light_node.trs.get_translation());
+
+        // X is the point on the surface
+        let x = hit.get_point();
+        // Sample incident direction
+        let x_to_x1 = x1 - x;
+        let point_light_distance = x_to_x1.len();
+        let omega = x_to_x1.get_normalized();
+
+        let mut ret = Box::new(NextEventEstimationSample::new(
+            light_draw_info,
+            omega,
+            Color::BLACK,
+            0.0,
+        ));
+
+        // Let us see if we actually see the light
+        let shadow_ray = hit.get_next_ray(omega);
+        if let Some(shadow_hit) = hit.tlas.intersects(hit.scene, shadow_ray) {
+            if shadow_hit.get_depth() < point_light_distance {
+                return ret;
+            }
+        }
+
+        let le = point_light.get_intensity(&light_node.trs, x);
+        let brdf = hit.get_brdf(omega);
+        let r_squared = x_to_x1.norm();
+        let d_omega = 1.0 / r_squared;
+        let n_dot_omega = hit.get_normal().dot(omega).clamp(0.0, 1.0);
+        ret.x = le * brdf * n_dot_omega * d_omega;
+        ret.pdf = NextEventEstimationSample::get_pdf(light_draw_info, hit, omega);
+        ret
+    }
+
+    fn sample(
+        config: &Config,
+        hit: &mut HitInfo,
+        light_index: usize,
+        light_sample_index: u32,
+    ) -> Box<dyn Sample> {
+        let light_draw_info = hit.scene.light_draw_infos[light_index];
+        let light = hit.scene.get_light(light_draw_info);
+        match light {
+            Light::Directional(_) => todo!(),
+            Light::Point(_) => Self::get_point_light_sample(hit, light_draw_info),
+            Light::Quad(_) => {
+                Self::get_quad_light_sample(config, hit, light_sample_index, light_draw_info)
+            }
+        }
     }
 
     fn get_light_samples(

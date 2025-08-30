@@ -178,6 +178,11 @@ impl Color {
         self.g = self.g.powf(frac_1_gamma);
         self.b = self.b.powf(frac_1_gamma);
     }
+
+    /// Returns the maximum RGB component value.
+    pub fn max_rgb(&self) -> f32 {
+        self.r.max(self.g).max(self.b)
+    }
 }
 
 impl From<u32> for Color {

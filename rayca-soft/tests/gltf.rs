@@ -271,26 +271,20 @@ mod gltf {
         Ok(())
     }
 
-    /// Add a custom camera
-    fn add_camera(model: &mut Model, camera_position: Vec3) {
-        let camera_handle = model.cameras.push(Camera::default());
-        let camera_node = Node::builder()
-            .trs(Trs::builder().translation(camera_position).build())
-            .camera(camera_handle)
-            .build();
-        let camera_node_handle = model.nodes.push(camera_node);
-        model.root.children.push(camera_node_handle);
-    }
-
     #[test]
     fn orientation() -> Result<(), Box<dyn Error>> {
         let mut scene = Scene::default();
         let assets = Assets::new();
-        scene.push_gltf_from_path(
+        let root_handle = scene.push_gltf_from_path(
             tests::get_model_path().join("orientation/OrientationTest.gltf"),
             &assets,
         )?;
-        add_camera(&mut scene.models[0], Vec3::new(0.0, 0.0, 20.0));
+        // Scale orientation model
+        let root = scene.get_node_mut(root_handle);
+        root.trs.scale(Vec3::new(0.2, 0.2, 0.2));
+
+        let default_model = SoftRenderer::create_default_model();
+        scene.push_model(default_model);
 
         let mut renderer = SoftRenderer::default();
         let mut image = Image::new(512, 512, ColorType::RGBA8);
@@ -308,7 +302,11 @@ mod gltf {
             &assets,
         )?;
 
-        add_camera(&mut scene.models[0], Vec3::new(0.0, 0.32, 1.0));
+        let mut default_model = SoftRenderer::create_default_model();
+        // Custom camera
+        let camera = default_model.get_mut_last_camera().unwrap();
+        camera.trs.translation = Vec3::new(0.0, 0.32, 1.0);
+        scene.push_model(default_model);
 
         let mut image = Image::new(32, 32, ColorType::RGBA8);
         let mut renderer = SoftRenderer::default();
@@ -323,24 +321,17 @@ mod gltf {
         let mut scene = Scene::default();
         let assets = Assets::new();
 
-        scene.push_gltf_from_path(tests::get_model_path().join("sponza/sponza.gltf"), &assets)?;
+        let root_node = scene
+            .push_gltf_from_path(tests::get_model_path().join("sponza/sponza.gltf"), &assets)?;
+        let root = scene.get_node_mut(root_node);
+        let rotation = Quat::new(0.0, -0.707, 0.0, 0.707);
+        root.trs.rotation = rotation;
 
         // Custom camera
-        let rotation = Quat::new(0.0, -0.707, 0.0, 0.707);
-        scene.models[0]
-            .nodes
-            .get_mut(0.into())
-            .unwrap()
-            .trs
-            .rotation = rotation;
-
-        let camera_handle = scene.models[0].cameras.push(Camera::default());
-        let camera_node = Node::builder()
-            .trs(Trs::builder().translation(Vec3::new(0.2, 1.0, 0.0)).build())
-            .camera(camera_handle)
-            .build();
-        let camera_node_handle = scene.models[0].nodes.push(camera_node);
-        scene.models[0].root.children.push(camera_node_handle);
+        let mut model = SoftRenderer::create_default_model();
+        let camera_node = model.get_mut_last_camera().unwrap();
+        camera_node.trs.translation = Vec3::new(0.2, 1.0, 0.0);
+        scene.push_model(model);
 
         let mut image = Image::new(32, 32, ColorType::RGBA8);
         let mut renderer = SoftRenderer::default();

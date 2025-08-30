@@ -30,13 +30,13 @@ impl SoftRenderer {
 
         // Add 2 point lights
         let mut light = Light::point();
-        light.set_intensity(64.0);
+        light.set_intensity(1024.0);
         let light_handle = model.lights.push(light);
 
         let light_node = Node::builder()
             .trs(
                 Trs::builder()
-                    .translation(Vec3::new(-1.0, 2.0, 1.0))
+                    .translation(Vec3::new(-1.0, 4.0, 3.0))
                     .build(),
             )
             .light(light_handle)
@@ -46,7 +46,7 @@ impl SoftRenderer {
 
         let point_light_node = Node::builder()
             .light(light_handle)
-            .trs(Trs::builder().translation(Vec3::new(1.0, 2.0, 1.0)).build())
+            .trs(Trs::builder().translation(Vec3::new(1.0, 4.0, 3.0)).build())
             .build();
         let light_node_handle = model.nodes.push(point_light_node);
         model.root.children.push(light_node_handle);
@@ -313,6 +313,15 @@ impl<'a> SceneDrawInfo<'a> {
         self.get_model(light_draw_info.model)
             .get_light(node.light.unwrap())
             .unwrap()
+    }
+
+    pub fn get_point_light(&self, light_draw_info: LightDrawInfo) -> &PointLight {
+        let light = self.get_light(light_draw_info);
+        if let Light::Point(point_light) = light {
+            point_light
+        } else {
+            panic!("Expected a PointLight, but found a different type of light.");
+        }
     }
 
     pub fn get_quad_light(&self, light_draw_info: LightDrawInfo) -> &QuadLight {

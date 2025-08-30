@@ -100,7 +100,7 @@ impl<'a> HitInfo<'a> {
         self.reflection.unwrap()
     }
 
-    pub fn get_material(&mut self) -> &'a Material {
+    pub fn get_material(&mut self) -> Material {
         let primitive = self.get_primitive();
         primitive.get_material(self.scene)
     }
@@ -138,7 +138,7 @@ impl<'a> HitInfo<'a> {
 
     pub fn get_specular(&mut self) -> Color {
         let model = self.get_model();
-        self.get_material().get_specular(model)
+        self.get_material().get_specular(model, self.get_uv())
     }
 
     pub fn get_t(&mut self) -> f32 {

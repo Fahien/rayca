@@ -100,13 +100,13 @@ impl BvhPrimitive {
         }
     }
 
-    pub fn get_material<'m>(&self, scene: &'m SceneDrawInfo) -> &'m Material {
+    pub fn get_material(&self, scene: &SceneDrawInfo) -> Material {
         let model = scene.get_model(self.node.model);
         let material = model
             .materials
             .get(self.material)
             .unwrap_or(&Material::DEFAULT);
-        material
+        *material
     }
 
     pub fn get_pbr_material<'m>(&self, scene: &'m SceneDrawInfo) -> &'m PbrMaterial {
@@ -123,9 +123,9 @@ impl BvhPrimitive {
         let model = scene.get_model(self.node.model);
         let material = self.get_material(scene);
         match material {
-            Material::Pbr(handle) => model.pbr_materials.get(*handle).unwrap().is_emissive(),
-            Material::Phong(handle) => model.phong_materials.get(*handle).unwrap().is_emissive(),
-            Material::Ggx(handle) => model.ggx_materials.get(*handle).unwrap().is_emissive(),
+            Material::Pbr(handle) => model.get_pbr_material(handle).is_emissive(),
+            Material::Phong(handle) => model.get_phong_material(handle).is_emissive(),
+            Material::Ggx(handle) => model.get_ggx_material(handle).is_emissive(),
         }
     }
 
@@ -133,9 +133,9 @@ impl BvhPrimitive {
         let model = scene.get_model(self.node.model);
         let material = self.get_material(scene);
         match material {
-            Material::Pbr(handle) => model.pbr_materials.get(*handle).unwrap().get_emission(),
-            Material::Phong(handle) => model.phong_materials.get(*handle).unwrap().get_emission(),
-            Material::Ggx(handle) => model.ggx_materials.get(*handle).unwrap().get_emission(),
+            Material::Pbr(handle) => model.get_pbr_material(handle).get_emission(),
+            Material::Phong(handle) => model.get_phong_material(handle).get_emission(),
+            Material::Ggx(handle) => model.get_ggx_material(handle).get_emission(),
         }
     }
 

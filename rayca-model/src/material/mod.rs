@@ -139,10 +139,14 @@ impl Material {
         }
     }
 
-    pub fn get_specular(&self, model: &Model) -> Color {
+    pub fn get_specular(&self, model: &Model, uv: Vec2) -> Color {
         match &self {
             Material::Phong(_) => self.get_phong_material(model).specular,
-            Material::Pbr(_) => todo!(),
+            Material::Pbr(_) => {
+                let pbr_material = self.get_pbr_material(model);
+                let base_color = pbr_material.get_color(model, uv);
+                pbr_material.get_metallic_roughness(model, uv).0 * base_color
+            }
             Material::Ggx(_) => self.get_ggx_material(model).specular,
         }
     }

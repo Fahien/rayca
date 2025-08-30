@@ -36,8 +36,11 @@ impl Pathtracer {
 
             if config.russian_roulette {
                 use std::f32::consts::PI;
-                let next_throughput =
-                    2.0 * PI * hit.get_ray().throughput * brdf * hit.get_normal().dot(omega_i);
+                let next_throughput = 2.0
+                    * PI
+                    * hit.get_ray().throughput
+                    * brdf
+                    * hit.get_normal().dot(omega_i).clamp(0.0, 1.0);
                 if let Some(boost_factor) = hit.get_ray().next_russian_roulette(next_throughput) {
                     weight = boost_factor;
                     next_ray.throughput = next_throughput * boost_factor;
