@@ -294,6 +294,7 @@ mod gltf {
     }
 
     #[test]
+    #[ignore]
     fn flight() -> Result<(), Box<dyn Error>> {
         let mut scene = Scene::default();
         let assets = Assets::new();

@@ -7,6 +7,7 @@ members = [
     "rayca-geometry",
     "rayca-model",
     "rayca-demo",
+    "rayca-graphics",
 ]
 
 [profile.dev.package."*"]

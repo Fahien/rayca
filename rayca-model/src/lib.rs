@@ -7,6 +7,7 @@
 mod buffer;
 mod camera;
 mod image;
+mod info;
 mod light;
 pub mod loader;
 mod material;
@@ -22,6 +23,7 @@ mod texture;
 pub use buffer::*;
 pub use camera::*;
 pub use image::*;
+pub use info::*;
 pub use light::*;
 pub use material::*;
 pub use mesh::*;

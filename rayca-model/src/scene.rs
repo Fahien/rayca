@@ -83,8 +83,17 @@ impl Scene {
         self.nodes.get_mut(handle).unwrap()
     }
 
-    pub fn get_model_node(&self, node: Handle<Node>, model: Handle<Model>) -> Option<&Node> {
-        self.models.get(model).and_then(|m| m.get_node(node))
+    pub fn get_model_node(&self, node_info: NodeInfo) -> Option<&Node> {
+        self.models
+            .get(node_info.model)
+            .and_then(|m| m.get_node(node_info.node))
+    }
+
+    pub fn get_camera(&self, camera_info: NodeInfo) -> Option<&Camera> {
+        self.models.get(camera_info.model).and_then(|m| {
+            m.get_node(camera_info.node)
+                .and_then(|n| n.camera.and_then(|h| m.cameras.get(h)))
+        })
     }
 
     pub fn get_model(&self, handle: Handle<Model>) -> Option<&Model> {
@@ -131,6 +140,24 @@ impl Scene {
             let camera_node = model.get_mut_last_camera();
             if camera_node.is_some() {
                 return camera_node;
+            }
+        }
+        None
+    }
+
+    pub fn get_last_camera_info(&self) -> Option<CameraInfo> {
+        for model_handle in self.models.get_handles().into_iter().rev() {
+            let model = self.models.get(model_handle)?;
+            let node_handles = model.nodes.get_handles().into_iter().rev();
+            for node_handle in node_handles {
+                let node = model.get_node(node_handle)?;
+                if node.camera.is_some() {
+                    let camera_info = CameraInfo {
+                        model: model_handle,
+                        node: node_handle,
+                    };
+                    return Some(camera_info);
+                }
             }
         }
         None

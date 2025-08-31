@@ -12,10 +12,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
-mod ctx;
-use ctx::*;
-
-use rayca_soft::*;
+use rayca_graphics::*;
 
 fn main() {
     env_logger::init();
@@ -37,14 +34,16 @@ struct App {
     ctx: Option<Ctx>,
     scene: Scene,
     image: Option<Image>,
-    renderer: SoftRenderer,
+    _renderer: SoftRenderer,
 }
 
 impl App {
-    fn soft_render(&mut self) {
-        let image = self.image.as_mut().unwrap();
-        image.fill(RGBA8::black());
-        self.renderer.draw(&self.scene, image);
+    fn get_compute_camera(&mut self) -> ComputeCamera {
+        let camera_info = self.scene.get_last_camera_info().unwrap();
+        let camera_node = self.scene.get_model_node(camera_info).unwrap();
+        let camera_trs = camera_node.trs.clone();
+        let angle = self.scene.get_camera(camera_info).unwrap().get_angle();
+        ComputeCamera::new(&camera_trs, angle)
     }
 
     fn update_move(&mut self, key: SmolStr) {
@@ -105,12 +104,11 @@ impl ApplicationHandler for App {
                 ctx.resize(physical_size);
             }
             WindowEvent::RedrawRequested => {
-                self.soft_render();
+                let compute_camera = self.get_compute_camera();
 
                 let ctx = self.ctx.as_mut().unwrap();
 
-                ctx.update(self.image.as_ref().unwrap().bytes());
-                match ctx.render() {
+                match ctx.render(&compute_camera) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => ctx.resize(ctx.size),

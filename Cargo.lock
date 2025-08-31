@@ -2118,8 +2118,7 @@ version = "0.0.1"
 dependencies = [
  "env_logger",
  "pollster",
- "rayca-soft",
- "wgpu",
+ "rayca-graphics",
  "winit",
 ]
 
@@ -2130,6 +2129,16 @@ dependencies = [
  "bon",
  "num-traits",
  "rayca-math",
+]
+
+[[package]]
+name = "rayca-graphics"
+version = "0.0.1"
+dependencies = [
+ "rayca-soft",
+ "wasm-bindgen-test",
+ "wgpu",
+ "winit",
 ]
 
 [[package]]
