@@ -125,6 +125,16 @@ impl Scene {
         self.root.children.push(node_handle);
         Ok((node_handle, config))
     }
+
+    pub fn get_last_camera_node_mut(&mut self) -> Option<&mut Node> {
+        for model in self.models.iter_mut().rev() {
+            let camera_node = model.get_mut_last_camera();
+            if camera_node.is_some() {
+                return camera_node;
+            }
+        }
+        None
+    }
 }
 
 #[derive(Serialize, Deserialize, Builder)]
