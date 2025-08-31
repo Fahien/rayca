@@ -8,19 +8,13 @@ use crate::*;
 #[derive(Default)]
 pub struct ComputeCamera {
     transform: Mat4,
-    scale_rotation: Mat3,
     angle: f32,
 }
 
 impl ComputeCamera {
     pub fn new(trs: &Trs, angle: f32) -> Self {
-        let transform = Mat4::from(trs);
-        let scale_rotation = Mat3::from(trs);
-        Self {
-            transform,
-            scale_rotation,
-            angle,
-        }
+        let transform = Mat4::from(trs).get_transpose();
+        Self { transform, angle }
     }
 }
 
@@ -31,6 +25,7 @@ pub struct ComputeStep {
 
     compute_storage_buffer: wgpu::Buffer,
     size_buffer: wgpu::Buffer,
+    triangle_buffer: wgpu::Buffer,
     cam_buffer: wgpu::Buffer,
 
     // 1. Storage, size
@@ -71,6 +66,14 @@ impl ComputeStep {
             mapped_at_creation: false,
         });
 
+        let triangle_buffer_size = std::mem::size_of::<Triangle>();
+        let triangle_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("TriangleBuffer"),
+            size: triangle_buffer_size as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let cam_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("CameraBuffer"),
             size: std::mem::size_of::<ComputeCamera>() as u64,
@@ -102,10 +105,16 @@ impl ComputeStep {
             device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("ComputeBindGroup1"),
                 layout: &compute_bind_group_layouts[1],
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: cam_buffer.as_entire_binding(),
-                }],
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: cam_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: triangle_buffer.as_entire_binding(),
+                    },
+                ],
             }),
         ];
 
@@ -114,6 +123,7 @@ impl ComputeStep {
             compute_pipeline,
             compute_storage_buffer,
             size_buffer,
+            triangle_buffer,
             cam_buffer,
 
             compute_bind_groups,
@@ -124,6 +134,7 @@ impl ComputeStep {
         &self,
         queue: &wgpu::Queue,
         camera: &ComputeCamera,
+        triangle: &Triangle,
         encoder: &mut wgpu::CommandEncoder,
         texture: &wgpu::Texture,
     ) {
@@ -132,8 +143,18 @@ impl ComputeStep {
         let size_slice: &[u8; 8] = unsafe { std::mem::transmute(&size) };
         queue.write_buffer(&self.size_buffer, 0, size_slice);
 
+        // Update triangle
+        let triangle_slice = unsafe {
+            std::mem::transmute::<&Triangle, &[u8; std::mem::size_of::<Triangle>()]>(triangle)
+        };
+        queue.write_buffer(&self.triangle_buffer, 0, triangle_slice);
+
         // Update camera
-        let cam_slice = unsafe { std::mem::transmute::<&ComputeCamera, &[u8; 64]>(camera) };
+        let cam_slice = unsafe {
+            std::mem::transmute::<&ComputeCamera, &[u8; std::mem::size_of::<ComputeCamera>()]>(
+                camera,
+            )
+        };
         queue.write_buffer(&self.cam_buffer, 0, cam_slice);
 
         // Record commands for compute pass

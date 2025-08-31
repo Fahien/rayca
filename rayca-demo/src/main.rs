@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use winit::{
     application::ApplicationHandler,
+    dpi::{LogicalSize, Size},
     event::*,
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{Key, SmolStr},
@@ -35,6 +36,8 @@ struct App {
     scene: Scene,
     image: Option<Image>,
     _renderer: SoftRenderer,
+
+    triangle: Triangle,
 }
 
 impl App {
@@ -75,7 +78,12 @@ impl ApplicationHandler for App {
 
         let window = Arc::new(
             event_loop
-                .create_window(Window::default_attributes())
+                .create_window(Window::default_attributes().with_inner_size(Size::Logical(
+                    LogicalSize {
+                        width: 4.0 * 128.0,
+                        height: 4.0 * 128.0,
+                    },
+                )))
                 .expect("Failed to create window"),
         );
 
@@ -92,6 +100,12 @@ impl ApplicationHandler for App {
         self.window = Some(window);
         self.ctx = Some(ctx);
         self.image = Some(image);
+
+        self.triangle = Triangle::new([
+            Point3::new(-1.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(-1.0, 1.0, 0.0),
+        ]);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -108,7 +122,7 @@ impl ApplicationHandler for App {
 
                 let ctx = self.ctx.as_mut().unwrap();
 
-                match ctx.render(&compute_camera) {
+                match ctx.render(&compute_camera, &self.triangle) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => ctx.resize(ctx.size),

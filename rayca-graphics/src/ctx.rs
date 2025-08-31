@@ -114,15 +114,25 @@ impl Ctx {
         }
     }
 
-    pub fn render(&mut self, camera: &ComputeCamera) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(
+        &mut self,
+        camera: &ComputeCamera,
+        triangle: &Triangle,
+    ) -> Result<(), wgpu::SurfaceError> {
         // A command encoder executes one or many pipelines.
         // It is to WebGPU what a command buffer is to Vulkan.
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-        self.compute_step
-            .pass(&self.queue, camera, &mut encoder, &self.render_step.texture);
+        // We can not render directly onto the surface
+        self.compute_step.pass(
+            &self.queue,
+            camera,
+            triangle,
+            &mut encoder,
+            &self.render_step.texture,
+        );
 
         let output = self.surface.get_current_texture()?;
         let view = output
