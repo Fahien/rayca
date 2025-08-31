@@ -37,7 +37,7 @@ struct App {
     image: Option<Image>,
     _renderer: SoftRenderer,
 
-    triangle: Triangle,
+    triangles: [Triangle; 2],
 }
 
 impl App {
@@ -101,11 +101,18 @@ impl ApplicationHandler for App {
         self.ctx = Some(ctx);
         self.image = Some(image);
 
-        self.triangle = Triangle::new([
-            Point3::new(-1.0, 0.0, 0.0),
-            Point3::new(1.0, 0.0, 0.0),
-            Point3::new(-1.0, 1.0, 0.0),
-        ]);
+        self.triangles = [
+            Triangle::new([
+                Point3::new(-1.0, 0.0, 0.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(-1.0, 1.0, 0.0),
+            ]),
+            Triangle::new([
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(1.0, 1.0, 0.0),
+                Point3::new(-1.0, 1.0, 0.0),
+            ]),
+        ];
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -122,7 +129,7 @@ impl ApplicationHandler for App {
 
                 let ctx = self.ctx.as_mut().unwrap();
 
-                match ctx.render(&compute_camera, &self.triangle) {
+                match ctx.render(&compute_camera, &self.triangles) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => ctx.resize(ctx.size),

@@ -117,7 +117,7 @@ impl Ctx {
     pub fn render(
         &mut self,
         camera: &ComputeCamera,
-        triangle: &Triangle,
+        triangles: &[Triangle],
     ) -> Result<(), wgpu::SurfaceError> {
         // A command encoder executes one or many pipelines.
         // It is to WebGPU what a command buffer is to Vulkan.
@@ -129,7 +129,7 @@ impl Ctx {
         self.compute_step.pass(
             &self.queue,
             camera,
-            triangle,
+            triangles,
             &mut encoder,
             &self.render_step.texture,
         );

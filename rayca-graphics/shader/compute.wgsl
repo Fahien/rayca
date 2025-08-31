@@ -49,6 +49,9 @@ var<uniform> size: vec2<u32>;
 var<uniform> camera: Camera;
 @group(1)
 @binding(1)
+var<uniform> tri_count: u32;
+@group(1)
+@binding(2)
 var<storage, read> tri: array<Triangle>;
 
 fn intersect_triangle(ray: ptr<function, Ray>, tri_index: u32, primitive: u32) {
@@ -88,7 +91,9 @@ fn intersect_triangle(ray: ptr<function, Ray>, tri_index: u32, primitive: u32) {
 }
 
 fn trace(ray: ptr<function, Ray>) -> vec4<f32> {
-    intersect_triangle(ray, 0u, 0u);
+    for (var i: u32 = 0u; i < tri_count; i++) {
+        intersect_triangle(ray, i, 0u);
+    }
     if (*ray).hit.depth < 1.0e30 {
         return vec4(1.0, 1.0, 1.0, 1.0);
     } else {
