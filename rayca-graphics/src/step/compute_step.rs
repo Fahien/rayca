@@ -35,6 +35,8 @@ pub struct ComputeStep {
 }
 
 impl ComputeStep {
+    const TRIANGLE_COUNT_MAX: u32 = 1024;
+
     pub fn new(device: &wgpu::Device, size: winit::dpi::PhysicalSize<u32>) -> Self {
         // Compute pipeline
         let compute_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -74,8 +76,8 @@ impl ComputeStep {
             mapped_at_creation: false,
         });
 
-        let triangle_max = 8;
-        let triangle_buffer_size = std::mem::size_of::<Triangle>() * triangle_max;
+        let triangle_buffer_size =
+            std::mem::size_of::<Triangle>() * Self::TRIANGLE_COUNT_MAX as usize;
         let triangle_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("TriangleBuffer"),
             size: triangle_buffer_size as u64,
@@ -144,21 +146,22 @@ impl ComputeStep {
         }
     }
 
-    pub fn pass(
-        &self,
-        queue: &wgpu::Queue,
-        camera: &ComputeCamera,
-        triangles: &[Triangle],
-        encoder: &mut wgpu::CommandEncoder,
-        texture: &wgpu::Texture,
-    ) {
+    pub fn update(&self, queue: &wgpu::Queue, triangles: &[Triangle]) {
         // Update size
         let size = [self.size.width, self.size.height];
         let size_slice: &[u8; 8] = unsafe { std::mem::transmute(&size) };
         queue.write_buffer(&self.size_buffer, 0, size_slice);
 
         // Update triangle count
-        let triangle_count = triangles.len() as u32;
+        let mut triangle_count = triangles.len() as u32;
+        if triangle_count > Self::TRIANGLE_COUNT_MAX {
+            log::warn!(
+                "Limiting numbers of triangles to {} (from {})",
+                Self::TRIANGLE_COUNT_MAX,
+                triangle_count
+            );
+            triangle_count = Self::TRIANGLE_COUNT_MAX;
+        }
         let triangle_count_slice = unsafe {
             std::slice::from_raw_parts::<u8>(
                 &triangle_count as *const u32 as _,
@@ -175,7 +178,15 @@ impl ComputeStep {
             )
         };
         queue.write_buffer(&self.triangle_buffer, 0, triangle_slice);
+    }
 
+    pub fn pass(
+        &self,
+        queue: &wgpu::Queue,
+        camera: &ComputeCamera,
+        encoder: &mut wgpu::CommandEncoder,
+        texture: &wgpu::Texture,
+    ) {
         // Update camera
         let cam_slice = unsafe {
             std::mem::transmute::<&ComputeCamera, &[u8; std::mem::size_of::<ComputeCamera>()]>(

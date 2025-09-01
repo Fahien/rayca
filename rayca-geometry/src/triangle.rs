@@ -45,6 +45,7 @@ impl TriangleBuilder {
 }
 
 #[repr(C, align(16))]
+#[derive(Clone)]
 pub struct Triangle {
     vertices: [Point3; 3],
     centroid: Vec3,

@@ -31,13 +31,13 @@ fn main() {
 
 #[derive(Default)]
 struct App {
+    fps: Fps,
+
     window: Option<Arc<Window>>,
     ctx: Option<Ctx>,
     scene: Scene,
     image: Option<Image>,
     _renderer: SoftRenderer,
-
-    triangles: [Triangle; 2],
 }
 
 impl App {
@@ -68,6 +68,22 @@ impl App {
         camera_node.trs.translate(Vec3::new(x, 0.0, z));
         camera_node.trs.rotate(Quat::axis_angle(Vec3::Y_AXIS, rot));
     }
+
+    fn get_triangles(&self) -> Vec<Triangle> {
+        let scene_draw_info = SceneDrawInfo::new(&self.scene);
+        let scene = BvhScene::from_scene(&scene_draw_info);
+        let tlas = Tlas::builder().scene(scene).build(&scene_draw_info);
+        let mut triangles = vec![];
+        for primitive in tlas.blass[0].model.primitives.iter() {
+            match &primitive.geometry {
+                BvhGeometry::Triangle(triangle) => {
+                    triangles.push(triangle.triangle.clone());
+                }
+                _ => (),
+            }
+        }
+        triangles
+    }
 }
 
 impl ApplicationHandler for App {
@@ -87,37 +103,27 @@ impl ApplicationHandler for App {
                 .expect("Failed to create window"),
         );
 
-        let ctx = pollster::block_on(Ctx::new(window.clone()));
-
         let assets = Assets::new();
+        let model_path = "orientation/OrientationTest.gltf";
         self.scene
-            .push_gltf_from_path(tests::get_model_path().join("box/box.gltf"), &assets)
+            .push_gltf_from_path(tests::get_model_path().join(model_path), &assets)
             .expect("Failed to push glTF model to scene");
         self.scene.push_model(SoftRenderer::create_default_model());
+
+        let mut ctx = pollster::block_on(Ctx::new(window.clone()));
+        ctx.update(&self.get_triangles());
 
         let image = Image::new(ctx.size.width, ctx.size.height, ColorType::RGBA8);
 
         self.window = Some(window);
         self.ctx = Some(ctx);
         self.image = Some(image);
-
-        self.triangles = [
-            Triangle::new([
-                Point3::new(-1.0, 0.0, 0.0),
-                Point3::new(1.0, 0.0, 0.0),
-                Point3::new(-1.0, 1.0, 0.0),
-            ]),
-            Triangle::new([
-                Point3::new(1.0, 0.0, 0.0),
-                Point3::new(1.0, 1.0, 0.0),
-                Point3::new(-1.0, 1.0, 0.0),
-            ]),
-        ];
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
+                log::info!("FPS ~{:.2}", self.fps.get());
                 event_loop.exit();
             }
             WindowEvent::Resized(physical_size) => {
@@ -129,8 +135,8 @@ impl ApplicationHandler for App {
 
                 let ctx = self.ctx.as_mut().unwrap();
 
-                match ctx.render(&compute_camera, &self.triangles) {
-                    Ok(_) => {}
+                match ctx.render(&compute_camera) {
+                    Ok(_) => self.fps.tick(),
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => ctx.resize(ctx.size),
                     // The system is out of memory, we should probably quit
@@ -155,5 +161,26 @@ impl ApplicationHandler for App {
             }
             _ => (),
         }
+    }
+}
+
+#[derive(Default)]
+struct Fps {
+    timer: Timer,
+    frame_count: usize,
+    frame_times: [f32; Self::FRAME_TIMES_COUNT],
+}
+
+impl Fps {
+    const FRAME_TIMES_COUNT: usize = 32;
+
+    pub fn tick(&mut self) {
+        let frame_time = self.timer.get_delta().as_secs_f32();
+        self.frame_times[self.frame_count % Self::FRAME_TIMES_COUNT] = frame_time;
+        self.frame_count += 1;
+    }
+
+    pub fn get(&self) -> f32 {
+        1.0 / (self.frame_times.iter().sum::<f32>() / self.frame_times.len() as f32)
     }
 }

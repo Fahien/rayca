@@ -5,7 +5,7 @@
 use crate::*;
 
 pub struct BvhTriangle {
-    triangle: Triangle,
+    pub triangle: Triangle,
     ext: [VertexExt; 3],
 }
 
