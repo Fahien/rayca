@@ -29,6 +29,8 @@ pub struct ComputeStep {
     triangle_buffer: wgpu::Buffer,
     triangle_ext_buffer: wgpu::Buffer,
     material_buffer: wgpu::Buffer,
+    node_count_buffer: wgpu::Buffer,
+    node_buffer: wgpu::Buffer,
     cam_buffer: wgpu::Buffer,
 
     // 1. Storage, size
@@ -39,6 +41,7 @@ pub struct ComputeStep {
 impl ComputeStep {
     const TRIANGLE_COUNT_MAX: u32 = 1024;
     const MATERIAL_COUNT_MAX: u32 = 256;
+    const NODE_COUNT_MAX: u32 = 256;
 
     pub fn new(device: &wgpu::Device, size: winit::dpi::PhysicalSize<u32>) -> Self {
         // Compute pipeline
@@ -106,6 +109,21 @@ impl ComputeStep {
             mapped_at_creation: false,
         });
 
+        let node_count_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("NodeCountBuffer"),
+            size: std::mem::size_of::<u32>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let node_buffer_size = std::mem::size_of::<BvhNode>() * Self::NODE_COUNT_MAX as usize;
+        let node_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("NodeBuffer"),
+            size: node_buffer_size as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let cam_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("CameraBuffer"),
             size: std::mem::size_of::<ComputeCamera>() as u64,
@@ -158,6 +176,14 @@ impl ComputeStep {
                         binding: 4,
                         resource: material_buffer.as_entire_binding(),
                     },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: node_count_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 6,
+                        resource: node_buffer.as_entire_binding(),
+                    },
                 ],
             }),
         ];
@@ -171,6 +197,8 @@ impl ComputeStep {
             triangle_buffer,
             triangle_ext_buffer,
             material_buffer,
+            node_count_buffer,
+            node_buffer,
             cam_buffer,
 
             compute_bind_groups,
@@ -183,6 +211,7 @@ impl ComputeStep {
         triangles: &[Triangle],
         triangle_exts: &[TriangleExt],
         materials: &[PbrMaterial],
+        bvh_nodes: &[BvhNode],
     ) {
         // Update size
         let size = [self.size.width, self.size.height];
@@ -242,6 +271,34 @@ impl ComputeStep {
             )
         };
         queue.write_buffer(&self.material_buffer, 0, material_slice);
+
+        // Update node count
+        let mut node_count = bvh_nodes.len() as u32;
+        if node_count > Self::NODE_COUNT_MAX {
+            log::warn!(
+                "Limiting numbers of nodes to {} (from {})",
+                Self::NODE_COUNT_MAX,
+                node_count
+            );
+            node_count = Self::NODE_COUNT_MAX;
+        }
+
+        let node_count_slice = unsafe {
+            std::slice::from_raw_parts::<u8>(
+                &node_count as *const u32 as _,
+                std::mem::size_of::<u32>(),
+            )
+        };
+        queue.write_buffer(&self.node_count_buffer, 0, node_count_slice);
+
+        // Update nodes
+        let node_slice = unsafe {
+            std::slice::from_raw_parts::<u8>(
+                bvh_nodes.as_ptr() as _,
+                node_count as usize * std::mem::size_of::<BvhNode>(),
+            )
+        };
+        queue.write_buffer(&self.node_buffer, 0, node_slice);
     }
 
     pub fn pass(

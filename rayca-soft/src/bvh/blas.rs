@@ -4,6 +4,7 @@
 
 use crate::*;
 
+#[repr(C, align(16))]
 #[derive(Clone)]
 /// If the node has primitives it means it is a leaf.
 /// Left node index is `triangles.offset`, when the node has no primitives.

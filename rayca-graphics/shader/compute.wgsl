@@ -2,6 +2,24 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
+struct AABB {
+    a: vec4<f32>,
+    b: vec4<f32>,
+}
+
+struct BvhRange {
+    offset: u32,
+    count: u32,
+}
+
+/// If the node has primitives it means it is a leaf.
+/// Left node index is `triangles.offset`, when the node has no primitives.
+/// Right node index is just `left_node_index + 1`.
+struct BvhNode {
+    bounds: AABB,
+    primitives: BvhRange,
+}
+
 struct Material {
     color: vec4<f32>,
     albedo_texture: u32,
@@ -37,7 +55,8 @@ struct Hit {
 
 struct Ray {
     origin: vec4<f32>,
-    dir: vec4<f32>,
+    dir: vec3<f32>,
+    rdir: vec3<f32>,
     hit: Hit,
 };
 
@@ -70,8 +89,38 @@ var<storage, read> tri_ext: array<TriangleExt>;
 @group(1)
 @binding(4)
 var<storage, read> materials: array<Material>;
+@group(1)
+@binding(5)
+var<uniform> node_count: u32;
+@group(1)
+@binding(6)
+var<storage, read> nodes: array<BvhNode>;
 
-fn intersect_triangle(ray: ptr<function, Ray>, tri_index: u32, primitive: u32) {
+
+fn intersect_aabb( ray: ptr<function, Ray>, bounds: AABB) -> f32 {
+    let ray_ori = (*ray).origin.xyz;
+    let ray_rdir = (*ray).rdir.xyz;
+
+    let tx1 = (bounds.a.x - ray_ori.x) * ray_rdir.x;
+    let tx2 = (bounds.b.x - ray_ori.x) * ray_rdir.x;
+    var tmin = min(tx1, tx2);
+    var tmax = max(tx1, tx2);
+    let ty1 = (bounds.a.y - ray_ori.y) * ray_rdir.y;
+    let ty2 = (bounds.b.y - ray_ori.y) * ray_rdir.y;
+    tmin = max(tmin, min(ty1, ty2));
+    tmax = min(tmax, max(ty1, ty2));
+    let tz1 = (bounds.a.z - ray_ori.z) * ray_rdir.z;
+    let tz2 = (bounds.b.z - ray_ori.z) * ray_rdir.z;
+    tmin = max(tmin, min(tz1, tz2));
+    tmax = min(tmax, max(tz1, tz2));
+    if tmax >= tmin && tmin < (*ray).hit.depth && tmax > 0.0 {
+        return tmin;
+    } else {
+        return 1.0e30;
+    }
+}
+
+fn intersect_triangle(ray: ptr<function, Ray>, tri_index: u32) {
     let ray_ori = (*ray).origin.xyz;
     let ray_dir = (*ray).dir.xyz;
 
@@ -103,7 +152,66 @@ fn intersect_triangle(ray: ptr<function, Ray>, tri_index: u32, primitive: u32) {
         (*ray).hit.depth = t;
         (*ray).hit.uv.x = u;
         (*ray).hit.uv.y = v;
-        (*ray).hit.primitive = primitive;
+        (*ray).hit.primitive = tri_index;
+    }
+}
+
+fn intersect_bvh(ray: ptr<function, Ray>) {
+    var node_index: u32 = 0u;
+    var stack: array<u32, 32u>;
+    var stack_ptr: u32 = 0u;
+    while true {
+        if node_index >= node_count {
+            return;
+        }
+
+        let node = &nodes[node_index];
+        if (*node).primitives.count > 0u { // is_leaf()
+            for (var i: u32 = 0u; i < (*node).primitives.count; i++) {
+                let tri_index = i + (*node).primitives.offset;
+                intersect_triangle(ray, tri_index);
+            }
+
+            if stack_ptr == 0u {
+                break;
+            } else {
+                stack_ptr--;
+                node_index = stack[stack_ptr];
+            }
+
+            continue;
+        }
+
+        var child1_index: u32 = (*node).primitives.offset;
+        let child1 = &nodes[child1_index];
+
+        var child2_index: u32 = child1_index + 1u;
+        let child2 = &nodes[child2_index];
+
+        var dist1: f32 = intersect_aabb(ray, (*child1).bounds);
+        var dist2: f32 = intersect_aabb(ray, (*child2).bounds);
+        if dist1 > dist2 {
+            var d: f32 = dist1;
+            dist1 = dist2;
+            dist2 = d;
+            var c_index: u32 = child1_index;
+            child1_index = child2_index;
+            child2_index = c_index;
+        }
+        if dist1 == 1.0e30 {
+            if stack_ptr == 0u {
+                break;
+            } else {
+                stack_ptr--;
+                node_index = stack[stack_ptr];
+            }
+        } else {
+            node_index = child1_index;
+            if dist2 != 1.0e30 {
+                stack[stack_ptr] = child2_index;
+                stack_ptr++;
+            }
+        }
     }
 }
 
@@ -114,11 +222,10 @@ fn get_color(primitive_index: u32) -> vec4<f32> {
 }
 
 fn trace(ray: ptr<function, Ray>) -> vec4<f32> {
-    for (var i: u32 = 0u; i < tri_count; i++) {
-        intersect_triangle(ray, i, i);
-    }
-    if (*ray).hit.depth < 1.0e30 {
-        return get_color((*ray).hit.primitive);
+    intersect_bvh(ray);
+    let d = (*ray).hit.depth;
+    if d < 1.0e30 {
+        return get_color((*ray).hit.primitive) / (d / 8.0);
     } else {
         return vec4(0.0, 0.0, 0.0, 1.0);
     }
@@ -152,9 +259,10 @@ fn create_ray(global_id: vec3<u32>) -> Ray {
     var xx = (2.0 * ((f32(x) + offset) * inv_width) - 1.0) * camera.angle * aspect_ratio;
     var yy = (1.0 - 2.0 * ((f32(y) + offset) * inv_height)) * camera.angle;
     // Vectors have w = 0, which effectively ignores translation
-    var ray_dir = camera.transform * vec4(xx, yy, -1.0, 0.0);
+    var ray_dir = (camera.transform * vec4(xx, yy, -1.0, 0.0)).xyz;
+    let ray_rdir = vec3(1.0) / ray_dir;
 
-    return Ray(ray_origin, ray_dir, Hit(1.0e30, vec2(0.0, 0.0), 0u));
+    return Ray(ray_origin, ray_dir, ray_rdir, Hit(1.0e30, vec2(0.0, 0.0), 0u));
 }
 
 @compute

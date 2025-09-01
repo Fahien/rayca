@@ -69,13 +69,14 @@ impl App {
         camera_node.trs.rotate(Quat::axis_angle(Vec3::Y_AXIS, rot));
     }
 
-    fn get_triangles(&self) -> (Vec<Triangle>, Vec<TriangleExt>) {
+    fn get_triangles(&self) -> (Vec<Triangle>, Vec<TriangleExt>, Vec<BvhNode>) {
         let scene_draw_info = SceneDrawInfo::new(&self.scene);
         let scene = BvhScene::from_scene(&scene_draw_info);
         let tlas = Tlas::builder().scene(scene).build(&scene_draw_info);
         let mut triangles = vec![];
         let mut triangle_exts = vec![];
-        for primitive in tlas.blass[0].model.primitives.iter() {
+        let blas = &tlas.blass[0];
+        for primitive in blas.model.primitives.iter() {
             match &primitive.geometry {
                 BvhGeometry::Triangle(triangle) => {
                     triangles.push(triangle.triangle.clone());
@@ -84,7 +85,7 @@ impl App {
                 _ => (),
             }
         }
-        (triangles, triangle_exts)
+        (triangles, triangle_exts, blas.nodes.to_vec())
     }
 }
 
@@ -113,11 +114,12 @@ impl ApplicationHandler for App {
         self.scene.push_model(SoftRenderer::create_default_model());
 
         let mut ctx = pollster::block_on(Ctx::new(window.clone()));
-        let (triangles, exts) = self.get_triangles();
+        let (triangles, exts, bvh_nodes) = self.get_triangles();
         ctx.update(
             &triangles,
             &exts,
             &self.scene.get_model(0.into()).unwrap().pbr_materials,
+            &bvh_nodes,
         );
 
         let image = Image::new(ctx.size.width, ctx.size.height, ColorType::RGBA8);

@@ -119,9 +119,10 @@ impl Ctx {
         triangles: &[Triangle],
         triangle_exts: &[TriangleExt],
         materials: &[PbrMaterial],
+        bvh_nodes: &[BvhNode],
     ) {
         self.compute_step
-            .update(&self.queue, triangles, triangle_exts, materials);
+            .update(&self.queue, triangles, triangle_exts, materials, bvh_nodes);
     }
 
     pub fn render(&mut self, camera: &ComputeCamera) -> Result<(), wgpu::SurfaceError> {

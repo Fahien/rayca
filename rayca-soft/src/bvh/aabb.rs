@@ -6,6 +6,7 @@ use std::simd::{f32x4, num::SimdFloat};
 
 use crate::*;
 
+#[repr(C)]
 #[derive(Default, Clone)]
 pub struct AABB {
     pub a: Point3,
