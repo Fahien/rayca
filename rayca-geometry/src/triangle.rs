@@ -548,6 +548,20 @@ impl TriangleMesh {
     }
 }
 
+#[repr(C, align(16))]
+#[derive(Clone)]
+pub struct TriangleExt {
+    pub vertices: [VertexExt; 3],
+    /// TODO: temporary material index for compute testing
+    material: u32,
+}
+
+impl TriangleExt {
+    pub fn new(vertices: [VertexExt; 3], material: u32) -> Self {
+        Self { vertices, material }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

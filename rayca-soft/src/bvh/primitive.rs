@@ -226,7 +226,8 @@ impl BvhPrimitive {
             c.ext.bitangent = &tangent_matrix * c.ext.bitangent;
 
             let triangle = Triangle::new([a.pos, b.pos, c.pos]);
-            let triangle = BvhTriangle::new(triangle, [a.ext, b.ext, c.ext]);
+            let ext = TriangleExt::new([a.ext, b.ext, c.ext], material.id);
+            let triangle = BvhTriangle::new(triangle, ext);
             let geometry = BvhGeometry::Triangle(triangle);
             let primitive = BvhPrimitive::new(geometry, node, material);
             ret.push(primitive)
@@ -329,8 +330,8 @@ impl BvhPrimitive {
         let triangle1 = Triangle::new([a.pos, d.pos, b.pos]);
         let triangle2 = Triangle::new([a.pos, c.pos, d.pos]);
 
-        let ext1 = [a.ext, d.ext, b.ext];
-        let ext2 = [a.ext, c.ext, d.ext];
+        let ext1 = TriangleExt::new([a.ext, d.ext, b.ext], 0);
+        let ext2 = TriangleExt::new([a.ext, c.ext, d.ext], 0);
 
         let t1 = BvhTriangle::new(triangle1, ext1);
         let t2 = BvhTriangle::new(triangle2, ext2);

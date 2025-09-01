@@ -4,9 +4,9 @@
 
 use crate::*;
 
+#[repr(C, align(16))]
 #[derive(Default)]
 pub struct PbrMaterialBuilder {
-    shader: u32,
     color: Color,
     albedo: Handle<Texture>,
     normal: Handle<Texture>,
@@ -16,11 +16,6 @@ pub struct PbrMaterialBuilder {
 }
 
 impl PbrMaterialBuilder {
-    pub fn shader(mut self, shader: u32) -> Self {
-        self.shader = shader;
-        self
-    }
-
     pub fn color(mut self, color: Color) -> Self {
         self.color = color;
         self
@@ -53,7 +48,6 @@ impl PbrMaterialBuilder {
 
     pub fn build(self) -> PbrMaterial {
         PbrMaterial {
-            shader: self.shader,
             color: self.color,
             albedo: self.albedo,
             normal: self.normal,
@@ -64,9 +58,9 @@ impl PbrMaterialBuilder {
     }
 }
 
+#[repr(C, align(16))]
 #[derive(Clone, Default, Debug)]
 pub struct PbrMaterial {
-    pub shader: u32,
     pub color: Color,
     pub albedo: Handle<Texture>,
     pub normal: Handle<Texture>,
@@ -77,7 +71,6 @@ pub struct PbrMaterial {
 
 impl PbrMaterial {
     pub const WHITE: Self = Self {
-        shader: 0,
         color: Color::WHITE,
         albedo: Handle::NONE,
         normal: Handle::NONE,

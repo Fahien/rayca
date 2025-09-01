@@ -27,6 +27,8 @@ pub struct ComputeStep {
     size_buffer: wgpu::Buffer,
     triangle_count_buffer: wgpu::Buffer,
     triangle_buffer: wgpu::Buffer,
+    triangle_ext_buffer: wgpu::Buffer,
+    material_buffer: wgpu::Buffer,
     cam_buffer: wgpu::Buffer,
 
     // 1. Storage, size
@@ -36,6 +38,7 @@ pub struct ComputeStep {
 
 impl ComputeStep {
     const TRIANGLE_COUNT_MAX: u32 = 1024;
+    const MATERIAL_COUNT_MAX: u32 = 256;
 
     pub fn new(device: &wgpu::Device, size: winit::dpi::PhysicalSize<u32>) -> Self {
         // Compute pipeline
@@ -85,6 +88,24 @@ impl ComputeStep {
             mapped_at_creation: false,
         });
 
+        let triangle_ext_buffer_size =
+            std::mem::size_of::<TriangleExt>() * Self::TRIANGLE_COUNT_MAX as usize;
+        let triangle_ext_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("TriangleExtBuffer"),
+            size: triangle_ext_buffer_size as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let material_buffer_size =
+            std::mem::size_of::<PbrMaterial>() * Self::MATERIAL_COUNT_MAX as usize;
+        let material_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("MaterialBuffer"),
+            size: material_buffer_size as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         let cam_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("CameraBuffer"),
             size: std::mem::size_of::<ComputeCamera>() as u64,
@@ -129,6 +150,14 @@ impl ComputeStep {
                         binding: 2,
                         resource: triangle_buffer.as_entire_binding(),
                     },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: triangle_ext_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: material_buffer.as_entire_binding(),
+                    },
                 ],
             }),
         ];
@@ -140,13 +169,21 @@ impl ComputeStep {
             size_buffer,
             triangle_count_buffer,
             triangle_buffer,
+            triangle_ext_buffer,
+            material_buffer,
             cam_buffer,
 
             compute_bind_groups,
         }
     }
 
-    pub fn update(&self, queue: &wgpu::Queue, triangles: &[Triangle]) {
+    pub fn update(
+        &self,
+        queue: &wgpu::Queue,
+        triangles: &[Triangle],
+        triangle_exts: &[TriangleExt],
+        materials: &[PbrMaterial],
+    ) {
         // Update size
         let size = [self.size.width, self.size.height];
         let size_slice: &[u8; 8] = unsafe { std::mem::transmute(&size) };
@@ -178,6 +215,33 @@ impl ComputeStep {
             )
         };
         queue.write_buffer(&self.triangle_buffer, 0, triangle_slice);
+
+        // Update triangle_ext
+        let triangle_exts_slice = unsafe {
+            std::slice::from_raw_parts::<u8>(
+                triangle_exts.as_ptr() as _,
+                triangle_count as usize * std::mem::size_of::<TriangleExt>(),
+            )
+        };
+        queue.write_buffer(&self.triangle_ext_buffer, 0, triangle_exts_slice);
+
+        // Update material
+        let mut material_count = materials.len() as u32;
+        if material_count > Self::MATERIAL_COUNT_MAX {
+            log::warn!(
+                "Limiting numbers of materials to {} (from {})",
+                Self::MATERIAL_COUNT_MAX,
+                material_count
+            );
+            material_count = Self::MATERIAL_COUNT_MAX;
+        }
+        let material_slice = unsafe {
+            std::slice::from_raw_parts::<u8>(
+                materials.as_ptr() as _,
+                material_count as usize * std::mem::size_of::<PbrMaterial>(),
+            )
+        };
+        queue.write_buffer(&self.material_buffer, 0, material_slice);
     }
 
     pub fn pass(

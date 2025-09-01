@@ -114,8 +114,14 @@ impl Ctx {
         }
     }
 
-    pub fn update(&mut self, triangles: &[Triangle]) {
-        self.compute_step.update(&self.queue, triangles);
+    pub fn update(
+        &mut self,
+        triangles: &[Triangle],
+        triangle_exts: &[TriangleExt],
+        materials: &[PbrMaterial],
+    ) {
+        self.compute_step
+            .update(&self.queue, triangles, triangle_exts, materials);
     }
 
     pub fn render(&mut self, camera: &ComputeCamera) -> Result<(), wgpu::SurfaceError> {

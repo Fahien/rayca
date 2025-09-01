@@ -2,20 +2,31 @@
 // Author: Antonio Caggiano <info@antoniocaggiano.eu>
 // SPDX-License-Identifier: MIT
 
-struct Vertex {
-    pos: vec4<f32>,
-    
-    uv: vec2<f32>,
+struct Material {
     color: vec4<f32>,
+    albedo_texture: u32,
+    normal_texture: u32,
+    metallic_factor: f32,
+    roughness_factor: f32,
+    metallic_roughness_texture: u32,
+}
 
+struct VertexExt {
+    color: vec4<f32>,
     normal: vec4<f32>,
     tangent: vec4<f32>,
     bitangent: vec4<f32>,
+    uv: vec2<f32>,
 }
 
 struct Triangle {
     pos: array<vec3<f32>,3>,
     centroid: vec4<f32>,
+}
+
+struct TriangleExt {
+    vertices: array<VertexExt,3>,
+    material: u32,
 }
 
 struct Hit {
@@ -53,11 +64,17 @@ var<uniform> tri_count: u32;
 @group(1)
 @binding(2)
 var<storage, read> tri: array<Triangle>;
+@group(1)
+@binding(3)
+var<storage, read> tri_ext: array<TriangleExt>;
+@group(1)
+@binding(4)
+var<storage, read> materials: array<Material>;
 
 fn intersect_triangle(ray: ptr<function, Ray>, tri_index: u32, primitive: u32) {
     let ray_ori = (*ray).origin.xyz;
     let ray_dir = (*ray).dir.xyz;
-    
+
     let v0 = tri[tri_index].pos[0].xyz;
     let v1 = tri[tri_index].pos[1].xyz;
     let v2 = tri[tri_index].pos[2].xyz;
@@ -90,12 +107,18 @@ fn intersect_triangle(ray: ptr<function, Ray>, tri_index: u32, primitive: u32) {
     }
 }
 
+fn get_color(primitive_index: u32) -> vec4<f32> {
+    let material_index = tri_ext[primitive_index].material;
+    let material = materials[material_index];
+    return material.color;
+}
+
 fn trace(ray: ptr<function, Ray>) -> vec4<f32> {
     for (var i: u32 = 0u; i < tri_count; i++) {
-        intersect_triangle(ray, i, 0u);
+        intersect_triangle(ray, i, i);
     }
     if (*ray).hit.depth < 1.0e30 {
-        return vec4(1.0, 1.0, 1.0, 1.0);
+        return get_color((*ray).hit.primitive);
     } else {
         return vec4(0.0, 0.0, 0.0, 1.0);
     }
@@ -126,9 +149,7 @@ fn create_ray(global_id: vec3<u32>) -> Ray {
     var inv_height = 1.0 / height;
     var aspect_ratio = width / height;
 
-    var xx = (2.0 * ((f32(x) + offset) * inv_width) - 1.0)
-                        * camera.angle
-                        * aspect_ratio;
+    var xx = (2.0 * ((f32(x) + offset) * inv_width) - 1.0) * camera.angle * aspect_ratio;
     var yy = (1.0 - 2.0 * ((f32(y) + offset) * inv_height)) * camera.angle;
     // Vectors have w = 0, which effectively ignores translation
     var ray_dir = camera.transform * vec4(xx, yy, -1.0, 0.0);
