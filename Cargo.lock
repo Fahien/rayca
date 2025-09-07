@@ -2135,6 +2135,9 @@ dependencies = [
 name = "rayca-graphics"
 version = "0.0.1"
 dependencies = [
+ "env_logger",
+ "log",
+ "naga",
  "rayca-soft",
  "wasm-bindgen-test",
  "wgpu",

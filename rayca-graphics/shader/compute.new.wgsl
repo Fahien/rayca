@@ -55,8 +55,8 @@ struct Hit {
 
 struct Ray {
     origin: vec4<f32>,
-    dir: vec4<f32>,
-    rdir: vec4<f32>,
+    dir: vec3<f32>,
+    rdir: vec3<f32>,
     hit: Hit,
 };
 
@@ -96,9 +96,6 @@ var<uniform> node_count: u32;
 @binding(6)
 var<storage, read> nodes: array<BvhNode>;
 
-const DEPTH_MAX = 1.0e30;
-const RAY_BIAS = 1.0e-4;
-
 fn intersect_aabb(ray: ptr<function, Ray>, bounds: AABB) -> f32 {
     let ray_ori = (*ray).origin.xyz;
     let ray_rdir = (*ray).rdir.xyz;
@@ -118,76 +115,44 @@ fn intersect_aabb(ray: ptr<function, Ray>, bounds: AABB) -> f32 {
     if tmax >= tmin && tmin < (*ray).hit.depth && tmax > 0.0 {
         return tmin;
     } else {
-        return DEPTH_MAX;
+        return 1.0e30;
     }
 }
 
 fn intersect_triangle(ray: ptr<function, Ray>, tri_index: u32) {
-    if tri_index >= tri_count {
-        return;
-    }
-
     let ray_ori = (*ray).origin.xyz;
     let ray_dir = (*ray).dir.xyz;
-    
+
     let v0 = tri[tri_index].pos[0].xyz;
     let v1 = tri[tri_index].pos[1].xyz;
     let v2 = tri[tri_index].pos[2].xyz;
 
-    let v0_to_v1 = v1 - v0;
-    let v0_to_v2 = v2 - v0;
+    var edge1 = v1 - v0;
+    var edge2 = v2 - v0;
 
-    let n = cross(v0_to_v1, v0_to_v2);
-    if dot(ray_dir, n) > 0.0 {
+    var h = cross(ray_dir, edge2);
+    var a = dot(edge1, h);
+    if a > -0.00001 && a < 0.00001 {
         return;
     }
-
-    let n_dot_ray_dir = dot(n, ray_dir);
-    if abs(n_dot_ray_dir) < RAY_BIAS {
+    var f = 1.0 / a;
+    var s = ray_ori - v0;
+    var u = f * dot(s, h);
+    if u < 0.0 || u > 1.0 {
         return;
     }
-
-    let d = -dot(n, v0);
-    let t = -(dot(n, ray_ori) + d) / n_dot_ray_dir;
-    if t < 0.0 {
+    var q = cross(s, edge1);
+    var v = f * dot(ray_dir, q);
+    if v < 0.0 || (u + v > 1.0) {
         return;
     }
-    
-    let p = ray_ori + ray_dir * t;
-
-    let vp_0 = p - v0;
-    let c_0 = cross(v0_to_v1, vp_0);
-    if dot(n, c_0) < 0.0 {
-        return;
-    }
-
-    let v1_to_v2 = v2 - v1;
-    let vp_1 = p - v1;
-    let c_1 = cross(v1_to_v2, vp_1);
-    let u = dot(n, c_1);
-    if u < 0.0 {
-        return;
-    }
-
-    let v2_to_v0 = v0 - v2;
-    let vp_2 = p - v2;
-    let c_2 = cross(v2_to_v0, vp_2);
-    let v = dot(n, c_2);
-    if v < 0.0 {
-        return;
-    }
-
-    if t < (*ray).hit.depth {
-        let denom = dot(n, n);
+    var t = f * dot(edge2, q);
+    if t > 0.0001 && t < (*ray).hit.depth {
         (*ray).hit.depth = t;
-        (*ray).hit.uv.x = u / denom;
-        (*ray).hit.uv.y = v / denom;
+        (*ray).hit.uv.x = u;
+        (*ray).hit.uv.y = v;
         (*ray).hit.primitive = tri_index;
     }
-}
-
-fn is_leaf(node_index: u32) -> bool {
-    return nodes[node_index].primitives.count > 0u;
 }
 
 fn intersect_bvh(ray: ptr<function, Ray>) {
@@ -200,7 +165,7 @@ fn intersect_bvh(ray: ptr<function, Ray>) {
         }
 
         let node = &nodes[node_index];
-        if is_leaf(node_index) { // is_leaf()
+        if (*node).primitives.count > 0u { // is_leaf()
             for (var i: u32 = 0u; i < (*node).primitives.count; i++) {
                 let tri_index = i + (*node).primitives.offset;
                 intersect_triangle(ray, tri_index);
@@ -232,7 +197,7 @@ fn intersect_bvh(ray: ptr<function, Ray>) {
             child1_index = child2_index;
             child2_index = c_index;
         }
-        if dist1 == DEPTH_MAX {
+        if dist1 == 1.0e30 {
             if stack_ptr == 0u {
                 break;
             } else {
@@ -241,14 +206,13 @@ fn intersect_bvh(ray: ptr<function, Ray>) {
             }
         } else {
             node_index = child1_index;
-            if dist2 != DEPTH_MAX {
+            if dist2 != 1.0e30 {
                 stack[stack_ptr] = child2_index;
                 stack_ptr++;
             }
         }
     }
 }
-
 
 fn get_color(primitive_index: u32) -> vec4<f32> {
     let material_index = tri_ext[primitive_index].material;
@@ -258,8 +222,9 @@ fn get_color(primitive_index: u32) -> vec4<f32> {
 
 fn trace(ray: ptr<function, Ray>) -> vec4<f32> {
     intersect_bvh(ray);
-    if (*ray).hit.depth < DEPTH_MAX {
-        return get_color((*ray).hit.primitive);
+    let d = (*ray).hit.depth;
+    if d < 1.0e30 {
+        return get_color((*ray).hit.primitive) / (d / 8.0);
     } else {
         return vec4(0.0, 0.0, 0.0, 1.0);
     }
@@ -273,18 +238,7 @@ fn rgba32f_to_rgba8(c: vec4<f32>) -> u32 {
     return (r << 24u) + (g << 16u) + (b << 8u) + a;
 }
 
-
-fn create_ray(origin: vec4<f32>, dir: vec4<f32>) -> Ray {
-    let rdir = vec4(vec3(1.0) / dir.xyz, 0.0);
-    return Ray(
-        origin,
-        dir,
-        rdir,
-        Hit(DEPTH_MAX, vec2(0.0, 0.0), 0u)
-    );
-}
-
-fn create_primary_ray(global_id: vec3<u32>) -> Ray {
+fn create_ray(global_id: vec3<u32>) -> Ray {
     var x: u32 = global_id.x;
     var y: u32 = global_id.y;
 
@@ -304,20 +258,17 @@ fn create_primary_ray(global_id: vec3<u32>) -> Ray {
     var xx = (2.0 * ((f32(x) + offset) * inv_width) - 1.0) * camera.angle * aspect_ratio;
     var yy = (1.0 - 2.0 * ((f32(y) + offset) * inv_height)) * camera.angle;
     // Vectors have w = 0, which effectively ignores translation
-    var ray_dir = normalize(camera.transform * vec4(xx, yy, -1.0, 0.0));
+    var ray_dir = (camera.transform * vec4(xx, yy, -1.0, 0.0)).xyz;
+    let ray_rdir = vec3(1.0) / ray_dir;
 
-    return create_ray(ray_origin, ray_dir);
+    return Ray(ray_origin, ray_dir, ray_rdir, Hit(1.0e30, vec2(0.0, 0.0), 0u));
 }
 
 @compute
 @workgroup_size(1)
 fn render(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    var ray = create_primary_ray(global_id);
+    var ray = create_ray(global_id);
     var color = trace(&ray);
-
-    for (var i = 0u; i < node_count; i++) {
-        color.x += nodes[i].bounds.a.x / f32(node_count);
-    }
 
     storage_b[global_id.x + global_id.y * size.y] = rgba32f_to_rgba8(color);
 }

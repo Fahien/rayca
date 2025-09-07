@@ -6,6 +6,7 @@ use std::simd::{f32x4, num::SimdFloat};
 
 use crate::*;
 
+#[repr(C, align(16))]
 #[derive(Default, Clone)]
 pub struct AABB {
     pub a: Point3,
@@ -22,28 +23,6 @@ impl AABB {
         e.simd[0] * e.simd[1] + e.simd[1] * e.simd[2] + e.simd[2] * e.simd[0]
     }
 
-    fn grow(&mut self, p: Point3) {
-        self.a = self.a.min(p);
-        self.b = self.b.max(p);
-    }
-
-    fn grow_triangle(&mut self, triangle: &BvhTriangle, trs: &Trs) {
-        self.grow(triangle.get_vertex(0, trs));
-        self.grow(triangle.get_vertex(1, trs));
-        self.grow(triangle.get_vertex(2, trs));
-    }
-
-    fn grow_sphere(&mut self, sphere: &Sphere, trs: &Trs) {
-        let radius = sphere.get_radius(trs);
-        let center = sphere.get_center(trs);
-        self.grow(center + Vec3::new(-radius, 0.0, 0.0));
-        self.grow(center + Vec3::new(radius, 0.0, 0.0));
-        self.grow(center + Vec3::new(0.0, -radius, 0.0));
-        self.grow(center + Vec3::new(0.0, radius, 0.0));
-        self.grow(center + Vec3::new(0.0, 0.0, -radius));
-        self.grow(center + Vec3::new(0.0, 0.0, radius));
-    }
-
     pub fn grow_range(
         &mut self,
         blas: &Blas,
@@ -52,22 +31,14 @@ impl AABB {
     ) {
         // Visits each primitive to find the lowest and highest x, y, and z
         for i in range.to_range() {
-            let prim = &blas.model.primitives[i];
-            self.a = self.a.min(prim.min(scene));
-            self.b = self.b.max(prim.max(scene));
+            let primitive = &blas.model.primitives[i];
+            self.grow_primitive(scene, primitive);
         }
     }
 
     pub fn grow_primitive(&mut self, scene: &SceneDrawInfo, primitive: &BvhPrimitive) {
-        let trs = scene.get_world_trs(primitive.node);
-        match &primitive.geometry {
-            BvhGeometry::Triangle(triangle) => {
-                self.grow_triangle(triangle, &trs.trs);
-            }
-            BvhGeometry::Sphere(sphere) => {
-                self.grow_sphere(sphere, &trs.trs);
-            }
-        }
+        self.a = self.a.min(primitive.min(scene));
+        self.b = self.b.max(primitive.max(scene));
     }
 
     /// Slab test. We do not care where we hit the box; only info we need is a yes/no answer.

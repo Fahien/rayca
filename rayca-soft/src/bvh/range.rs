@@ -4,6 +4,7 @@
 
 use std::{marker::PhantomData, ops::Range};
 
+#[repr(C)]
 pub struct BvhRange<T> {
     pub offset: u32,
     pub count: u32,

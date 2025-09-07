@@ -258,6 +258,13 @@ impl Mul<Vec3> for Point3 {
     }
 }
 
+impl MulAssign<f32> for Point3 {
+    fn mul_assign(&mut self, rhs: f32) {
+        self.simd
+            .mul_assign(f32x4::from_array([rhs, rhs, rhs, 1.0]));
+    }
+}
+
 impl Index<Axis3> for Point3 {
     type Output = f32;
 

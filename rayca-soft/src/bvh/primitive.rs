@@ -191,11 +191,11 @@ impl BvhPrimitive {
         }
     }
 
-    fn from_triangle_mesh_impl<'m, Index: NumCast>(
+    fn from_triangle_mesh_impl<Index: NumCast>(
         triangles: &TriangleMesh,
         node: NodeDrawInfo,
         material: Handle<Material>,
-        scene: &'m SceneDrawInfo,
+        scene: &SceneDrawInfo,
         indices: &[Index],
     ) -> Vec<BvhPrimitive> {
         let mut ret = vec![];
@@ -208,19 +208,16 @@ impl BvhPrimitive {
 
         for i in 0..(indices.len() / 3) {
             let mut a = triangles.vertices[indices[i * 3].to_usize().unwrap()].clone();
-            a.pos = a.pos;
             a.ext.normal = &normal_matrix * a.ext.normal;
             a.ext.tangent = &tangent_matrix * a.ext.tangent;
             a.ext.bitangent = &tangent_matrix * a.ext.bitangent;
 
             let mut b = triangles.vertices[indices[i * 3 + 1].to_usize().unwrap()].clone();
-            b.pos = b.pos;
             b.ext.normal = &normal_matrix * b.ext.normal;
             b.ext.tangent = &tangent_matrix * b.ext.tangent;
             b.ext.bitangent = &tangent_matrix * b.ext.bitangent;
 
             let mut c = triangles.vertices[indices[i * 3 + 2].to_usize().unwrap()].clone();
-            c.pos = c.pos;
             c.ext.normal = &normal_matrix * c.ext.normal;
             c.ext.tangent = &tangent_matrix * c.ext.tangent;
             c.ext.bitangent = &tangent_matrix * c.ext.bitangent;

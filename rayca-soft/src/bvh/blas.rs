@@ -4,7 +4,8 @@
 
 use crate::*;
 
-#[derive(Clone)]
+#[repr(C, align(16))]
+#[derive(Clone, Default)]
 /// If the node has primitives it means it is a leaf.
 /// Left node index is `triangles.offset`, when the node has no primitives.
 /// Right node index is just `left_node_index + 1`.
@@ -12,15 +13,6 @@ pub struct BvhNode {
     pub bounds: AABB,
 
     primitives: BvhRange<BvhPrimitive>,
-}
-
-impl Default for BvhNode {
-    fn default() -> Self {
-        Self {
-            bounds: AABB::default(),
-            primitives: BvhRange::default(),
-        }
-    }
 }
 
 impl BvhNode {

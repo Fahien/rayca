@@ -13,6 +13,11 @@ crate-type = ["cdylib", "rlib"]
 [dev-dependencies]
 wasm-bindgen-test = "0.3.33"
 
+[build-dependencies]
+naga = { version = "26.0.*", features = [ "wgsl-in" ] }
+log = { workspace = true }
+env_logger = { workspace = true }
+
 [dependencies]
 rayca-soft = { path = "../rayca-soft" }
 wgpu = "26.0.1"
