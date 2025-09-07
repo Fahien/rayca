@@ -2129,6 +2129,7 @@ dependencies = [
  "bon",
  "num-traits",
  "rayca-math",
+ "rayca-util",
 ]
 
 [[package]]

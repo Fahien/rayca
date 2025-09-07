@@ -98,6 +98,7 @@ var<storage, read> nodes: array<BvhNode>;
 
 const DEPTH_MAX = 1.0e30;
 const RAY_BIAS = 1.0e-4;
+const NONE = 4294967295u;
 
 fn intersect_aabb(ray: ptr<function, Ray>, bounds: AABB) -> f32 {
     let ray_ori = (*ray).origin.xyz;
@@ -200,7 +201,7 @@ fn intersect_bvh(ray: ptr<function, Ray>) {
         }
 
         let node = &nodes[node_index];
-        if is_leaf(node_index) { // is_leaf()
+        if is_leaf(node_index) {
             for (var i: u32 = 0u; i < (*node).primitives.count; i++) {
                 let tri_index = i + (*node).primitives.offset;
                 intersect_triangle(ray, tri_index);
@@ -249,7 +250,6 @@ fn intersect_bvh(ray: ptr<function, Ray>) {
     }
 }
 
-
 fn get_color(primitive_index: u32) -> vec4<f32> {
     let material_index = tri_ext[primitive_index].material;
     let material = materials[material_index];
@@ -258,7 +258,7 @@ fn get_color(primitive_index: u32) -> vec4<f32> {
 
 fn trace(ray: ptr<function, Ray>) -> vec4<f32> {
     intersect_bvh(ray);
-    if (*ray).hit.depth < DEPTH_MAX {
+    if (*ray).hit.primitive != NONE {
         return get_color((*ray).hit.primitive);
     } else {
         return vec4(0.0, 0.0, 0.0, 1.0);
@@ -280,7 +280,7 @@ fn create_ray(origin: vec4<f32>, dir: vec4<f32>) -> Ray {
         origin,
         dir,
         rdir,
-        Hit(DEPTH_MAX, vec2(0.0, 0.0), 0u)
+        Hit(DEPTH_MAX, vec2(0.0, 0.0), NONE)
     );
 }
 
@@ -314,10 +314,6 @@ fn create_primary_ray(global_id: vec3<u32>) -> Ray {
 fn render(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var ray = create_primary_ray(global_id);
     var color = trace(&ray);
-
-    for (var i = 0u; i < node_count; i++) {
-        color.x += nodes[i].bounds.a.x / f32(node_count);
-    }
 
     storage_b[global_id.x + global_id.y * size.y] = rgba32f_to_rgba8(color);
 }

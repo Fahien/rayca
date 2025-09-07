@@ -163,14 +163,14 @@ impl Triangle {
     }
 
     pub fn min(&self, trs: &Trs) -> Point3 {
-        Point3::new(f32::MAX, f32::MAX, f32::MAX)
+        Point3::MAX
             .min(self.get_vertex(0, trs))
             .min(self.get_vertex(1, trs))
             .min(self.get_vertex(2, trs))
     }
 
     pub fn max(&self, trs: &Trs) -> Point3 {
-        Point3::new(f32::MIN, f32::MIN, f32::MIN)
+        Point3::MIN
             .max(self.get_vertex(0, trs))
             .max(self.get_vertex(1, trs))
             .max(self.get_vertex(2, trs))
@@ -210,15 +210,51 @@ impl ComponentType {
     }
 }
 
-#[derive(Builder, Debug, Clone, Default)]
-
-pub struct TriangleIndices {
+#[derive(Default)]
+pub struct TriangleIndicesBuilder {
+    index_type: ComponentType,
     indices: Vec<u8>,
-    #[builder(default)]
+}
+
+impl TriangleIndicesBuilder {
+    pub fn index_type(mut self, index_type: ComponentType) -> Self {
+        self.index_type = index_type;
+        self
+    }
+
+    pub fn indices<Index: NumCast>(mut self, indices: Vec<Index>) -> Self {
+        self.indices = Vec::from(unsafe {
+            std::slice::from_raw_parts(
+                indices.as_ptr() as *const u8,
+                indices.len() * std::mem::size_of::<Index>(),
+            )
+        });
+        self
+    }
+
+    pub fn build(self) -> TriangleIndices {
+        let index_count = self.indices.len() / self.index_type.get_size();
+        TriangleIndices {
+            index_type: self.index_type,
+            index_count: index_count as u32,
+            indices: self.indices,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Default)]
+pub struct TriangleIndices {
     pub index_type: ComponentType,
+    pub index_count: u32,
+    pub indices: Vec<u8>,
 }
 
 impl TriangleIndices {
+    pub fn builder() -> TriangleIndicesBuilder {
+        TriangleIndicesBuilder::default()
+    }
+
     pub fn get_index_count(&self) -> usize {
         self.indices.len() / self.index_type.get_size()
     }
@@ -268,13 +304,9 @@ impl TriangleIndices {
     pub fn add_index(&mut self, last_index: usize) {
         // Check whether we need more bits for indices
         match self.index_type {
-            ComponentType::U8 if last_index == std::u8::MAX as usize + 1 => {
-                self.expand_index_size()
-            }
-            ComponentType::U16 if last_index == std::u16::MAX as usize + 1 => {
-                self.expand_index_size()
-            }
-            _ if last_index == std::usize::MAX => {
+            ComponentType::U8 if last_index == u8::MAX as usize + 1 => self.expand_index_size(),
+            ComponentType::U16 if last_index == u16::MAX as usize + 1 => self.expand_index_size(),
+            _ if last_index == usize::MAX => {
                 panic!("Yeah, you know, I can't really handle all these vertices..")
             }
             _ => (), // you good
@@ -549,7 +581,7 @@ impl TriangleMesh {
 }
 
 #[repr(C, align(16))]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct TriangleExt {
     pub vertices: [VertexExt; 3],
     /// TODO: temporary material index for compute testing

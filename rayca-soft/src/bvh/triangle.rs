@@ -83,9 +83,10 @@ mod test {
     #[test]
     fn intersect() {
         let mut model = Model::default();
+        let triangles_handle = model.triangles.push(TriangleMesh::unit());
         let geometry_handle = model
             .geometries
-            .push(Geometry::TriangleMesh(TriangleMesh::unit()));
+            .push(Geometry::TriangleMesh(triangles_handle));
         let triangle_prim = model
             .primitives
             .push(Primitive::builder().geometry(geometry_handle).build());

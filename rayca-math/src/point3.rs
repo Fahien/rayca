@@ -4,7 +4,7 @@
 
 use std::{
     ops::{Add, AddAssign, Index, Mul, MulAssign, Sub},
-    simd::{StdFloat, f32x4, num::SimdFloat},
+    simd::{StdFloat, f32x4, mask32x4, num::SimdFloat},
 };
 
 use crate::{Axis3, Dot, EPS, Quat, Vec3};
@@ -22,13 +22,20 @@ impl Default for Point3 {
 }
 
 impl Point3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
+    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0);
+    pub const ONE: Self = Self::new(1.0, 1.0, 1.0);
+    pub const MAX: Self = Self::new(f32::MAX, f32::MAX, f32::MAX);
+    pub const MIN: Self = Self::new(f32::MIN, f32::MIN, f32::MIN);
+
+    pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self {
             simd: f32x4::from_array([x, y, z, 1.0]),
         }
     }
 
     pub fn simd(simd: f32x4) -> Self {
+        let mask: mask32x4 = mask32x4::from_array([true, true, true, false]);
+        let simd = mask.select(simd, Self::ZERO.simd);
         Self { simd }
     }
 

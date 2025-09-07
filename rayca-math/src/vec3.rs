@@ -41,6 +41,10 @@ impl std::fmt::Display for Vec3 {
 }
 
 impl Vec3 {
+    pub const EPSILON: Self = Self {
+        simd: f32x4::from_array([f32::EPSILON, f32::EPSILON, f32::EPSILON, 0.0]),
+    };
+
     pub const ZERO: Self = Self {
         simd: f32x4::from_array([0.0, 0.0, 0.0, 0.0]),
     };

@@ -279,9 +279,13 @@ impl BvhPrimitive {
         let geometry = model.get_geometry(primitive.geometry).unwrap();
         match geometry {
             Geometry::TriangleMesh(triangles) => {
+                let triangles = model.get_triangle_mesh(*triangles);
                 BvhPrimitive::from_triangle_mesh(triangles, node, primitive.material, scene)
             }
-            Geometry::Sphere(sphere) => BvhPrimitive::from_sphere(sphere, node, primitive.material),
+            Geometry::Sphere(sphere) => {
+                let sphere = model.get_sphere(*sphere);
+                BvhPrimitive::from_sphere(sphere, node, primitive.material)
+            }
         }
     }
 

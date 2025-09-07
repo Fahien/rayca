@@ -9,6 +9,12 @@ pub struct SphereBuilder {
     radius: f32,
 }
 
+impl Default for SphereBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SphereBuilder {
     pub fn new() -> Self {
         Self {

@@ -463,8 +463,10 @@ impl Model {
             )
             .build();
 
+        let triangles_handle = self.triangles.push(triangle_mesh);
+
         // Triangle mesh are wrapped in a geometry
-        let geometry = Geometry::TriangleMesh(triangle_mesh);
+        let geometry = Geometry::TriangleMesh(triangles_handle);
         let geometry_handle = self.geometries.push(geometry);
 
         let material = if let Some(index) = gprimitive.material().index() {
@@ -716,7 +718,8 @@ impl StoreModel {
             store_primitive.material = primitive.material;
 
             let geometry = model.geometries.get(primitive.geometry).unwrap();
-            let triangle_mesh = geometry.as_triangle_mesh().unwrap();
+            let triangle_mesh_handle = geometry.get_triangle_mesh();
+            let triangle_mesh = model.get_triangle_mesh(triangle_mesh_handle);
 
             // Buffer views should be created for vertices and indices
             let buffer_view = store_model.buffer.extend_from_bytes(

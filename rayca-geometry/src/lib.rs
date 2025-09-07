@@ -15,3 +15,4 @@ pub use triangle::*;
 pub use vertex::*;
 
 pub use rayca_math::*;
+pub use rayca_util::*;

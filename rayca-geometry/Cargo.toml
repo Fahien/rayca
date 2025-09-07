@@ -9,5 +9,6 @@ readme = "README.md"
 
 [dependencies]
 rayca-math = { path = "../rayca-math" }
+rayca-util = { path = "../rayca-util" }
 bon = "3.6.*"
 num-traits = "0.2.*"

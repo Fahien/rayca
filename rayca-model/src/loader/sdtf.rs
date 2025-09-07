@@ -266,18 +266,20 @@ impl SdtfBuilder {
                 .vertices(vec![])
                 .indices(TriangleIndices::default())
                 .build();
+            let triangles_handle = self.temp_model.triangles.push(triangle_mesh);
             let geometry_handle = self
                 .temp_model
                 .geometries
-                .push(Geometry::TriangleMesh(triangle_mesh));
+                .push(Geometry::TriangleMesh(triangles_handle));
             self.temp_model
                 .primitives
                 .push(Primitive::builder().geometry(geometry_handle).build());
         }
 
         let geometry_handle = self.temp_model.primitives[0].geometry;
-        let geometry = self.temp_model.get_geometry_mut(geometry_handle).unwrap();
+        let geometry = self.temp_model.get_geometry(geometry_handle).unwrap();
         if let Geometry::TriangleMesh(triangle_mesh) = geometry {
+            let triangle_mesh = self.temp_model.get_triangle_mesh_mut(*triangle_mesh);
             let last_vertex_index = triangle_mesh.vertices.len();
             triangle_mesh.indices.add_index(last_vertex_index);
             triangle_mesh.indices.add_index(last_vertex_index + 1);
@@ -338,7 +340,11 @@ impl SdtfBuilder {
         // Create or get current primitive
         if self.temp_model.primitives.is_empty() {
             let sphere = Sphere::builder().center(center).radius(radius).build();
-            let geometry_handle = self.temp_model.geometries.push(Geometry::Sphere(sphere));
+            let sphere_handle = self.temp_model.spheres.push(sphere);
+            let geometry_handle = self
+                .temp_model
+                .geometries
+                .push(Geometry::Sphere(sphere_handle));
             self.temp_model
                 .primitives
                 .push(Primitive::builder().geometry(geometry_handle).build());
@@ -948,6 +954,7 @@ tri 0 1 2"#,
         let Geometry::TriangleMesh(triangles) = geometry else {
             panic!("Failed to get triangles");
         };
+        let triangles = model.get_triangle_mesh(*triangles);
         assert_eq!(triangles.vertices.len(), 3);
     }
 
@@ -959,11 +966,12 @@ tri 0 1 2"#,
             .unwrap();
 
         let geometry_handle = model.primitives[0].geometry;
-        let geomtry = model.get_geometry(geometry_handle).unwrap();
-        let Geometry::TriangleMesh(triangles) = geomtry else {
+        let geometry = model.get_geometry(geometry_handle).unwrap();
+        let Geometry::TriangleMesh(triangles) = geometry else {
             panic!("Failed to get triangles");
         };
         // One primitive with two triangles hence six vertices
+        let triangles = model.get_triangle_mesh(*triangles);
         assert_eq!(triangles.vertices.len(), 6);
     }
 
@@ -979,6 +987,7 @@ tri 0 1 2"#,
         let Geometry::TriangleMesh(triangles) = geometry else {
             panic!("Failed to get triangles");
         };
+        let triangles = model.get_triangle_mesh(*triangles);
         assert_eq!(triangles.vertices.len(), 6);
         assert_eq!(model.primitives.len(), 27);
     }

@@ -17,7 +17,8 @@ fn sphere() -> Result<(), Box<dyn Error>> {
     );
 
     let mut model = Model::default();
-    let geometry_handle = model.geometries.push(Geometry::Sphere(Sphere::unit()));
+    let sphere_handle = model.spheres.push(Sphere::unit());
+    let geometry_handle = model.geometries.push(Geometry::Sphere(sphere_handle));
     let prim_handle = model
         .primitives
         .push(Primitive::builder().geometry(geometry_handle).build());
@@ -55,7 +56,10 @@ fn triangle() -> Result<(), Box<dyn Error>> {
     triangle.vertices[0].ext.color = Color::from(0xFF0000FF);
     triangle.vertices[1].ext.color = Color::from(0x00FF00FF);
     triangle.vertices[2].ext.color = Color::from(0x0000FFFF);
-    let geometry_handle = model.geometries.push(Geometry::TriangleMesh(triangle));
+    let triangle_handle = model.triangles.push(triangle);
+    let geometry_handle = model
+        .geometries
+        .push(Geometry::TriangleMesh(triangle_handle));
     let prim_handle = model
         .primitives
         .push(Primitive::builder().geometry(geometry_handle).build());
@@ -157,7 +161,8 @@ fn cube_over_plane() -> Result<(), Box<dyn Error>> {
     // Sphere on top
     {
         let mut model = Model::default();
-        let geometry_handle = model.geometries.push(Geometry::Sphere(Sphere::unit()));
+        let sphere_handle = model.spheres.push(Sphere::unit());
+        let geometry_handle = model.geometries.push(Geometry::Sphere(sphere_handle));
         let primitive_handle = model
             .primitives
             .push(Primitive::builder().geometry(geometry_handle).build());

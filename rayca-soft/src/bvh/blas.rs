@@ -17,13 +17,8 @@ pub struct BvhNode {
 
 impl BvhNode {
     pub fn new(blas: &Blas, primitives: BvhRange<BvhPrimitive>, scene: &SceneDrawInfo) -> Self {
-        let mut bounds = AABB::new(
-            Point3::new(f32::MAX, f32::MAX, f32::MAX),
-            Point3::new(f32::MIN, f32::MIN, f32::MIN),
-        );
-
+        let mut bounds = AABB::default();
         bounds.grow_range(blas, primitives, scene);
-
         Self { bounds, primitives }
     }
 
@@ -397,9 +392,11 @@ mod test {
         let mut scene = Scene::default();
 
         let mut model = Model::default();
+
+        let triangles_handle = model.triangles.push(TriangleMesh::unit());
         let geometry_handle = model
             .geometries
-            .push(Geometry::TriangleMesh(TriangleMesh::unit()));
+            .push(Geometry::TriangleMesh(triangles_handle));
 
         let primitive_handle = model
             .primitives
@@ -442,14 +439,20 @@ mod test {
             ])
             .indices(TriangleIndices::builder().indices(vec![0, 1, 2]).build())
             .build();
-        let geometry_handle = model.geometries.push(Geometry::TriangleMesh(triangle_mesh));
+
+        let triangles_handle = model.triangles.push(triangle_mesh.clone());
+        let geometry_handle = model
+            .geometries
+            .push(Geometry::TriangleMesh(triangles_handle));
         let right_triangle_prim = model
             .primitives
             .push(Primitive::builder().geometry(geometry_handle).build());
 
+        let triangles_handle = model.triangles.push(TriangleMesh::unit());
+
         let right_geometry_handle = model
             .geometries
-            .push(Geometry::TriangleMesh(TriangleMesh::unit()));
+            .push(Geometry::TriangleMesh(triangles_handle));
         let left_triangle_prim = model
             .primitives
             .push(Primitive::builder().geometry(right_geometry_handle).build());

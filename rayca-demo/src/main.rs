@@ -72,7 +72,10 @@ impl App {
     fn get_triangles(&self) -> (Vec<Triangle>, Vec<TriangleExt>, Vec<BvhNode>) {
         let scene_draw_info = SceneDrawInfo::new(&self.scene);
         let scene = BvhScene::from_scene(&scene_draw_info);
-        let tlas = Tlas::builder().scene(scene).build(&scene_draw_info);
+        let tlas = Tlas::builder()
+            .max_depth(1)
+            .scene(scene)
+            .build(&scene_draw_info);
         let mut triangles = vec![];
         let mut triangle_exts = vec![];
         let blas = &tlas.blass[0];

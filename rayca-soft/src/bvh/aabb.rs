@@ -4,17 +4,27 @@
 
 use std::simd::{f32x4, num::SimdFloat};
 
+use bon::Builder;
+
 use crate::*;
 
 #[repr(C, align(16))]
-#[derive(Default, Clone)]
+#[derive(Builder, Clone)]
 pub struct AABB {
+    #[builder(default = Point3::MAX)]
     pub a: Point3,
+    #[builder(default = Point3::MIN)]
     pub b: Point3,
 }
 
+impl Default for AABB {
+    fn default() -> Self {
+        Self::new(Point3::MAX, Point3::MIN)
+    }
+}
+
 impl AABB {
-    pub fn new(a: Point3, b: Point3) -> Self {
+    pub const fn new(a: Point3, b: Point3) -> Self {
         Self { a, b }
     }
 
@@ -34,6 +44,8 @@ impl AABB {
             let primitive = &blas.model.primitives[i];
             self.grow_primitive(scene, primitive);
         }
+        self.a.translate(&-Vec3::EPSILON);
+        self.b.translate(&Vec3::EPSILON);
     }
 
     pub fn grow_primitive(&mut self, scene: &SceneDrawInfo, primitive: &BvhPrimitive) {

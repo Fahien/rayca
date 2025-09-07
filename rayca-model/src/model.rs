@@ -37,6 +37,8 @@ pub struct Model {
     pub meshes: Pack<Mesh>,
     pub primitives: Pack<Primitive>,
     pub geometries: Pack<Geometry>,
+    pub triangles: Pack<TriangleMesh>,
+    pub spheres: Pack<Sphere>,
     pub pbr_materials: Pack<PbrMaterial>,
     pub phong_materials: Pack<PhongMaterial>,
     pub ggx_materials: Pack<GgxMaterial>,
@@ -61,6 +63,8 @@ impl Default for Model {
             meshes: Pack::default(),
             primitives: Pack::default(),
             geometries: Pack::default(),
+            triangles: Pack::default(),
+            spheres: Pack::default(),
             pbr_materials: Pack::default(),
             phong_materials: Pack::default(),
             ggx_materials: Pack::default(),
@@ -152,6 +156,22 @@ impl Model {
 
     pub fn get_primitive_mut(&mut self, handle: Handle<Primitive>) -> Option<&mut Primitive> {
         self.primitives.get_mut(handle)
+    }
+
+    pub fn get_triangle_mesh(&self, handle: Handle<TriangleMesh>) -> &TriangleMesh {
+        self.triangles.get(handle).unwrap()
+    }
+
+    pub fn get_triangle_mesh_mut(&mut self, handle: Handle<TriangleMesh>) -> &mut TriangleMesh {
+        self.triangles.get_mut(handle).unwrap()
+    }
+
+    pub fn get_sphere(&self, handle: Handle<Sphere>) -> &Sphere {
+        self.spheres.get(handle).unwrap()
+    }
+
+    pub fn get_sphere_mut(&mut self, handle: Handle<Sphere>) -> &mut Sphere {
+        self.spheres.get_mut(handle).unwrap()
     }
 
     pub fn get_camera(&self, handle: Handle<Camera>) -> Option<&Camera> {
